@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains API keys)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Mobile (Capacitor)
+android/
+.capacitor/
+
+# iOS build artifacts (keep ios/ tracked for Xcode customizations)
+ios/App/Pods/
+ios/App/App/public/
+ios/App/capacitor.config.json
+
+# Test coverage
+coverage/

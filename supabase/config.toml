@@ -1,0 +1,4 @@
+# NutriVault Supabase Configuration
+# https://supabase.com/docs/guides/cli/config
+
+project_id = "gbdrsqskqvsfnwyeidda"

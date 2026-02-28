@@ -1,0 +1,8 @@
+{
+  "name": "NutriVault v1.0",
+  "description": "A minimalist, privacy-first calorie and macro tracker that logs food via natural language, voice, or photo.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

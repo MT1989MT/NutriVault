@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Ensure font-display class uses the Sora display font */
+.font-display {
+  font-family: 'Sora', 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
