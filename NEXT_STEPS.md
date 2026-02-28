@@ -17,42 +17,16 @@
 
 ## Fase 0: Schone Start op je Mac
 
-### Stap 1 — GitHub repo hernoemen (1 minuut)
+> **Status: VOLTOOID** — Repository is hernoemd naar NutriVault en code is gepusht.
 
-Ga naar GitHub in je browser:
-1. Open: https://github.com/MT1989MT/NutriMind
-2. Klik **Settings** (tandwiel, bovenaan rechts)
-3. Bij **Repository name**: verander `NutriMind` naar `NutriVault`
-4. Klik **Rename**
-
-Nu is je repo: `https://github.com/MT1989MT/NutriVault`
-
-### Stap 2 — Oude map verwijderen op Mac
-
-Open Terminal en voer uit:
-
-```bash
-# Verwijder de oude NutriMind map (als die er nog is)
-rm -rf ~/NutriMind
-```
-
-### Stap 3 — Verse clone van NutriVault
-
-```bash
-# Clone de hernoemde repo
-cd ~
-git clone https://github.com/MT1989MT/NutriVault.git
-cd ~/NutriVault
-```
-
-### Stap 4 — Dependencies installeren
+### Stap 1 — Dependencies installeren
 
 ```bash
 # Installeer alle packages
 npm install
 ```
 
-### Stap 5 — Controleer of alles werkt
+### Stap 2 — Controleer of alles werkt
 
 ```bash
 # TypeScript check
@@ -64,7 +38,7 @@ npm run build
 
 Je moet zien: `✓ built in X.XXs` zonder errors.
 
-### Stap 6 — Dev server starten (testen in browser)
+### Stap 3 — Dev server starten (testen in browser)
 
 ```bash
 npm run dev

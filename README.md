@@ -4,15 +4,29 @@
 
 # NutriVault - AI-Powered Nutrition & Fitness Tracker
 
-A minimalist, AI-powered calorie and macro tracker that logs food via natural language. Now powered by **Claude AI** (Anthropic).
+A minimalist, privacy-first calorie and macro tracker that logs food via natural language, voice, or photo. Powered by **Google Gemini AI**.
 
 ## Features
 
 - Natural language food logging with AI parsing
+- Photo-based meal analysis
+- Voice input for hands-free logging
 - Recipe generation based on mood and preferences
 - Personalized AI coaching with multiple personality styles
 - Workout planning and training programs
 - Weekly nutrition insights and analytics
+- 6 languages supported (EN, NL, DE, FR, ES, IT)
+- Privacy-first: health data stays 100% on your device
+
+## Tech Stack
+
+- **Frontend:** React 19, TypeScript, Tailwind CSS
+- **Build:** Vite
+- **Mobile:** Capacitor (iOS)
+- **Backend:** Supabase (auth & activation codes)
+- **AI:** Google Gemini API (server-side via Vercel)
+- **Payments:** RevenueCat
+- **Hosting:** Vercel
 
 ## Run Locally
 
@@ -23,9 +37,9 @@ A minimalist, AI-powered calorie and macro tracker that logs food via natural la
    npm install
    ```
 
-2. Create a `.env.local` file in the root directory and add your Anthropic API key:
+2. Create a `.env.local` file in the root directory and add your API key:
    ```
-   ANTHROPIC_API_KEY=your-api-key-here
+   GEMINI_API_KEY=your-gemini-api-key
    ```
 
 3. Run the app:
@@ -35,4 +49,14 @@ A minimalist, AI-powered calorie and macro tracker that logs food via natural la
 
 ## Getting an API Key
 
-Get your Claude API key from the [Anthropic Console](https://console.anthropic.com/).
+Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+## iOS Build
+
+```bash
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+See [NEXT_STEPS.md](NEXT_STEPS.md) for the complete setup and App Store submission guide.
