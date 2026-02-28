@@ -31,14 +31,11 @@ interface MockAccount {
 const COLORS = ['Green', 'Red', 'Blue', 'Gold', 'Silver', 'Black', 'White', 'Neon', 'Cosmic', 'Solar'];
 const NOUNS = ['Apple', 'Falcon', 'River', 'Mountain', 'Tiger', 'Storm', 'Wolf', 'Ocean', 'Phoenix', 'Dragon'];
 
-// Hash function
+// Hash function - requires Web Crypto API (available in all modern browsers and Capacitor)
 const hashKey = async (key: string): Promise<string> => {
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const msgBuffer = new TextEncoder().encode(key);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  return btoa(key).split('').reverse().join('');
+  const msgBuffer = new TextEncoder().encode(key);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 /**

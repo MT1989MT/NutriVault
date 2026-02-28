@@ -44,6 +44,10 @@
 	<true/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDarkContent</string>
+	<key>NSCameraUsageDescription</key>
+	<string>NutriVault uses your camera to photograph meals for automatic nutritional analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>NutriVault needs access to your photo library to analyze meal photos for nutritional information.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>NutriVault uses your microphone to log meals and workouts by voice for a faster experience.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

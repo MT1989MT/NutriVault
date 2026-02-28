@@ -22,15 +22,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     'https://nutri-vault.vercel.app',
     'https://nutri-vault-ehct2xqn3-mts-projects-8071bc81.vercel.app',
     'http://localhost:3000',
+    'http://localhost:5173',
     'capacitor://localhost',
     'ionic://localhost'
   ];
   const origin = req.headers.origin || '';
-  if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+  if (allowedOrigins.includes(origin) || origin.includes('nutri-vault') && origin.endsWith('.vercel.app')) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
-    // Capacitor iOS WKWebView may not send origin header
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Capacitor iOS WKWebView does not send origin header — allow but restrict methods
+    res.setHeader('Access-Control-Allow-Origin', 'capacitor://localhost');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -82,9 +83,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }];
 
     if (imageBase64 && typeof imageBase64 === 'string') {
+      // Validate image size (max 10MB base64 ≈ 7.5MB raw)
+      if (imageBase64.length > 10_000_000) {
+        return res.status(400).json({ error: 'Image too large (max 10MB)' });
+      }
       // Extract mime type and data from base64 data URL
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
       const match = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
+      if (match && allowedImageTypes.includes(match[1])) {
         parts.push({
           inline_data: {
             mime_type: match[1],
@@ -117,7 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[API] Gemini API error:', response.status, errorText);
-      return res.status(response.status).json({ error: 'Gemini API error', details: errorText });
+      const clientError = response.status === 429 ? 'AI rate limit reached. Please wait a moment.' : 'AI service temporarily unavailable.';
+      return res.status(response.status).json({ error: clientError });
     }
 
     const data = await response.json();

@@ -151,8 +151,17 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       setInput('');
       setPhotoPreview(null);
     } catch (err: any) {
-      console.error('Food analysis error:', err?.message || err?.toString?.() || 'unknown error');
-      alert("Could not analyze food. Please check your connection and try again.");
+      const msg = err?.message || err?.toString?.() || 'unknown error';
+      console.error('Food analysis error:', msg);
+      if (msg.includes('API key not configured')) {
+        alert("Server API key is not configured. Please set GEMINI_API_KEY in your Vercel environment variables.");
+      } else if (msg.includes('timed out')) {
+        alert("Request timed out. Please try again.");
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        alert("Could not reach the server. Please check your internet connection.");
+      } else {
+        alert(`Could not analyze food: ${msg}`);
+      }
     }
     finally { setIsAnalyzing(false); }
   };
