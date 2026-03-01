@@ -69,8 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Validate prompt length to prevent abuse
-    if (typeof prompt !== 'string' || prompt.length > 5000) {
-      return res.status(400).json({ error: 'Prompt too long (max 5000 chars)' });
+    // Food parsing prompt with reference data is ~6100 chars; coach with user context can be larger
+    if (typeof prompt !== 'string' || prompt.length > 20_000) {
+      return res.status(400).json({ error: 'Prompt too long' });
     }
 
     // Validate model name
