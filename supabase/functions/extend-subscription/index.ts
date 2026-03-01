@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-edge-secret',
 }
 
 async function hashCode(code: string): Promise<string> {
@@ -23,10 +23,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the request comes from an authenticated client
-    const authHeader = req.headers.get('authorization') ?? ''
-    const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    if (!authHeader.includes(expectedAnonKey) && expectedAnonKey) {
+    // Require server-side secret to prevent public abuse
+    const secret = req.headers.get('x-edge-secret') ?? ''
+    const expectedSecret = Deno.env.get('EDGE_FUNCTION_SECRET') ?? ''
+    if (!expectedSecret || secret !== expectedSecret) {
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

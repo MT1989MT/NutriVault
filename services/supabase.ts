@@ -1,8 +1,9 @@
 /**
  * Supabase Client
  *
- * All operations go through Edge Functions (create, verify, extend)
- * Edge Functions use service_role key server-side to bypass RLS
+ * Write operations (create, extend) go through Vercel API proxy routes
+ * which add a server-side secret before calling Edge Functions.
+ * Read operations (verify) go through Edge Functions directly.
  *
  * SETUP: See /supabase/migrations/001_activation_codes.sql
  * DEPLOY: See /supabase/README.md
@@ -12,12 +13,15 @@
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
+// API base URL for Vercel proxy routes (same as gemini service)
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '';
+
 // Check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
   return !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 };
 
-// Call a Supabase Edge Function
+// Call a Supabase Edge Function directly (for read-only operations)
 const callEdgeFunction = async (functionName: string, body: Record<string, unknown>) => {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
     method: 'POST',
@@ -36,15 +40,37 @@ const callEdgeFunction = async (functionName: string, body: Record<string, unkno
   return response.json();
 };
 
+// Call a Vercel API proxy route (for write operations that need server-side secret)
+const callApiRoute = async (route: string, body: Record<string, unknown>) => {
+  if (!API_BASE_URL) {
+    throw new Error('API base URL not configured');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/${route}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+};
+
 /**
- * Create a new activation code via Edge Function
- * The Edge Function uses the service_role key to bypass RLS
+ * Create a new activation code via Vercel API proxy
+ * The proxy adds a server-side secret before calling the Edge Function
  */
 export const createActivationCode = async (): Promise<{ code: string; name: string } | null> => {
   if (!isSupabaseConfigured()) return null;
 
   try {
-    const result = await callEdgeFunction('create-code', {});
+    const result = await callApiRoute('create-code', {});
     if (result.error) throw new Error(result.error);
     return { code: result.code, name: result.name };
   } catch (error) {
@@ -54,7 +80,7 @@ export const createActivationCode = async (): Promise<{ code: string; name: stri
 };
 
 /**
- * Verify an activation code via Edge Function (server-side, uses service_role)
+ * Verify an activation code via Edge Function (read-only, no secret needed)
  */
 export const verifyActivationCode = async (code: string): Promise<{
   success: boolean;
@@ -77,13 +103,14 @@ export const verifyActivationCode = async (code: string): Promise<{
 };
 
 /**
- * Extend subscription via Edge Function
+ * Extend subscription via Vercel API proxy
+ * The proxy adds a server-side secret before calling the Edge Function
  */
 export const extendSubscription = async (code: string, months: number): Promise<boolean> => {
   if (!isSupabaseConfigured()) return false;
 
   try {
-    const result = await callEdgeFunction('extend-subscription', { code, months });
+    const result = await callApiRoute('extend-subscription', { code, months });
     return result.success === true;
   } catch (error) {
     console.error('Failed to extend subscription:', error);

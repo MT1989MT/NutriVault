@@ -20,14 +20,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS - allow known origins + Capacitor (which may send no origin)
   const allowedOrigins = [
     'https://nutri-vault.vercel.app',
-    'https://nutri-vault-ehct2xqn3-mts-projects-8071bc81.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'capacitor://localhost',
-    'ionic://localhost'
+    'ionic://localhost',
+    // Extra origins from env (comma-separated)
+    ...(process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || []),
   ];
   const origin = req.headers.origin || '';
-  if (allowedOrigins.includes(origin) || origin.includes('nutri-vault') && origin.endsWith('.vercel.app')) {
+  // Match exact origins or Vercel preview deployments for this project only
+  const isAllowed = allowedOrigins.includes(origin)
+    || /^https:\/\/nutri-vault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
     // Capacitor iOS WKWebView does not send origin header — allow but restrict methods
