@@ -69,7 +69,7 @@ Set these in your Vercel project settings:
 
 Create a code (via Vercel API proxy — the secure way):
 ```bash
-curl -X POST https://nutri-vault.vercel.app/api/create-code \
+curl -X POST https://nutrivault-seven.vercel.app/api/create-code \
   -H "Content-Type: application/json"
 ```
 

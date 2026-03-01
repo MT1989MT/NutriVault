@@ -19,7 +19,7 @@ function isRateLimited(ip: string): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS - allow known origins + Capacitor (which may send no origin)
   const allowedOrigins = [
-    'https://nutri-vault.vercel.app',
+    'https://nutrivault-seven.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'capacitor://localhost',
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin || '';
   // Match exact origins or Vercel preview deployments for this project only
   const isAllowed = allowedOrigins.includes(origin)
-    || /^https:\/\/nutri-vault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
+    || /^https:\/\/nutrivault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {

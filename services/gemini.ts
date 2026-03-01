@@ -35,7 +35,7 @@ const API_BASE_URL = (() => {
     return import.meta.env.VITE_API_BASE_URL;
   }
   if (typeof window !== 'undefined' && ((window as any).Capacitor?.isNativePlatform?.() || window.location?.protocol === 'capacitor:')) {
-    return 'https://nutri-vault.vercel.app';
+    return 'https://nutrivault-seven.vercel.app';
   }
   return '';
 })();
