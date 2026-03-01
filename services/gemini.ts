@@ -26,8 +26,19 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
     }
 };
 
-// API base URL - configurable via env var, defaults to Vercel deployment
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'https://nutri-vault.vercel.app';
+// API base URL
+// - Web (Vercel): empty string → relative URL "/api/gemini" → same-origin, no CORS
+// - Native (Capacitor): full URL since there's no local API server
+// - Explicit env var overrides everything
+const API_BASE_URL = (() => {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && ((window as any).Capacitor?.isNativePlatform?.() || window.location?.protocol === 'capacitor:')) {
+    return 'https://nutri-vault.vercel.app';
+  }
+  return '';
+})();
 
 // Call our secure API route (API key stays server-side)
 const callGemini = async (model: string, prompt: string, jsonMode: boolean = false, imageBase64?: string): Promise<string> => {

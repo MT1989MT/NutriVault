@@ -13,8 +13,17 @@
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
-// API base URL for Vercel proxy routes (same as gemini service)
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '';
+// API base URL for Vercel proxy routes (same logic as gemini service)
+// Empty string = relative URL = same-origin on Vercel, proxied in dev
+const API_BASE_URL = (() => {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && ((window as any).Capacitor?.isNativePlatform?.() || window.location?.protocol === 'capacitor:')) {
+    return 'https://nutri-vault.vercel.app';
+  }
+  return '';
+})();
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
@@ -42,10 +51,6 @@ const callEdgeFunction = async (functionName: string, body: Record<string, unkno
 
 // Call a Vercel API proxy route (for write operations that need server-side secret)
 const callApiRoute = async (route: string, body: Record<string, unknown>) => {
-  if (!API_BASE_URL) {
-    throw new Error('API base URL not configured');
-  }
-
   const response = await fetch(`${API_BASE_URL}/api/${route}`, {
     method: 'POST',
     headers: {
