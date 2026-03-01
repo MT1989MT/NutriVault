@@ -74,12 +74,13 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 };
 
 // Shared response parser for food items from AI
+// Handles multiple field name formats in case Gemini uses full names instead of abbreviations
 const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
   return rawData.map((item: any) => {
-    let cal = Math.max(0, Math.round(Number(item.cal) || 0));
-    const protein = Math.max(0, Math.round(Number(item.p) || 0));
-    const carbs = Math.max(0, Math.round(Number(item.c) || 0));
-    const fat = Math.max(0, Math.round(Number(item.f) || 0));
+    let cal = Math.max(0, Math.round(Number(item.cal ?? item.calories ?? item.kcal) || 0));
+    const protein = Math.max(0, Math.round(Number(item.p ?? item.protein) || 0));
+    const carbs = Math.max(0, Math.round(Number(item.c ?? item.carbs ?? item.carbohydrates) || 0));
+    const fat = Math.max(0, Math.round(Number(item.f ?? item.fat ?? item.fats) || 0));
 
     // Always recalculate calories from macros — Atwater is ground truth
     const macroCal = (protein * 4) + (carbs * 4) + (fat * 9);
@@ -125,21 +126,17 @@ export const parseFoodInput = async (input: string): Promise<Omit<FoodItem, 'id'
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `Parse this food input into nutritional data. Understand any language.
+      `You are a precise nutritionist. Someone tells you what they ate:
 
 "${safeInput}"
 
-Rules:
-- Understand casual input (e.g. "2 boterhammen kaas" or "a bowl of oatmeal")
-- Combined foods stay as one item ("broodje kroket" = 1 item)
-- Split multiple items only at commas, "and"/"en"/"+", or newlines
-- Use realistic portion sizes when not specified
-- Calculate: cal = (protein × 4) + (carbs × 4) + (fat × 9)
-- Food names in the SAME language as input
-- Include estimated weight in portion description
+Figure out exactly what they mean — handle typos, slang, any language, brand names, and vague portions.
+For each food item, look up accurate macros per 100g, estimate the real portion weight, then scale.
+Combined dishes stay as 1 item ("broodje kroket", "koffie verkeerd", "rijst met kip").
+Only split at commas, "and"/"en"/"+".
+Food names in the SAME language as the input. Include weight estimate in portion.
 
-Return JSON array:
-[{"name":"string","portion":"string (~weight)","cal":number,"p":number,"c":number,"f":number,"fiber":number,"sugar":number,"sodium":number}]`,
+JSON: [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
       true
     );
     if (!text) return [];
@@ -156,13 +153,13 @@ export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<Food
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `Identify ALL food and drinks in this photo. Estimate portions using plate/utensils for scale.
+      `You are a precise nutritionist analyzing a food photo.
 
-For each item: estimate weight, calculate macros, derive cal = (p×4)+(c×4)+(f×9).
-Include sauces, spreads, and drinks if visible. Food names in ${langName}.
+Identify every food item, drink, sauce, and topping visible. Use the plate, utensils, and packaging for scale to estimate real portion weights. Don't forget sauces, butter, dressing, or drinks.
+For each item: look up accurate macros per 100g, estimate portion weight, then scale.
+Food names in ${langName}.
 
-Return JSON array (empty [] if no food visible):
-[{"name":"string","portion":"string (~weight)","cal":number,"p":number,"c":number,"f":number,"fiber":number,"sugar":number,"sodium":number}]`,
+JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
       true,
       imageBase64
     );
@@ -180,18 +177,15 @@ export const autoTrackDay = async (description: string): Promise<{ items: Omit<F
 
         const text = await callGemini(
             POWERFUL_MODEL,
-            `Parse this description of food eaten and optional exercise. Understand any language.
+            `You are a precise nutritionist. Someone describes their day (food and possibly exercise):
 
 "${safeInput}"
 
-Rules:
-- Combined foods stay as one item ("broodje kroket" = 1 item)
-- Use realistic portions when not specified
-- Food names in the same language as input
-- Also detect any exercise/workout mentioned
+Figure out what they ate and did. Handle casual speech, any language, typos.
+Combined dishes = 1 item. Use realistic portions. Food names in same language as input.
+Also detect any exercise mentioned (running, gym, cycling, walking, etc.).
 
-Return JSON:
-{"foods":[{"name":"string","portion":"string (~weight)","cal":number,"p":number,"c":number,"f":number}],"workout":{"type":"string","durationMinutes":number,"elevatedHeartRate":boolean} or null}`,
+JSON: {"foods":[{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
             true
         );
         if (!text) return { items: [], workout: null };
