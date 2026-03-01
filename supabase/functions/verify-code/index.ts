@@ -42,12 +42,15 @@ Deno.serve(async (req) => {
 
     const { data: results, error } = await supabase
       .from('activation_codes')
-      .select('*')
+      .select('display_name, expires_at')
       .eq('code_hash', hash)
       .eq('is_active', true)
       .limit(1)
 
-    if (error) throw error
+    if (error) {
+      console.error('verify-code DB error:', error.message)
+      throw new Error('Verification failed')
+    }
 
     if (!results || results.length === 0) {
       return new Response(
@@ -75,8 +78,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('verify-code error:', error.message)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: 'Verification failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

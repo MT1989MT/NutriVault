@@ -19,15 +19,19 @@ function isRateLimited(ip: string): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS - allow known origins + Capacitor (which may send no origin)
   const allowedOrigins = [
-    'https://nutri-vault.vercel.app',
-    'https://nutri-vault-ehct2xqn3-mts-projects-8071bc81.vercel.app',
+    'https://nutrivault-seven.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'capacitor://localhost',
-    'ionic://localhost'
+    'ionic://localhost',
+    // Extra origins from env (comma-separated)
+    ...(process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || []),
   ];
   const origin = req.headers.origin || '';
-  if (allowedOrigins.includes(origin) || origin.includes('nutri-vault') && origin.endsWith('.vercel.app')) {
+  // Match exact origins or Vercel preview deployments for this project only
+  const isAllowed = allowedOrigins.includes(origin)
+    || /^https:\/\/nutrivault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
     // Capacitor iOS WKWebView does not send origin header — allow but restrict methods
@@ -65,8 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Validate prompt length to prevent abuse
-    if (typeof prompt !== 'string' || prompt.length > 5000) {
-      return res.status(400).json({ error: 'Prompt too long (max 5000 chars)' });
+    // Food parsing prompt with reference data is ~6100 chars; coach with user context can be larger
+    if (typeof prompt !== 'string' || prompt.length > 20_000) {
+      return res.status(400).json({ error: 'Prompt too long' });
     }
 
     // Validate model name
@@ -135,6 +140,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ text });
   } catch (error: any) {
     console.error('[API] Error:', error.message || error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
