@@ -23,9 +23,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify the request comes from an authenticated client
+    const authHeader = req.headers.get('authorization') ?? ''
+    const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    if (!authHeader.includes(expectedAnonKey) && expectedAnonKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { code, months } = await req.json()
 
-    if (!code || !months || typeof months !== 'number' || months < 1) {
+    if (!code || !months || typeof months !== 'number' || months < 1 || months > 12) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid parameters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -42,11 +52,14 @@ Deno.serve(async (req) => {
 
     const { data: results, error } = await supabase
       .from('activation_codes')
-      .select('*')
+      .select('id, expires_at')
       .eq('code_hash', hash)
       .limit(1)
 
-    if (error) throw error
+    if (error) {
+      console.error('extend-subscription DB error:', error.message)
+      throw new Error('Extension failed')
+    }
 
     if (!results || results.length === 0) {
       return new Response(
@@ -71,8 +84,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('extend-subscription error:', error.message)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: 'Extension failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

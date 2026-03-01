@@ -33,6 +33,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify the request comes from an authenticated client via the Authorization header
+    // The anon key in the Authorization header proves the request is from our app
+    const authHeader = req.headers.get('authorization') ?? ''
+    const expectedAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    if (!authHeader.includes(expectedAnonKey) && expectedAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Use service role key (server-side, bypasses RLS)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -94,8 +105,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('create-code error:', error.message)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to create code' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

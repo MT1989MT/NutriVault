@@ -7,6 +7,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     status: 'ok',
     timestamp: new Date().toISOString(),
     hasApiKey: !!apiKey,
-    apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'NOT SET'
   });
 }
