@@ -294,12 +294,26 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
                   <p className="text-gray-400 text-sm text-center mb-4">{suggestion.exercises.length} exercises • {suggestion.duration} min</p>
                   <div className="space-y-2 mb-4 max-h-[35vh] overflow-y-auto">
                     {suggestion.exercises.map((e, i) => (
-                      <div key={i} className="bg-white/10 p-3 rounded-xl flex justify-between items-center">
-                        <div className="flex-1 min-w-0 mr-2">
-                          <div className="font-semibold text-sm truncate">{e.name}</div>
-                          <div className="text-[10px] text-gray-400 truncate">{e.instructions || "Good form"}</div>
+                      <div key={i} className="bg-white/10 p-3 rounded-xl">
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1 min-w-0 mr-2">
+                            <div className="font-semibold text-sm truncate">{e.name}</div>
+                            <div className="text-[10px] text-gray-400 truncate">{e.instructions || "Good form"}</div>
+                          </div>
+                          <button onClick={() => { const ex = [...suggestion.exercises]; ex.splice(i, 1); if (ex.length > 0) setSuggestion({ ...suggestion, exercises: ex }); }} className="p-1 bg-white/5 rounded-lg ml-1 shrink-0"><X className="w-3 h-3 text-gray-500" /></button>
                         </div>
-                        <span className="text-gray-300 text-xs bg-white/5 px-2 py-1 rounded shrink-0">{e.sets}×{e.reps}</span>
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1">
+                            <button onClick={() => { const ex = [...suggestion.exercises]; ex[i] = { ...ex[i], sets: Math.max(1, parseInt(ex[i].sets) - 1).toString() }; setSuggestion({ ...suggestion, exercises: ex }); }} className="text-gray-400 active:text-white"><Minus className="w-3 h-3" /></button>
+                            <span className="text-xs font-bold w-8 text-center">{e.sets} sets</span>
+                            <button onClick={() => { const ex = [...suggestion.exercises]; ex[i] = { ...ex[i], sets: (parseInt(ex[i].sets) + 1).toString() }; setSuggestion({ ...suggestion, exercises: ex }); }} className="text-gray-400 active:text-white"><Plus className="w-3 h-3" /></button>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1">
+                            <button onClick={() => { const ex = [...suggestion.exercises]; ex[i] = { ...ex[i], reps: Math.max(1, parseInt(ex[i].reps) - 1).toString() }; setSuggestion({ ...suggestion, exercises: ex }); }} className="text-gray-400 active:text-white"><Minus className="w-3 h-3" /></button>
+                            <span className="text-xs font-bold w-8 text-center">{e.reps} reps</span>
+                            <button onClick={() => { const ex = [...suggestion.exercises]; ex[i] = { ...ex[i], reps: (parseInt(ex[i].reps) + 1).toString() }; setSuggestion({ ...suggestion, exercises: ex }); }} className="text-gray-400 active:text-white"><Plus className="w-3 h-3" /></button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
