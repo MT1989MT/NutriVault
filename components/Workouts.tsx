@@ -280,16 +280,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
               </div>
             ))}
           </div>
-          <div className="bg-white border-t px-4 pt-3" style={{paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)'}}>
-            <div className="flex gap-2">
-              <button onClick={handleLibraryBuild} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-white text-gray-700 py-3.5 rounded-xl font-bold border border-gray-200 disabled:opacity-40">
-                Edit ({selectedLibraryItems.length})
-              </button>
-              <button onClick={handleLibraryStart} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-[#E07A5F] text-white py-3.5 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/20">
-                <Play className="w-4 h-4 fill-current" /> Start ({selectedLibraryItems.length})
+          {selectedLibraryItems.length > 0 && (
+            <div className="bg-white border-t px-4 pt-3 animate-in slide-in-from-bottom duration-200" style={{paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)'}}>
+              <button onClick={handleLibraryStart} className="w-full bg-[#E07A5F] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/25 active:scale-[0.98] transition-smooth">
+                <Play className="w-5 h-5 fill-current" /> Start Workout ({selectedLibraryItems.length})
               </button>
             </div>
-          </div>
+          )}
         </div>
       )}
 
