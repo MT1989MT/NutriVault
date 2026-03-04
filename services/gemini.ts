@@ -91,19 +91,13 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 // Handles multiple field name formats in case Gemini uses full names instead of abbreviations
 const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
   return rawData.map((item: any) => {
-    let cal = Math.max(0, Math.round(Number(item.cal ?? item.calories ?? item.kcal) || 0));
     const protein = Math.max(0, Math.round(Number(item.p ?? item.protein) || 0));
     const carbs = Math.max(0, Math.round(Number(item.c ?? item.carbs ?? item.carbohydrates) || 0));
     const fat = Math.max(0, Math.round(Number(item.f ?? item.fat ?? item.fats) || 0));
+    const grams = Math.max(0, Math.round(Number(item.grams ?? item.weight ?? item.g) || 0));
 
-    // Always recalculate calories from macros — Atwater is ground truth
-    const macroCal = (protein * 4) + (carbs * 4) + (fat * 9);
-    if (macroCal > 0) {
-      // If AI calories differ >20% from macro math, trust the macros
-      if (cal === 0 || Math.abs(cal - macroCal) > cal * 0.2) {
-        cal = macroCal;
-      }
-    }
+    // Always calculate calories from macros — Atwater is ground truth
+    const cal = (protein * 4) + (carbs * 4) + (fat * 9);
 
     const result: any = {
       name: typeof item.name === 'string' ? item.name : 'Unknown food',
@@ -112,6 +106,7 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       protein,
       carbs,
       fat,
+      grams, // store base weight for portion adjustment
     };
 
     if (includeMicros) {
@@ -140,29 +135,42 @@ export const parseFoodInput = async (input: string): Promise<Omit<FoodItem, 'id'
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `You are a precise nutritionist. Someone tells you what they ate:
+      `You are a precise food database. A user describes what they ate:
 
 "${safeInput}"
 
-PARSING:
-- Handle typos, slang, any language, brand names, and vague portions.
-- Combined dishes stay as 1 item ("broodje kroket", "koffie verkeerd", "rijst met kip").
-- Only split at commas, "and"/"en"/"und"/"et"/"y"/"e"/"+".
-- Food names in the SAME language as the input.
+TASK: Break down into INDIVIDUAL ingredients. Each ingredient is a separate item.
 
-PORTION ESTIMATION (critical — be realistic):
-- First look up accurate macros per 100g, then estimate portion weight, then scale.
-- Use context to determine portion: "kipfilet" on bread = ~30g cold cut; "kipfilet" as main = ~150g cooked.
-- Sauces/condiments unless specified: mayo/aioli = 15g, ketchup/mustard = 15g, butter on bread = 10g, olive oil = 10ml, dressing on salad = 25ml, peanut butter = 15g, hummus = 30g, jam = 15g.
-- Drinks: coffee/tea = 150ml (add milk ~30ml if "koffie verkeerd"/"latte"/"cappuccino"), glass juice/soda = 250ml, glass water = 250ml, glass wine = 150ml, beer = 330ml.
-- Bread: 1 slice = ~35g, 1 bun/broodje = ~50g. "Two sandwiches" (twee boterhammen) = 2 slices.
-- Cheese on bread = ~20g, ham/salami on bread = ~20g per slice.
-- "A bowl of" = ~250-300ml, "a plate of" = standard restaurant portion.
-- When truly ambiguous, pick the most common everyday interpretation.
+SPLITTING RULES:
+- "bread with cheese and butter" → 3 items: bread, cheese, butter
+- "pasta with meat sauce" → 2 items: pasta, meat sauce (or further: pasta, ground beef, tomato sauce)
+- "coffee with milk" → 2 items: coffee, milk
+- "broodje kroket" → 2 items: broodje/bun, kroket
+- Single items stay single: "an apple" → 1 item: apple
+- Composite dishes that can't logically be split stay as 1 item: "pizza margherita", "sushi roll"
+- Handle typos, slang, any language, brand names
 
-Include weight estimate in portion description, e.g. "2 slices (~70g)".
+NUTRITIONAL DATA (critical — be accurate):
+- For each ingredient, determine the macros PER 100g from a reliable food database
+- Then estimate the realistic portion weight in grams for the context
+- Calculate final macros by scaling: (macros_per_100g × grams / 100)
+- Return both the per-100g values AND the estimated portion weight
 
-JSON: [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
+PORTION WEIGHTS (realistic defaults when unspecified):
+- Bread slice: 35g, bread roll/broodje: 50g
+- Butter on bread: 10g, cheese on bread: 20g, ham/cold cuts: 20g
+- Mayo/ketchup/mustard: 15g, peanut butter: 15g, jam: 15g
+- Chicken breast (main): 150g, chicken on sandwich: 30g
+- Rice/pasta (cooked, side): 150g, as main: 250g
+- Coffee/tea: 150ml, milk in coffee: 30ml, glass juice: 250ml
+- Egg: 60g, apple/banana: 150g, yogurt: 150g
+
+LANGUAGE: Food names in the SAME language as the input.
+
+JSON array, one object per ingredient:
+[{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]
+
+"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION (not per 100g).`,
       true
     );
     if (!text) return [];
@@ -179,22 +187,30 @@ export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<Food
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `You are a precise nutritionist analyzing a food photo.
+      `You are a precise food database analyzing a food photo.
 
-IDENTIFICATION:
-- Identify every food item, drink, sauce, and topping visible.
-- Don't forget: sauces, butter, dressing, cooking oil, drinks, sides, garnishes.
-- Combined dishes stay as 1 item (e.g. "broodje kroket", "pasta carbonara").
+TASK: Break down everything visible into INDIVIDUAL ingredients/items.
 
-PORTION ESTIMATION (critical — be realistic):
-- Use plate size, utensils, hands, and packaging for scale.
-- First look up accurate macros per 100g, then estimate portion weight from the photo, then scale.
-- Sauces/condiments if visible but amount unclear: mayo/aioli = 15g, ketchup/mustard = 15g, butter = 10g, olive oil = 10ml, dressing = 25ml, peanut butter = 15g.
-- Drinks if glass/cup visible: coffee = 150ml, juice/soda = 250ml, wine = 150ml, beer = 330ml.
+SPLITTING RULES:
+- Separate each visible component: bread, topping, sauce, drink, side dish
+- "Sandwich with cheese and ham" → bread, cheese, ham (3 items)
+- Don't forget: sauces, butter, dressing, cooking oil, drinks, sides, garnishes
+- Composite items that can't be split stay as 1: "pizza", "sushi roll", "kroket"
 
-Food names in ${langName}. Include weight estimate in portion description.
+NUTRITIONAL DATA (critical — be accurate):
+- For each item, determine macros per 100g from a reliable database
+- Use plate size, utensils, hands, packaging for scale to estimate portion weight
+- Calculate final macros: (macros_per_100g × grams / 100)
 
-JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
+PORTION ESTIMATION:
+- Sauces if visible but amount unclear: mayo = 15g, ketchup = 15g, butter = 10g, dressing = 25ml
+- Drinks: coffee = 150ml, juice = 250ml, wine = 150ml, beer = 330ml
+
+Food names in ${langName}.
+
+JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]
+
+"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION.`,
       true,
       imageBase64
     );
