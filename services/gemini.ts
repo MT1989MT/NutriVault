@@ -130,11 +130,23 @@ export const parseFoodInput = async (input: string): Promise<Omit<FoodItem, 'id'
 
 "${safeInput}"
 
-Figure out exactly what they mean — handle typos, slang, any language, brand names, and vague portions.
-For each food item, look up accurate macros per 100g, estimate the real portion weight, then scale.
-Combined dishes stay as 1 item ("broodje kroket", "koffie verkeerd", "rijst met kip").
-Only split at commas, "and"/"en"/"+".
-Food names in the SAME language as the input. Include weight estimate in portion.
+PARSING:
+- Handle typos, slang, any language, brand names, and vague portions.
+- Combined dishes stay as 1 item ("broodje kroket", "koffie verkeerd", "rijst met kip").
+- Only split at commas, "and"/"en"/"und"/"et"/"y"/"e"/"+".
+- Food names in the SAME language as the input.
+
+PORTION ESTIMATION (critical — be realistic):
+- First look up accurate macros per 100g, then estimate portion weight, then scale.
+- Use context to determine portion: "kipfilet" on bread = ~30g cold cut; "kipfilet" as main = ~150g cooked.
+- Sauces/condiments unless specified: mayo/aioli = 15g, ketchup/mustard = 15g, butter on bread = 10g, olive oil = 10ml, dressing on salad = 25ml, peanut butter = 15g, hummus = 30g, jam = 15g.
+- Drinks: coffee/tea = 150ml (add milk ~30ml if "koffie verkeerd"/"latte"/"cappuccino"), glass juice/soda = 250ml, glass water = 250ml, glass wine = 150ml, beer = 330ml.
+- Bread: 1 slice = ~35g, 1 bun/broodje = ~50g. "Two sandwiches" (twee boterhammen) = 2 slices.
+- Cheese on bread = ~20g, ham/salami on bread = ~20g per slice.
+- "A bowl of" = ~250-300ml, "a plate of" = standard restaurant portion.
+- When truly ambiguous, pick the most common everyday interpretation.
+
+Include weight estimate in portion description, e.g. "2 slices (~70g)".
 
 JSON: [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
       true
@@ -155,9 +167,18 @@ export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<Food
       POWERFUL_MODEL,
       `You are a precise nutritionist analyzing a food photo.
 
-Identify every food item, drink, sauce, and topping visible. Use the plate, utensils, and packaging for scale to estimate real portion weights. Don't forget sauces, butter, dressing, or drinks.
-For each item: look up accurate macros per 100g, estimate portion weight, then scale.
-Food names in ${langName}.
+IDENTIFICATION:
+- Identify every food item, drink, sauce, and topping visible.
+- Don't forget: sauces, butter, dressing, cooking oil, drinks, sides, garnishes.
+- Combined dishes stay as 1 item (e.g. "broodje kroket", "pasta carbonara").
+
+PORTION ESTIMATION (critical — be realistic):
+- Use plate size, utensils, hands, and packaging for scale.
+- First look up accurate macros per 100g, then estimate portion weight from the photo, then scale.
+- Sauces/condiments if visible but amount unclear: mayo/aioli = 15g, ketchup/mustard = 15g, butter = 10g, olive oil = 10ml, dressing = 25ml, peanut butter = 15g.
+- Drinks if glass/cup visible: coffee = 150ml, juice/soda = 250ml, wine = 150ml, beer = 330ml.
+
+Food names in ${langName}. Include weight estimate in portion description.
 
 JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]`,
       true,
@@ -181,9 +202,18 @@ export const autoTrackDay = async (description: string): Promise<{ items: Omit<F
 
 "${safeInput}"
 
-Figure out what they ate and did. Handle casual speech, any language, typos.
-Combined dishes = 1 item. Use realistic portions. Food names in same language as input.
-Also detect any exercise mentioned (running, gym, cycling, walking, etc.).
+PARSING:
+- Handle casual speech, any language, typos, brand names.
+- Combined dishes = 1 item. Food names in same language as input.
+- Also detect any exercise mentioned (running, gym, cycling, walking, etc.).
+
+PORTION ESTIMATION (critical — be realistic):
+- First look up accurate macros per 100g, then estimate portion weight, then scale.
+- Use context: "kipfilet" on bread = ~30g cold cut; as main dish = ~150g.
+- Sauces/condiments unless specified: mayo = 15g, ketchup = 15g, butter on bread = 10g, peanut butter = 15g.
+- Drinks: coffee/tea = 150ml, juice/soda = 250ml. Bread slice = ~35g.
+- When ambiguous, pick the most common everyday interpretation.
+- Include weight estimate in portion description.
 
 JSON: {"foods":[{"name":"str","portion":"str (~Xg)","cal":N,"p":N,"c":N,"f":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
             true
