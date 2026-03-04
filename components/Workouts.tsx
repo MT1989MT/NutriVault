@@ -270,9 +270,12 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
               </div>
             ))}
           </div>
-          <div className="p-4 bg-white border-t">
-            <button onClick={handleLibraryBuild} disabled={selectedLibraryItems.length === 0} className="w-full bg-[#E07A5F] text-white py-3 rounded-xl font-bold disabled:opacity-40">
-              Create Workout ({selectedLibraryItems.length})
+          <div className="p-4 bg-white border-t flex gap-2">
+            <button onClick={handleLibraryBuild} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-white text-gray-700 py-3 rounded-xl font-bold border border-gray-200 disabled:opacity-40">
+              Edit ({selectedLibraryItems.length})
+            </button>
+            <button onClick={() => { handleLibraryBuild(); startSession(); }} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-[#E07A5F] text-white py-3 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2">
+              <Play className="w-4 h-4 fill-current" /> Start ({selectedLibraryItems.length})
             </button>
           </div>
         </div>
