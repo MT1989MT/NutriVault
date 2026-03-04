@@ -7,8 +7,8 @@
  * npm install @revenuecat/purchases-capacitor @revenuecat/purchases-capacitor-ui
  */
 
-// RevenueCat Configuration - use env var in production
-const REVENUECAT_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_REVENUECAT_API_KEY) || 'test_lbinfjvpnZmfOIArXwNBtKHmonX';
+// RevenueCat Configuration - requires env var, no hardcoded fallback
+const REVENUECAT_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_REVENUECAT_API_KEY) || '';
 
 // Entitlement identifier (zoals in RevenueCat dashboard)
 const ENTITLEMENT_ID = 'NutriVault';
@@ -41,7 +41,7 @@ const getRevenueCatModules = async () => {
 
 // Check if RevenueCat is configured
 export const isRevenueCatConfigured = (): boolean => {
-  return !REVENUECAT_API_KEY.includes('YOUR_REVENUECAT') && isNativePlatform();
+  return !!REVENUECAT_API_KEY && isNativePlatform();
 };
 
 /**

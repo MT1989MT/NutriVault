@@ -62,7 +62,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
       const carbs = items.reduce((s, i) => s + i.carbs, 0);
       const fat = items.reduce((s, i) => s + i.fat, 0);
       const dayWorkouts = log?.workouts || [];
-      const burned = dayWorkouts.reduce((s, w) => s + (w.durationMinutes * (w.elevatedHeartRate ? 8 : 5)), 0);
+      const weightFactor = (profile?.weightKg || 75) / 75; // Scale relative to 75kg reference
+      const burned = dayWorkouts.reduce((s, w) => s + Math.round(w.durationMinutes * (w.elevatedHeartRate ? 8 : 5) * weightFactor), 0);
       const isToday = date === new Date().toISOString().split('T')[0];
       const d = new Date(date);
       return { date, eaten, burned, protein, carbs, fat, isToday, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };

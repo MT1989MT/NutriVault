@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, newExpiry }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
-    console.error('extend-subscription error:', error.message)
+  } catch (error: unknown) {
+    console.error('extend-subscription error:', error instanceof Error ? error.message : error)
     return new Response(
       JSON.stringify({ success: false, error: 'Extension failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -71,18 +71,19 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handleClearData = () => {
-    if (confirm("This will delete all your nutrition data (logs, recipes, etc). Your account key will still work. Are you sure?")) {
-      const session = localStorage.getItem('nutrivault_auth_session');
-      const serverDb = localStorage.getItem('nutrivault_server_db_hashes');
-      const onboarding = localStorage.getItem('nutrivault_onboarding_complete');
-      const lang = localStorage.getItem('nutrivault_language');
-      localStorage.clear();
-      if (session) localStorage.setItem('nutrivault_auth_session', session);
-      if (serverDb) localStorage.setItem('nutrivault_server_db_hashes', serverDb);
-      if (onboarding) localStorage.setItem('nutrivault_onboarding_complete', onboarding);
-      if (lang) localStorage.setItem('nutrivault_language', lang);
-      window.location.reload();
-    }
+    if (!confirm("This will delete all your nutrition data (logs, recipes, etc). Your account key will still work. Are you sure?")) return;
+    if (!confirm("This action cannot be undone. All food logs, workouts, and recipes will be permanently deleted. Continue?")) return;
+
+    const session = localStorage.getItem('nutrivault_auth_session');
+    const serverDb = localStorage.getItem('nutrivault_server_db_hashes');
+    const onboarding = localStorage.getItem('nutrivault_onboarding_complete');
+    const lang = localStorage.getItem('nutrivault_language');
+    localStorage.clear();
+    if (session) localStorage.setItem('nutrivault_auth_session', session);
+    if (serverDb) localStorage.setItem('nutrivault_server_db_hashes', serverDb);
+    if (onboarding) localStorage.setItem('nutrivault_onboarding_complete', onboarding);
+    if (lang) localStorage.setItem('nutrivault_language', lang);
+    window.location.reload();
   };
 
   return (

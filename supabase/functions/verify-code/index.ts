@@ -102,8 +102,8 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
-    console.error('verify-code error:', error.message)
+  } catch (error: unknown) {
+    console.error('verify-code error:', error instanceof Error ? error.message : error)
     return new Response(
       JSON.stringify({ success: false, error: 'Verification failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
