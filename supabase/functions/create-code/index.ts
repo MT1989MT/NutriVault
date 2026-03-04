@@ -10,15 +10,24 @@ const corsHeaders = {
 }
 
 // Food-themed display name generators
+// 40 adjectives x 50 foods = 2000 unique combinations
 const ADJECTIVES = [
   'Fresh', 'Golden', 'Spicy', 'Sweet', 'Crispy', 'Roasted', 'Juicy', 'Ripe',
   'Savory', 'Zesty', 'Smoky', 'Tangy', 'Creamy', 'Crunchy', 'Toasted',
-  'Glazed', 'Seared', 'Grilled', 'Minty', 'Nutty'
+  'Glazed', 'Seared', 'Grilled', 'Minty', 'Nutty', 'Buttery', 'Pickled',
+  'Steamed', 'Braised', 'Candied', 'Peppered', 'Herbed', 'Smoked', 'Charred',
+  'Whipped', 'Silky', 'Velvet', 'Honey', 'Maple', 'Truffle', 'Rustic',
+  'Wild', 'Organic', 'Toasty', 'Bitter'
 ]
 const FOODS = [
   'Avocado', 'Mango', 'Coconut', 'Papaya', 'Walnut', 'Pistachio', 'Acai',
-  'Quinoa', 'Truffle', 'Saffron', 'Ginger', 'Wasabi', 'Matcha', 'Cacao',
-  'Tahini', 'Kimchi', 'Kombucha', 'Tempeh', 'Arugula', 'Dragonfruit'
+  'Quinoa', 'Saffron', 'Ginger', 'Wasabi', 'Matcha', 'Cacao', 'Tahini',
+  'Kimchi', 'Kombucha', 'Tempeh', 'Arugula', 'Dragonfruit', 'Turmeric',
+  'Cardamom', 'Cinnamon', 'Vanilla', 'Hazelnut', 'Almond', 'Cashew',
+  'Pistachio', 'Macadamia', 'Pecan', 'Blueberry', 'Raspberry', 'Pomegranate',
+  'Passionfruit', 'Lychee', 'Guava', 'Starfruit', 'Tamarind', 'Edamame',
+  'Brioche', 'Focaccia', 'Pesto', 'Risotto', 'Burrata', 'Halloumi',
+  'Mochi', 'Granola', 'Churro', 'Croissant', 'Biscotti', 'Tiramisu'
 ]
 
 async function hashCode(code: string): Promise<string> {
