@@ -161,10 +161,20 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
     setManualType(''); setManualDuration(''); showFeedback("Logged!");
   };
 
-  const handleLibraryBuild = () => {
+  const buildLibrarySuggestion = () => {
     const selectedEx = STANDARD_LIBRARY.flatMap(cat => cat.exercises).filter(ex => selectedLibraryItems.includes(ex.name));
-    setSuggestion({ title: "Custom Session", duration: genDuration, focus: "Custom", warmup: [], exercises: selectedEx.map(ex => ({ name: ex.name, sets: "3", reps: "12", instructions: ex.instructions })) });
+    return { title: "Custom Session", duration: genDuration, focus: "Custom", warmup: [] as string[], exercises: selectedEx.map(ex => ({ name: ex.name, sets: "3", reps: "12", instructions: ex.instructions })) };
+  };
+
+  const handleLibraryBuild = () => {
+    setSuggestion(buildLibrarySuggestion());
     setShowLibrary(false); setShowGenerator(true); setSelectedLibraryItems([]);
+  };
+
+  const handleLibraryStart = () => {
+    setSuggestion(buildLibrarySuggestion());
+    setShowLibrary(false); setShowGenerator(true); setSelectedLibraryItems([]);
+    setIsSessionActive(true); setSessionState('PREP'); setTimer(5); setElapsed(0); setExerciseIdx(0); setSetNum(1);
   };
 
   const saveEditDay = () => {
@@ -270,13 +280,15 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
               </div>
             ))}
           </div>
-          <div className="shrink-0 p-4 bg-white border-t flex gap-2" style={{paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
-            <button onClick={handleLibraryBuild} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-white text-gray-700 py-3 rounded-xl font-bold border border-gray-200 disabled:opacity-40">
-              Edit ({selectedLibraryItems.length})
-            </button>
-            <button onClick={() => { handleLibraryBuild(); startSession(); }} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-[#E07A5F] text-white py-3 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2">
-              <Play className="w-4 h-4 fill-current" /> Start ({selectedLibraryItems.length})
-            </button>
+          <div className="bg-white border-t px-4 pt-3" style={{paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)'}}>
+            <div className="flex gap-2">
+              <button onClick={handleLibraryBuild} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-white text-gray-700 py-3.5 rounded-xl font-bold border border-gray-200 disabled:opacity-40">
+                Edit ({selectedLibraryItems.length})
+              </button>
+              <button onClick={handleLibraryStart} disabled={selectedLibraryItems.length === 0} className="flex-1 bg-[#E07A5F] text-white py-3.5 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/20">
+                <Play className="w-4 h-4 fill-current" /> Start ({selectedLibraryItems.length})
+              </button>
+            </div>
           </div>
         </div>
       )}
