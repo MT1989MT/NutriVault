@@ -32,10 +32,18 @@ export const getLogs = (): Record<string, DayLog> => {
   try { return JSON.parse(localStorage.getItem(LOGS_KEY) || '{}'); } catch { return {}; }
 };
 
-export const addFoodToLog = (date: string, item: any) => {
+export const addFoodToLog = (date: string, item: FoodItem) => {
   const logs = getLogs();
   if (!logs[date]) logs[date] = { date, items: [] };
   logs[date].items.push(item);
+  saveLogs(logs);
+  return logs;
+};
+
+export const addFoodsToLog = (date: string, items: FoodItem[]) => {
+  const logs = getLogs();
+  if (!logs[date]) logs[date] = { date, items: [] };
+  logs[date].items.push(...items);
   saveLogs(logs);
   return logs;
 };
@@ -297,12 +305,15 @@ export const importAllData = (jsonString: string): { success: boolean; error?: s
     if (!data._exportVersion || typeof data._exportVersion !== 'number') {
       return { success: false, error: 'Invalid backup file format' };
     }
-    // Only import known keys, validate each is a string
+    // Only import known keys, validate each is a string with valid JSON
     ALL_KEYS.forEach(key => {
       if (data[key] && typeof data[key] === 'string') {
-        // Validate it's parseable JSON before storing
-        try { JSON.parse(data[key]); } catch { return; }
-        safeSetItem(key, data[key]);
+        try {
+          JSON.parse(data[key]);
+          safeSetItem(key, data[key]);
+        } catch {
+          // Skip keys with invalid JSON
+        }
       }
     });
     return { success: true };

@@ -26,51 +26,65 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
     }
 };
 
-// API base URL
-// - Web (Vercel): empty string → relative URL "/api/gemini" → same-origin, no CORS
-// - Native (Capacitor): full URL since there's no local API server
-// - Explicit env var overrides everything
-const API_BASE_URL = (() => {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  if (typeof window !== 'undefined' && ((window as any).Capacitor?.isNativePlatform?.() || window.location?.protocol === 'capacitor:')) {
-    return 'https://nutrivault-seven.vercel.app';
-  }
-  return '';
-})();
+import { API_BASE_URL } from './config';
 
-// Call our secure API route (API key stays server-side)
+// Call our secure API route (API key stays server-side) with retry logic
 const callGemini = async (model: string, prompt: string, jsonMode: boolean = false, imageBase64?: string): Promise<string> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  try {
-    const body: any = { model, prompt, jsonMode };
-    if (imageBase64) body.imageBase64 = imageBase64;
+  const MAX_RETRIES = 2;
+  let lastError: Error | null = null;
 
-    const response = await fetch(`${API_BASE_URL}/api/gemini`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      const body: Record<string, unknown> = { model, prompt, jsonMode };
+      if (imageBase64) body.imageBase64 = imageBase64;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      const response = await fetch(`${API_BASE_URL}/api/gemini`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.error || `API error: ${response.status}`);
+        // Don't retry on client errors (400-level) except 429
+        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          throw error;
+        }
+        lastError = error;
+        clearTimeout(timeout);
+        if (attempt < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        throw error;
+      }
+
+      const data = await response.json();
+      return data.text || "";
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        lastError = new Error('Request timed out. Please try again.');
+        if (attempt < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+      }
+      if (attempt === MAX_RETRIES) {
+        console.error('[callGemini] all retries failed:', error?.message || 'unknown');
+        throw lastError || error;
+      }
+      lastError = error;
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = await response.json();
-    return data.text || "";
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please try again.');
-    }
-    console.error('[callGemini] fetch failed:', error?.message || error?.toString?.() || 'unknown', 'URL:', `${API_BASE_URL}/api/gemini`);
-    throw error;
-  } finally {
-    clearTimeout(timeout);
   }
+  throw lastError || new Error('Request failed');
 };
 
 // Shared response parser for food items from AI
