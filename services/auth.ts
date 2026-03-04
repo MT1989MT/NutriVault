@@ -17,6 +17,7 @@ interface Session {
   subscriptionEnds: number;
   name?: string;
   expiry: number;
+  createdAt?: number; // When session was first created (for max lifetime check)
 }
 
 // Mock database account interface
@@ -27,9 +28,17 @@ interface MockAccount {
   name?: string;
 }
 
-// Display name generators
-const COLORS = ['Green', 'Red', 'Blue', 'Gold', 'Silver', 'Black', 'White', 'Neon', 'Cosmic', 'Solar'];
-const NOUNS = ['Apple', 'Falcon', 'River', 'Mountain', 'Tiger', 'Storm', 'Wolf', 'Ocean', 'Phoenix', 'Dragon'];
+// Food-themed display name generators (unique per account)
+const ADJECTIVES = [
+  'Fresh', 'Golden', 'Spicy', 'Sweet', 'Crispy', 'Roasted', 'Juicy', 'Ripe',
+  'Savory', 'Zesty', 'Smoky', 'Tangy', 'Creamy', 'Crunchy', 'Toasted',
+  'Glazed', 'Seared', 'Grilled', 'Minty', 'Nutty'
+];
+const FOODS = [
+  'Avocado', 'Mango', 'Coconut', 'Papaya', 'Walnut', 'Pistachio', 'Acai',
+  'Quinoa', 'Truffle', 'Saffron', 'Ginger', 'Wasabi', 'Matcha', 'Cacao',
+  'Tahini', 'Kimchi', 'Kombucha', 'Tempeh', 'Arugula', 'Dragonfruit'
+];
 
 // Hash function - requires Web Crypto API (available in all modern browsers and Capacitor)
 const hashKey = async (key: string): Promise<string> => {
@@ -61,9 +70,23 @@ export const createAccount = async (): Promise<{ key: string; name: string }> =>
   const dbStr = localStorage.getItem(MOCK_DB_KEY);
   const db: MockAccount[] = dbStr ? JSON.parse(dbStr) : [];
 
-  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const name = `${color} ${noun}`;
+  // Generate unique food-themed name
+  const existingNames = new Set(db.map(acc => acc.name));
+  let name = '';
+  for (let i = 0; i < 20; i++) {
+    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const food = FOODS[Math.floor(Math.random() * FOODS.length)];
+    const candidate = `${adj} ${food}`;
+    if (!existingNames.has(candidate)) {
+      name = candidate;
+      break;
+    }
+  }
+  if (!name) {
+    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const food = FOODS[Math.floor(Math.random() * FOODS.length)];
+    name = `${adj} ${food} ${Math.floor(Math.random() * 100)}`;
+  }
 
   db.push({
     hashedKey: hashed,
@@ -154,7 +177,8 @@ export const saveSession = (key: string, token: string, expiry: number, name?: s
     token,
     subscriptionEnds: expiry,
     name,
-    expiry: Date.now() + (1000 * 60 * 60 * 24) // Session valid for 24 hours
+    expiry: Date.now() + (1000 * 60 * 60 * 24), // Session valid for 24 hours
+    createdAt: Date.now()
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 };
@@ -170,10 +194,17 @@ export const getSession = (): Session | null => {
 
     const session: Session = JSON.parse(str);
 
-    // Session token expired - but keep data accessible
-    // Just refresh the session token (not subscription)
+    // Max session lifetime: 7 days without re-login
+    const maxLifetime = 1000 * 60 * 60 * 24 * 7; // 7 days
+    const sessionAge = Date.now() - (session.createdAt || 0);
+    if (session.createdAt && sessionAge > maxLifetime) {
+      // Session too old - require re-verification
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+
+    // Session token expired within 7-day window - refresh it
     if (Date.now() > session.expiry) {
-      // Extend session token but keep original subscription end date
       session.expiry = Date.now() + (1000 * 60 * 60 * 24); // 24 hours
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     }

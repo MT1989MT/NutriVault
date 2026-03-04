@@ -9,8 +9,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-edge-secret',
 }
 
-const COLORS = ['Green', 'Red', 'Blue', 'Gold', 'Silver', 'Black', 'White', 'Neon', 'Cosmic', 'Solar']
-const NOUNS = ['Apple', 'Falcon', 'River', 'Mountain', 'Tiger', 'Storm', 'Wolf', 'Ocean', 'Phoenix', 'Dragon']
+// Food-themed display name generators
+const ADJECTIVES = [
+  'Fresh', 'Golden', 'Spicy', 'Sweet', 'Crispy', 'Roasted', 'Juicy', 'Ripe',
+  'Savory', 'Zesty', 'Smoky', 'Tangy', 'Creamy', 'Crunchy', 'Toasted',
+  'Glazed', 'Seared', 'Grilled', 'Minty', 'Nutty'
+]
+const FOODS = [
+  'Avocado', 'Mango', 'Coconut', 'Papaya', 'Walnut', 'Pistachio', 'Acai',
+  'Quinoa', 'Truffle', 'Saffron', 'Ginger', 'Wasabi', 'Matcha', 'Cacao',
+  'Tahini', 'Kimchi', 'Kombucha', 'Tempeh', 'Arugula', 'Dragonfruit'
+]
 
 async function hashCode(code: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(code)
@@ -77,10 +86,30 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Generate display name
-    const color = COLORS[Math.floor(Math.random() * COLORS.length)]
-    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)]
-    const displayName = `${color} ${noun}`
+    // Generate unique food-themed display name
+    let displayName = ''
+    for (let i = 0; i < 20; i++) {
+      const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
+      const food = FOODS[Math.floor(Math.random() * FOODS.length)]
+      const candidate = `${adj} ${food}`
+
+      const { data: nameExists } = await supabase
+        .from('activation_codes')
+        .select('id')
+        .eq('display_name', candidate)
+        .limit(1)
+
+      if (!nameExists || nameExists.length === 0) {
+        displayName = candidate
+        break
+      }
+    }
+    if (!displayName) {
+      // Fallback: append random number for guaranteed uniqueness
+      const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
+      const food = FOODS[Math.floor(Math.random() * FOODS.length)]
+      displayName = `${adj} ${food} ${Math.floor(Math.random() * 1000)}`
+    }
 
     // 30 days from now
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -103,8 +132,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ code, name: displayName }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
-    console.error('create-code error:', error.message)
+  } catch (error: unknown) {
+    console.error('create-code error:', error instanceof Error ? error.message : error)
     return new Response(
       JSON.stringify({ error: 'Failed to create code' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
