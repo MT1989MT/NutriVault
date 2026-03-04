@@ -254,12 +254,12 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
 
       {/* Library Modal */}
       {showLibrary && (
-        <div className="fixed inset-0 z-[100] bg-[#FAFAF8] flex flex-col">
-          <div className="px-4 py-3 bg-white border-b flex justify-between items-center" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-[#FAFAF8] flex flex-col" style={{height: '100dvh'}}>
+          <div className="shrink-0 px-4 py-3 bg-white border-b flex justify-between items-center" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
             <h2 className="font-bold">Exercise Library ({selectedLibraryItems.length}/25)</h2>
             <button onClick={() => setShowLibrary(false)} className="p-2"><X className="w-5 h-5" /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {STANDARD_LIBRARY.map((cat, i) => (
               <div key={i}>
                 <h3 className="text-[10px] font-bold text-[#E07A5F] uppercase mb-2">{cat.category}</h3>
@@ -295,13 +295,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
 
       {/* Session/Generator Modal */}
       {(isSessionActive || showGenerator) && (
-        <div className="fixed inset-0 z-[100] bg-[#1A1C1E] text-white flex flex-col">
-          <div className="flex justify-between items-center p-4 border-b border-white/10" style={{paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)'}}>
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-[#1A1C1E] text-white flex flex-col" style={{height: '100dvh'}}>
+          <div className="shrink-0 flex justify-between items-center p-4 border-b border-white/10" style={{paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)'}}>
             {isSessionActive ? <div className="font-mono text-xl font-bold">{Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}</div> : <h2 className="font-bold">{suggestion?.title || "New Workout"}</h2>}
             <button onClick={() => { setIsSessionActive(false); setShowGenerator(false); setSuggestion(null); }} className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col items-center justify-center" style={{paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
             {!isSessionActive ? (
               suggestion ? (
                 <div className="w-full max-w-md">
