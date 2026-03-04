@@ -13,17 +13,7 @@
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
-// API base URL for Vercel proxy routes (same logic as gemini service)
-// Empty string = relative URL = same-origin on Vercel, proxied in dev
-const API_BASE_URL = (() => {
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  if (typeof window !== 'undefined' && ((window as any).Capacitor?.isNativePlatform?.() || window.location?.protocol === 'capacitor:')) {
-    return 'https://nutrivault-seven.vercel.app';
-  }
-  return '';
-})();
+import { API_BASE_URL } from './config';
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {

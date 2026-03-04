@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FoodItem, UserProfile, WorkoutLog } from './types';
-import { getProfile, saveProfile, getLogs, addFoodToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake } from './services/storage';
+import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake } from './services/storage';
 import { getSession } from './services/auth';
 import { initializePurchases } from './services/payments';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [logs, setLogs] = useState({});
+  const [logs, setLogs] = useState<Record<string, import('./types').DayLog>>({});
   const [currentView, setCurrentView] = useState<View>('DASHBOARD');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -48,7 +48,7 @@ const App: React.FC = () => {
   };
   const handleAddItems = (items: FoodItem[], date?: string) => {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    items.forEach(i => addFoodToLog(targetDate, i));
+    addFoodsToLog(targetDate, items);
     setLogs(getLogs());
   };
   const handleRemoveItem = (item: FoodItem, date?: string) => {
@@ -75,27 +75,41 @@ const App: React.FC = () => {
       <div className="h-full w-full bg-[#FAFAF8] text-slate-900 font-sans overflow-hidden">
         <div className="mx-auto max-w-lg h-full relative bg-[#FAFAF8] flex flex-col">
           <div className="flex-1 overflow-hidden relative">
-            <div className={`absolute inset-0 ${currentView === 'DASHBOARD' ? 'z-10' : 'z-0 hidden'}`}>
-              <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={() => setCurrentView('SETTINGS')} onCoachClick={() => setCurrentView('COACH')} isActive={currentView === 'DASHBOARD'} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'WORKOUTS' ? 'z-10' : 'z-0 hidden'}`}>
-              <Workouts logs={logs} onAddWorkout={handleAddWorkout} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'RECIPES' ? 'z-10' : 'z-0 hidden'}`}>
-              <Recipes onLogRecipe={handleAddItems} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'HISTORY' ? 'z-10' : 'z-0 hidden'}`}>
-              <History logs={logs} profile={profile} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'PROFILE' ? 'z-10' : 'z-0 hidden'}`}>
-              <Profile existingProfile={profile} onSave={handleSaveProfile} onCancel={() => setCurrentView('DASHBOARD')} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'SETTINGS' ? 'z-10' : 'z-0 hidden'}`}>
-              <Settings onBack={() => setCurrentView('DASHBOARD')} />
-            </div>
-            <div className={`absolute inset-0 ${currentView === 'COACH' ? 'z-10' : 'z-0 hidden'}`}>
-              <Motivation onBack={() => setCurrentView('DASHBOARD')} logs={logs} profile={profile} />
-            </div>
+            {currentView === 'DASHBOARD' && (
+              <div className="absolute inset-0 z-10">
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={() => setCurrentView('SETTINGS')} onCoachClick={() => setCurrentView('COACH')} isActive={currentView === 'DASHBOARD'} />
+              </div>
+            )}
+            {currentView === 'WORKOUTS' && (
+              <div className="absolute inset-0 z-10">
+                <Workouts logs={logs} onAddWorkout={handleAddWorkout} />
+              </div>
+            )}
+            {currentView === 'RECIPES' && (
+              <div className="absolute inset-0 z-10">
+                <Recipes onLogRecipe={handleAddItems} />
+              </div>
+            )}
+            {currentView === 'HISTORY' && (
+              <div className="absolute inset-0 z-10">
+                <History logs={logs} profile={profile} />
+              </div>
+            )}
+            {currentView === 'PROFILE' && (
+              <div className="absolute inset-0 z-10">
+                <Profile existingProfile={profile} onSave={handleSaveProfile} onCancel={() => setCurrentView('DASHBOARD')} />
+              </div>
+            )}
+            {currentView === 'SETTINGS' && (
+              <div className="absolute inset-0 z-10">
+                <Settings onBack={() => setCurrentView('DASHBOARD')} />
+              </div>
+            )}
+            {currentView === 'COACH' && (
+              <div className="absolute inset-0 z-10">
+                <Motivation onBack={() => setCurrentView('DASHBOARD')} logs={logs} profile={profile} />
+              </div>
+            )}
           </div>
           {currentView !== 'SETTINGS' && currentView !== 'COACH' && <Navigation currentView={currentView} onChange={setCurrentView} />}
         </div>
