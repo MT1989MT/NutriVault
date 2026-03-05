@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { ActivityLevel, Gender, UserProfile } from '../types';
 import { calculateBMR, calculateTDEE } from '../utils/calculations';
 import { User, Flame, X, Check, HelpCircle } from 'lucide-react';
@@ -17,21 +17,57 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
     quickLog: false, ignoreWorkoutCalories: true, mentalConditions: [], habits: [], dietaryPreferences: []
   });
 
+  // Use string state for numeric fields to avoid lag from Number() conversion on every keystroke
+  const [ageStr, setAgeStr] = useState(existingProfile?.age?.toString() || '');
+  const [heightStr, setHeightStr] = useState(existingProfile?.heightCm?.toString() || '');
+  const [weightStr, setWeightStr] = useState(existingProfile?.weightKg?.toString() || '');
+  const [targetWeightStr, setTargetWeightStr] = useState(existingProfile?.targetWeightKg?.toString() || '');
+  const [customCalStr, setCustomCalStr] = useState(existingProfile?.customCalories?.toString() || '');
+
+  const formRef = useRef<HTMLFormElement>(null);
   const [showHelp, setShowHelp] = useState(false);
 
+  // Sync numeric values to formData on blur (not on every keystroke)
+  const syncNumericField = useCallback((field: string, value: string) => {
+    const num = Number(value) || undefined;
+    setFormData(prev => ({ ...prev, [field]: num }));
+  }, []);
+
+  // Scroll focused input into view when iOS keyboard opens
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
+
   const dynamicTDEE = useMemo(() => {
-    if (formData.weightKg && formData.heightCm && formData.age) {
-      const bmr = calculateBMR(Number(formData.weightKg), Number(formData.heightCm), Number(formData.age), formData.gender || Gender.MALE);
+    const w = Number(weightStr) || 0;
+    const h = Number(heightStr) || 0;
+    const a = Number(ageStr) || 0;
+    if (w && h && a) {
+      const bmr = calculateBMR(w, h, a, formData.gender || Gender.MALE);
       return calculateTDEE(bmr, formData.activityLevel || ActivityLevel.SEDENTARY, formData.goal || 'MAINTAIN');
     }
     return 0;
-  }, [formData]);
+  }, [weightStr, heightStr, ageStr, formData.gender, formData.activityLevel, formData.goal]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.weightKg && formData.heightCm && formData.age) {
-      const bmr = calculateBMR(Number(formData.weightKg), Number(formData.heightCm), Number(formData.age), formData.gender || Gender.MALE);
-      onSave({ ...formData, tdee: calculateTDEE(bmr, formData.activityLevel!, formData.goal!) } as UserProfile);
+    const w = Number(weightStr) || 0;
+    const h = Number(heightStr) || 0;
+    const a = Number(ageStr) || 0;
+    if (w && h && a) {
+      const bmr = calculateBMR(w, h, a, formData.gender || Gender.MALE);
+      const finalData = {
+        ...formData,
+        age: a,
+        heightCm: h,
+        weightKg: w,
+        targetWeightKg: Number(targetWeightStr) || undefined,
+        customCalories: Number(customCalStr) || undefined,
+        tdee: calculateTDEE(bmr, formData.activityLevel!, formData.goal!),
+      };
+      onSave(finalData as UserProfile);
     }
   };
 
@@ -49,18 +85,18 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pt-3 space-y-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+      <form ref={formRef} onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pt-3 space-y-3" style={{ paddingBottom: 'calc(260px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Name */}
         <div className="bg-white p-2.5 rounded-xl shadow-sm">
           <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{t('nickname')}</label>
-          <input type="text" className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm" placeholder={t('yourName')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          <input type="text" className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm" placeholder={t('yourName')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} onFocus={handleInputFocus} />
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-4 gap-1.5">
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">{t('age')}</label>
-            <input type="number" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={formData.age || ''} onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })} />
+            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={ageStr} onChange={(e) => setAgeStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('age', ageStr)} onFocus={handleInputFocus} />
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">{t('sex')}</label>
@@ -71,11 +107,11 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">cm</label>
-            <input type="number" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={formData.heightCm || ''} onChange={(e) => setFormData({ ...formData, heightCm: Number(e.target.value) })} />
+            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={heightStr} onChange={(e) => setHeightStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('heightCm', heightStr)} onFocus={handleInputFocus} />
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">kg</label>
-            <input type="number" inputMode="decimal" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={formData.weightKg || ''} onChange={(e) => setFormData({ ...formData, weightKg: Number(e.target.value) })} />
+            <input type="text" inputMode="decimal" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={weightStr} onChange={(e) => setWeightStr(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => syncNumericField('weightKg', weightStr)} onFocus={handleInputFocus} />
           </div>
         </div>
 
@@ -84,13 +120,14 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
           <div className="bg-white p-2.5 rounded-xl shadow-sm">
             <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{t('targetWeight') || 'Target Weight'} (kg)</label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.1"
-              placeholder={formData.goal === 'LOSE' ? String((formData.weightKg || 70) - 5) : String((formData.weightKg || 70) + 5)}
+              placeholder={formData.goal === 'LOSE' ? String((Number(weightStr) || 70) - 5) : String((Number(weightStr) || 70) + 5)}
               className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm"
-              value={formData.targetWeightKg || ''}
-              onChange={(e) => setFormData({ ...formData, targetWeightKg: Number(e.target.value) || undefined })}
+              value={targetWeightStr}
+              onChange={(e) => setTargetWeightStr(e.target.value.replace(/[^0-9.]/g, ''))}
+              onBlur={() => syncNumericField('targetWeightKg', targetWeightStr)}
+              onFocus={handleInputFocus}
             />
           </div>
         )}
@@ -149,14 +186,17 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
 
         {/* Calories Row */}
         <div className="grid grid-cols-2 gap-1.5">
-          <div className={`bg-white p-2.5 rounded-xl shadow-sm ${formData.customCalories ? 'ring-1 ring-[#E07A5F]' : ''}`}>
+          <div className={`bg-white p-2.5 rounded-xl shadow-sm ${customCalStr ? 'ring-1 ring-[#E07A5F]' : ''}`}>
             <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{t('targetKcal')}</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder={dynamicTDEE > 0 ? String(dynamicTDEE) : t('auto')}
               className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm"
-              value={formData.customCalories || ''}
-              onChange={(e) => setFormData({ ...formData, customCalories: Number(e.target.value) || undefined })}
+              value={customCalStr}
+              onChange={(e) => setCustomCalStr(e.target.value.replace(/[^0-9]/g, ''))}
+              onBlur={() => syncNumericField('customCalories', customCalStr)}
+              onFocus={handleInputFocus}
             />
           </div>
           <button
@@ -173,7 +213,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
         </div>
 
         {/* Calculated TDEE Display */}
-        {dynamicTDEE > 0 && !formData.customCalories && (
+        {dynamicTDEE > 0 && !customCalStr && (
           <div className="bg-gradient-to-r from-[#E07A5F]/10 to-[#C85A40]/10 p-3 rounded-xl flex items-center justify-between">
             <span className="text-xs text-gray-600 font-medium">{t('targetKcal')}</span>
             <span className="text-lg font-black text-[#E07A5F]">{dynamicTDEE} kcal</span>
