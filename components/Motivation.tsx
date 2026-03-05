@@ -89,9 +89,10 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
       loadedMessages.push({ id: m.id + '_ai', text: m.advice, sender: 'AI', timestamp: m.timestamp + 1 });
     });
     if (loadedMessages.length === 0) {
+      const name = profile?.name || '';
       const greeting = userStats.todayCalories > 0
-        ? `Hey! I see you've logged ${userStats.todayCalories} kcal today. I'm your personal coach - ask me anything about your nutrition, workouts, or goals!`
-        : "Hey! I'm your personal AI coach. I can see your food logs, workouts, and progress. Ask me anything!";
+        ? `Hey${name ? ' ' + name : ''}! ${userStats.todayCalories} kcal so far today - how's your day going?`
+        : `Hey${name ? ' ' + name : ''}! What's up? Tell me about your day or ask me anything.`;
       loadedMessages.push({ id: 'init', text: greeting, sender: 'AI', timestamp: Date.now() });
     }
     setMessages(loadedMessages.sort((a, b) => a.timestamp - b.timestamp));
@@ -175,7 +176,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     localStorage.removeItem('nutrivault_moods');
     setMessages([{
       id: 'init',
-      text: "Hey! I'm your personal coach. I can see all your logs and progress. Ask me anything!",
+      text: `Hey${profile?.name ? ' ' + profile.name : ''}! Fresh start. What's on your mind?`,
       sender: 'AI',
       timestamp: Date.now()
     }]);

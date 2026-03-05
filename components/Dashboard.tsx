@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
-import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp } from 'lucide-react';
+import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp } from 'lucide-react';
 import { parseFoodInput } from '../services/gemini';
 import { getWorkouts, toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
@@ -14,11 +14,10 @@ interface DashboardProps {
   onRemoveItem: (item: FoodItem, date?: string) => void;
   onWaterUpdate?: (date: string, ml: number) => void;
   onSettingsClick: () => void;
-  onCoachClick?: () => void;
   isActive?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, isActive = true }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, isActive = true }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const todayDate = new Date().toISOString().split('T')[0];
   const dayLog = logs[selectedDate] || { date: selectedDate, items: [] };
@@ -867,17 +866,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             </div>
           </div>
         </div>
-      )}
-
-      {/* Coach FAB - only visible when Dashboard is active */}
-      {isActive && onCoachClick && (
-        <button
-          onClick={onCoachClick}
-          className="fixed right-5 w-12 h-12 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl shadow-lg shadow-[#E07A5F]/25 flex items-center justify-center z-40 active:scale-90 transition-smooth"
-          style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <Brain className="w-5 h-5 text-white" />
-        </button>
       )}
 
       {/* Hidden file input */}
