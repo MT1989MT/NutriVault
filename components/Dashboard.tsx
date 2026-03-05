@@ -30,7 +30,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const [editGrams, setEditGrams] = useState('');
   const [editUnit, setEditUnit] = useState<'multiplier' | 'grams' | 'pieces'>('multiplier');
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
-  const [instantLog, setInstantLog] = useState(profile.quickLog ?? true);
   const [activeCalories, setActiveCalories] = useState(0);
   const [showAbout, setShowAbout] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
@@ -138,16 +137,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
         alert("Could not identify any food items. Please try again with more detail.");
         return;
       }
-      const itemsWithMeta = result.map(i => ({ ...i, id: generateId(), mealType: selectedMealType, timestamp: Date.now(), source: 'AI_LOG' as const, ...(photoPreview ? { photoUri: photoPreview } : {}) }));
-      if (instantLog) {
-        onItemsAdded(itemsWithMeta, selectedDate);
-        itemsWithMeta.forEach(item => { addToRecentFoods(item); trackFoodFrequency(item); });
-        setRecentFoods(getRecentFoods());
-        setMostUsedFoods(getMostUsedFoods());
-        setSelectedMealType(null);
-      } else {
-        setAnalyzedItems(result);
-      }
+      // Always show review modal so user can adjust individual items before logging
+      setAnalyzedItems(result);
       setInput('');
       setPhotoPreview(null);
     } catch (err: any) {
@@ -816,8 +807,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       {analyzedItems && selectedMealType && (
         <AnalysisModal
           items={analyzedItems}
-          onConfirm={() => {
-            const itemsToAdd = analyzedItems.map(i => ({ ...i, id: generateId(), mealType: selectedMealType, timestamp: Date.now(), source: 'AI_LOG' as const, ...(photoPreview ? { photoUri: photoPreview } : {}) }));
+          onConfirm={(editedItems) => {
+            const itemsToAdd = editedItems.map(i => ({ ...i, id: generateId(), mealType: selectedMealType, timestamp: Date.now(), source: 'AI_LOG' as const, ...(photoPreview ? { photoUri: photoPreview } : {}) }));
             onItemsAdded(itemsToAdd, selectedDate);
             itemsToAdd.forEach(item => { addToRecentFoods(item); trackFoodFrequency(item); });
             setRecentFoods(getRecentFoods());

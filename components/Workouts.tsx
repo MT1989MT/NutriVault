@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Info } from 'lucide-react';
 import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine } from '../services/storage';
 import { getWorkoutSuggestion, generateTrainingPlan } from '../services/gemini';
@@ -253,8 +254,8 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
       )}
 
       {/* Library Modal */}
-      {showLibrary && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-[#FAFAF8] flex flex-col" style={{height: '100dvh'}}>
+      {showLibrary && createPortal(
+        <div className="fixed inset-0 z-[100] bg-[#FAFAF8] flex flex-col">
           <div className="shrink-0 px-4 py-3 bg-white border-b flex justify-between items-center" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
             <h2 className="font-bold">Exercise Library ({selectedLibraryItems.length}/25)</h2>
             <button onClick={() => setShowLibrary(false)} className="p-2"><X className="w-5 h-5" /></button>
@@ -288,11 +289,11 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
             </div>
           )}
         </div>
-      )}
+      , document.body)}
 
       {/* Session/Generator Modal */}
-      {(isSessionActive || showGenerator) && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-[#1A1C1E] text-white flex flex-col" style={{height: '100dvh'}}>
+      {(isSessionActive || showGenerator) && createPortal(
+        <div className="fixed inset-0 z-[100] bg-[#1A1C1E] text-white flex flex-col">
           <div className="shrink-0 flex justify-between items-center p-4 border-b border-white/10" style={{paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)'}}>
             {isSessionActive ? <div className="font-mono text-xl font-bold">{Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}</div> : <h2 className="font-bold">{suggestion?.title || "New Workout"}</h2>}
             <button onClick={() => { setIsSessionActive(false); setShowGenerator(false); setSuggestion(null); }} className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
@@ -409,7 +410,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
