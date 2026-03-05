@@ -209,7 +209,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Weekly Summary */}
         <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
           <div className="grid grid-cols-3 gap-3 mb-3">

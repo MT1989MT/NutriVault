@@ -82,7 +82,8 @@ const CoachBanner: React.FC<CoachBannerProps> = ({ onTap, logs = {}, profile: pr
   return (
     <button
       onClick={onTap}
-      className="w-full px-3 py-2 flex items-center gap-2.5 bg-gradient-to-r from-[#E07A5F]/8 to-[#C85A40]/5 active:from-[#E07A5F]/15 active:to-[#C85A40]/10 transition-colors"
+      className="fixed left-0 right-0 mx-auto max-w-lg z-50 px-3 py-2 flex items-center gap-2.5 bg-white/95 backdrop-blur-sm border-t border-gray-100/60 active:bg-gray-50 transition-colors"
+      style={{ bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="w-8 h-8 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center shrink-0 shadow-sm">
         <Brain className="w-4 h-4 text-white" />
