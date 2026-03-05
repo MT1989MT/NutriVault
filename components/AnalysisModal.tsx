@@ -80,8 +80,8 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#2D3436]/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-sm rounded-t-[1.5rem] sm:rounded-[1.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[#2D3436]/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-sm rounded-t-[1.5rem] sm:rounded-[1.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[80vh] flex flex-col" style={{ marginBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
           <button onClick={onCancel} className="text-gray-400 p-1">
