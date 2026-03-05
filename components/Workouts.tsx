@@ -424,7 +424,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
           {['LOG', 'PLAN', 'FAVORITES', 'HISTORY'].map(tab => (

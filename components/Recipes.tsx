@@ -207,7 +207,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
         <button onClick={() => setViewMode('QUICK')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'QUICK' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
