@@ -109,6 +109,11 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       grams, // store base weight for portion adjustment
     };
 
+    // Preserve group name for branded/composite products
+    if (typeof item.group === 'string' && item.group.trim()) {
+      result.groupName = item.group.trim();
+    }
+
     if (includeMicros) {
       result.micros = [
         { name: 'Fiber', amount: Math.max(0, Number(item.fiber) || 0), unit: 'g', percentageOfDailyNeeds: Math.round((Math.max(0, Number(item.fiber) || 0)) / 25 * 100) },
@@ -150,27 +155,44 @@ SPLITTING RULES:
 - Composite dishes that can't logically be split stay as 1 item: "pizza margherita", "sushi roll"
 - Handle typos, slang, any language, brand names
 
-NUTRITIONAL DATA (critical — be accurate):
+BRANDED / KNOWN PRODUCTS (critical):
+- For branded items (Big Mac, Whopper, KitKat, etc.) or well-known dishes:
+  1. Look up the OFFICIAL nutritional values for the complete product
+  2. Break down into ingredients, but ENSURE the ingredient totals match the official total
+  3. Add "group" field with the product name so ingredients are grouped together
+  4. Example: "Big Mac" (official: ~550 kcal, 25g protein, 45g carbs, 30g fat)
+     → ingredients: sesame bun, 2x beef patty, American cheese, lettuce, onion, pickles, Big Mac sauce
+     → each with accurate macros, summing to ~550 kcal total
+- For homemade / non-branded food: omit the "group" field
+
+ACCURACY CROSS-CHECK:
+- After calculating all ingredients, verify the total is realistic
+- A Big Mac is ~550 kcal (NOT 700+). A broodje kroket is ~350 kcal. A cheese sandwich is ~300 kcal.
+- If your ingredient sum deviates >15% from the known total, adjust portions to match reality
+- Common calorie references: slice of bread ~90 kcal, egg ~90 kcal, banana ~105 kcal, apple ~80 kcal
+
+NUTRITIONAL DATA:
 - For each ingredient, determine the macros PER 100g from a reliable food database
 - Then estimate the realistic portion weight in grams for the context
 - Calculate final macros by scaling: (macros_per_100g × grams / 100)
-- Return both the per-100g values AND the estimated portion weight
 
 PORTION WEIGHTS (realistic defaults when unspecified):
-- Bread slice: 35g, bread roll/broodje: 50g
+- Bread slice: 35g, bread roll/broodje: 50g, sesame bun (burger): 45g
 - Butter on bread: 10g, cheese on bread: 20g, ham/cold cuts: 20g
 - Mayo/ketchup/mustard: 15g, peanut butter: 15g, jam: 15g
 - Chicken breast (main): 150g, chicken on sandwich: 30g
+- Beef patty (fast food): 45g, beef patty (homemade): 100g
 - Rice/pasta (cooked, side): 150g, as main: 250g
 - Coffee/tea: 150ml, milk in coffee: 30ml, glass juice: 250ml
 - Egg: 60g, apple/banana: 150g, yogurt: 150g
+- Fast food sauce packet: 25g, dressing: 30g
 
 LANGUAGE: Food names in the SAME language as the input.
 
 JSON array, one object per ingredient:
-[{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]
+[{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]
 
-"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION (not per 100g).`,
+"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION (not per 100g). "group" = parent product name ONLY for branded/known products.`,
       true
     );
     if (!text) return [];
@@ -206,11 +228,22 @@ PORTION ESTIMATION:
 - Sauces if visible but amount unclear: mayo = 15g, ketchup = 15g, butter = 10g, dressing = 25ml
 - Drinks: coffee = 150ml, juice = 250ml, wine = 150ml, beer = 330ml
 
+BRANDED / KNOWN PRODUCTS:
+- If you recognize a branded product (Big Mac, Whopper, KitKat, etc.):
+  1. Use OFFICIAL nutritional values as ground truth
+  2. Break into ingredients but ensure totals match the official values
+  3. Add "group" field with the product name
+- For non-branded food: omit "group" field
+
+ACCURACY CROSS-CHECK:
+- Verify ingredient totals are realistic (Big Mac ~550 kcal, not 700+)
+- Common references: bread slice ~90 kcal, egg ~90 kcal, banana ~105 kcal
+
 Food names in ${langName}.
 
-JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N}]
+JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]
 
-"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION.`,
+"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION. "group" = parent product name ONLY for branded/known products.`,
       true,
       imageBase64
     );

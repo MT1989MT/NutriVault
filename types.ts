@@ -57,17 +57,18 @@ export interface FoodItem {
   id: string;
   name: string;
   calories: number;
-  protein: number; 
-  carbs: number;   
-  fat: number;     
+  protein: number;
+  carbs: number;
+  fat: number;
   amountDescription: string;
   quantity?: number;
   mealId?: string;
-  mealType?: MealType; 
-  timestamp: number;      
+  mealType?: MealType;
+  timestamp: number;
   micros?: MicroNutrient[];
   source?: 'AI_LOG' | 'MANUAL' | 'BARCODE' | 'RECIPE';
   photoUri?: string;
+  groupName?: string; // Parent product name for grouped ingredients (e.g. "Big Mac")
 }
 
 export interface WorkoutLog {

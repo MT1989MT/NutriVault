@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { FoodItem } from '../types';
-import { Check, Minus, Plus, Trash2, X, PenLine } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Minus, Plus, Trash2, X, PenLine } from 'lucide-react';
 
 interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   grams?: number;
@@ -9,12 +9,18 @@ interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   baseCarbsPer100g?: number;
   baseFatPer100g?: number;
   removed?: boolean;
+  groupName?: string;
 }
 
 interface AnalysisModalProps {
   items: Omit<FoodItem, 'id' | 'timestamp'>[];
   onConfirm: (items: Omit<FoodItem, 'id' | 'timestamp'>[]) => void;
   onCancel: () => void;
+}
+
+interface ItemGroup {
+  groupName: string;
+  indices: number[];
 }
 
 const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onConfirm, onCancel }) => {
@@ -24,7 +30,6 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
       return {
         ...item,
         grams: g,
-        // Calculate per-100g base values for scaling
         baseProteinPer100g: g > 0 ? (item.protein / g) * 100 : item.protein,
         baseCarbsPer100g: g > 0 ? (item.carbs / g) * 100 : item.carbs,
         baseFatPer100g: g > 0 ? (item.fat / g) * 100 : item.fat,
@@ -34,6 +39,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   );
 
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [editingNameIdx, setEditingNameIdx] = useState<number | null>(null);
 
   const activeItems = editableItems.filter(i => !i.removed);
@@ -47,6 +53,57 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     }), { cal: 0, p: 0, c: 0, f: 0 }),
     [activeItems]
   );
+
+  // Build display order: groups and ungrouped items
+  const displayOrder = useMemo(() => {
+    const groups: ItemGroup[] = [];
+    const ungroupedIndices: number[] = [];
+    const seenGroups = new Map<string, number>(); // groupName -> index in groups array
+
+    editableItems.forEach((item, idx) => {
+      if (item.removed) return;
+      if (item.groupName) {
+        const existing = seenGroups.get(item.groupName);
+        if (existing !== undefined) {
+          groups[existing].indices.push(idx);
+        } else {
+          seenGroups.set(item.groupName, groups.length);
+          groups.push({ groupName: item.groupName, indices: [idx] });
+        }
+      } else {
+        ungroupedIndices.push(idx);
+      }
+    });
+
+    return { groups, ungroupedIndices };
+  }, [editableItems]);
+
+  const getGroupTotals = (indices: number[]) => {
+    return indices.reduce((acc, idx) => {
+      const item = editableItems[idx];
+      if (item.removed) return acc;
+      return {
+        cal: acc.cal + item.calories,
+        p: acc.p + item.protein,
+        c: acc.c + item.carbs,
+        f: acc.f + item.fat,
+      };
+    }, { cal: 0, p: 0, c: 0, f: 0 });
+  };
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupName)) {
+        next.delete(groupName);
+        // Collapse any expanded item within this group
+        setExpandedIdx(null);
+      } else {
+        next.add(groupName);
+      }
+      return next;
+    });
+  };
 
   const updateItemGrams = (idx: number, newGrams: number) => {
     setEditableItems(prev => prev.map((item, i) => {
@@ -82,9 +139,130 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   };
 
   const handleConfirm = () => {
-    // Preserve grams for edit-portion modal, strip internal calculation fields
     const itemsToLog = activeItems.map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
     onConfirm(itemsToLog);
+  };
+
+  // Render a single food item row (used for both grouped and ungrouped)
+  const renderItemRow = (item: EditableItem, idx: number, indented: boolean = false) => {
+    const isExpanded = expandedIdx === idx;
+
+    return (
+      <div key={idx} className={`rounded-xl border transition-all ${isExpanded ? 'border-[#E07A5F]/30 bg-[#FAFAF8]' : 'border-gray-100 bg-gray-50/80'} ${indented ? 'ml-3' : ''}`}>
+        <button
+          className="w-full p-3 text-left"
+          onClick={() => { setExpandedIdx(isExpanded ? null : idx); setEditingNameIdx(null); }}
+        >
+          <div className="flex justify-between items-start mb-1">
+            {editingNameIdx === idx ? (
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => updateItemName(idx, e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => { if (e.key === 'Enter') setEditingNameIdx(null); }}
+                onBlur={() => setEditingNameIdx(null)}
+                className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1"
+                autoFocus
+              />
+            ) : (
+              <span className={`font-bold text-gray-800 text-sm leading-tight pr-2 ${indented ? 'text-xs' : ''}`}>{item.name}</span>
+            )}
+            <span className="font-bold text-gray-900 text-sm shrink-0">{Math.round(item.calories)} kcal</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[#E07A5F] text-xs font-semibold">
+              {item.grams ? `~${item.grams}g` : item.amountDescription}
+            </span>
+            <div className="flex gap-2 text-[10px] font-bold">
+              <span className="text-[#E07A5F]">P {Math.round(item.protein)}</span>
+              <span className="text-[#81B29A]">C {Math.round(item.carbs)}</span>
+              <span className="text-[#F2CC8F]">F {Math.round(item.fat)}</span>
+            </div>
+          </div>
+        </button>
+
+        {isExpanded && (
+          <div className="px-3 pb-3 pt-0">
+            <div className="h-px bg-gray-200 mb-3" />
+
+            <div className="flex items-center gap-3 mb-3">
+              <button
+                onClick={() => updateItemGrams(idx, (item.grams || 100) - 10)}
+                className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Minus className="w-4 h-4 text-gray-600" />
+              </button>
+
+              <div className="flex-1 relative">
+                <input
+                  type="number"
+                  value={item.grams || ''}
+                  onChange={(e) => updateItemGrams(idx, parseInt(e.target.value) || 0)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-center text-base font-bold text-gray-900 outline-none focus:border-[#E07A5F]/40"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold">g</span>
+              </div>
+
+              <button
+                onClick={() => updateItemGrams(idx, (item.grams || 100) + 10)}
+                className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5 mb-3">
+              {[10, 25, 50, 100, 150].map(g => (
+                <button
+                  key={g}
+                  onClick={() => updateItemGrams(idx, g)}
+                  className={`py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                    item.grams === g
+                      ? 'bg-[#E07A5F] text-white'
+                      : 'bg-white border border-gray-200 text-gray-600'
+                  }`}
+                >
+                  {g}g
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1.5 mb-3">
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
+                <div className="text-xs font-bold text-gray-900">{Math.round(item.protein)}g</div>
+                <div className="text-[8px] text-[#E07A5F] font-bold">PROT</div>
+              </div>
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
+                <div className="text-xs font-bold text-gray-900">{Math.round(item.carbs)}g</div>
+                <div className="text-[8px] text-[#81B29A] font-bold">CARB</div>
+              </div>
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
+                <div className="text-xs font-bold text-gray-900">{Math.round(item.fat)}g</div>
+                <div className="text-[8px] text-[#F2CC8F] font-bold">FAT</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingNameIdx(idx)}
+                className="flex-1 py-2 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+              >
+                <PenLine className="w-3.5 h-3.5" />
+                Rename
+              </button>
+              <button
+                onClick={() => removeItem(idx)}
+                className="flex-1 py-2 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -104,132 +282,63 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         {/* Scrollable item list */}
         <div className="overflow-y-auto flex-1 px-4 pb-2">
           <div className="space-y-2">
-            {editableItems.map((item, idx) => {
-              if (item.removed) return null;
-              const isExpanded = expandedIdx === idx;
+            {/* Render grouped items */}
+            {displayOrder.groups.map((group) => {
+              const isGroupExpanded = expandedGroups.has(group.groupName);
+              const groupTotals = getGroupTotals(group.indices);
+              const activeCount = group.indices.filter(idx => !editableItems[idx].removed).length;
+
+              if (activeCount === 0) return null;
 
               return (
-                <div key={idx} className={`rounded-xl border transition-all ${isExpanded ? 'border-[#E07A5F]/30 bg-[#FAFAF8]' : 'border-gray-100 bg-gray-50/80'}`}>
-                  {/* Item row - always visible */}
+                <div key={`group-${group.groupName}`} className="rounded-2xl border-2 border-[#E07A5F]/20 bg-white overflow-hidden">
+                  {/* Group header - clickable to expand/collapse */}
                   <button
-                    className="w-full p-3 text-left"
-                    onClick={() => { setExpandedIdx(isExpanded ? null : idx); setEditingNameIdx(null); }}
+                    className="w-full p-3 text-left bg-gradient-to-r from-[#E07A5F]/5 to-transparent"
+                    onClick={() => toggleGroup(group.groupName)}
                   >
                     <div className="flex justify-between items-start mb-1">
-                      {editingNameIdx === idx ? (
-                        <input
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => updateItemName(idx, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => { if (e.key === 'Enter') setEditingNameIdx(null); }}
-                          onBlur={() => setEditingNameIdx(null)}
-                          className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="font-bold text-gray-800 text-sm leading-tight pr-2">{item.name}</span>
-                      )}
-                      <span className="font-bold text-gray-900 text-sm shrink-0">{Math.round(item.calories)} kcal</span>
+                      <div className="flex items-center gap-2">
+                        {isGroupExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-[#E07A5F] shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-[#E07A5F] shrink-0" />
+                        )}
+                        <span className="font-black text-gray-900 text-sm">{group.groupName}</span>
+                      </div>
+                      <span className="font-black text-[#E07A5F] text-sm shrink-0">{Math.round(groupTotals.cal)} kcal</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#E07A5F] text-xs font-semibold">
-                        {item.grams ? `~${item.grams}g` : item.amountDescription}
+                    <div className="flex justify-between items-center pl-6">
+                      <span className="text-gray-400 text-xs font-semibold">
+                        {activeCount} ingredient{activeCount !== 1 ? 's' : ''}
                       </span>
                       <div className="flex gap-2 text-[10px] font-bold">
-                        <span className="text-[#E07A5F]">P {Math.round(item.protein)}</span>
-                        <span className="text-[#81B29A]">C {Math.round(item.carbs)}</span>
-                        <span className="text-[#F2CC8F]">F {Math.round(item.fat)}</span>
+                        <span className="text-[#E07A5F]">P {Math.round(groupTotals.p)}</span>
+                        <span className="text-[#81B29A]">C {Math.round(groupTotals.c)}</span>
+                        <span className="text-[#F2CC8F]">F {Math.round(groupTotals.f)}</span>
                       </div>
                     </div>
                   </button>
 
-                  {/* Expanded: gram adjustment */}
-                  {isExpanded && (
-                    <div className="px-3 pb-3 pt-0">
-                      <div className="h-px bg-gray-200 mb-3" />
-
-                      {/* Gram slider with +/- buttons */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <button
-                          onClick={() => updateItemGrams(idx, (item.grams || 100) - 10)}
-                          className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
-                        >
-                          <Minus className="w-4 h-4 text-gray-600" />
-                        </button>
-
-                        <div className="flex-1 relative">
-                          <input
-                            type="number"
-                            value={item.grams || ''}
-                            onChange={(e) => updateItemGrams(idx, parseInt(e.target.value) || 0)}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-center text-base font-bold text-gray-900 outline-none focus:border-[#E07A5F]/40"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold">g</span>
-                        </div>
-
-                        <button
-                          onClick={() => updateItemGrams(idx, (item.grams || 100) + 10)}
-                          className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
-                        >
-                          <Plus className="w-4 h-4 text-gray-600" />
-                        </button>
-                      </div>
-
-                      {/* Quick gram presets */}
-                      <div className="grid grid-cols-5 gap-1.5 mb-3">
-                        {[10, 25, 50, 100, 150].map(g => (
-                          <button
-                            key={g}
-                            onClick={() => updateItemGrams(idx, g)}
-                            className={`py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
-                              item.grams === g
-                                ? 'bg-[#E07A5F] text-white'
-                                : 'bg-white border border-gray-200 text-gray-600'
-                            }`}
-                          >
-                            {g}g
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Macro preview for this item */}
-                      <div className="flex gap-1.5 mb-3">
-                        <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                          <div className="text-xs font-bold text-gray-900">{Math.round(item.protein)}g</div>
-                          <div className="text-[8px] text-[#E07A5F] font-bold">PROT</div>
-                        </div>
-                        <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                          <div className="text-xs font-bold text-gray-900">{Math.round(item.carbs)}g</div>
-                          <div className="text-[8px] text-[#81B29A] font-bold">CARB</div>
-                        </div>
-                        <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                          <div className="text-xs font-bold text-gray-900">{Math.round(item.fat)}g</div>
-                          <div className="text-[8px] text-[#F2CC8F] font-bold">FAT</div>
-                        </div>
-                      </div>
-
-                      {/* Rename + Remove */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditingNameIdx(idx)}
-                          className="flex-1 py-2 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                        >
-                          <PenLine className="w-3.5 h-3.5" />
-                          Rename
-                        </button>
-                        <button
-                          onClick={() => removeItem(idx)}
-                          className="flex-1 py-2 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Remove
-                        </button>
-                      </div>
+                  {/* Group ingredients - shown when expanded */}
+                  {isGroupExpanded && (
+                    <div className="px-2 pb-2 space-y-1.5">
+                      {group.indices.map(idx => {
+                        const item = editableItems[idx];
+                        if (item.removed) return null;
+                        return renderItemRow(item, idx, true);
+                      })}
                     </div>
                   )}
                 </div>
               );
+            })}
+
+            {/* Render ungrouped items */}
+            {displayOrder.ungroupedIndices.map(idx => {
+              const item = editableItems[idx];
+              if (item.removed) return null;
+              return renderItemRow(item, idx, false);
             })}
           </div>
         </div>
