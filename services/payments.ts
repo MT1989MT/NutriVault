@@ -1,16 +1,19 @@
 /**
  * RevenueCat Payment Service
  * Uses @revenuecat/purchases-capacitor for native iOS/Android
- * Falls back to mock for web testing
+ * Falls back to mock for web testing (dev only)
  *
- * NOTE: RevenueCat packages worden geïnstalleerd bij Capacitor setup:
- * npm install @revenuecat/purchases-capacitor @revenuecat/purchases-capacitor-ui
+ * SETUP:
+ * 1. npm install @revenuecat/purchases-capacitor @revenuecat/purchases-capacitor-ui
+ * 2. Set VITE_REVENUECAT_API_KEY in environment
+ * 3. Configure products in RevenueCat dashboard
+ * 4. Set entitlement ID to 'NutriVault'
  */
 
-// RevenueCat Configuration - requires env var, no hardcoded fallback
+// RevenueCat Configuration
 const REVENUECAT_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_REVENUECAT_API_KEY) || '';
 
-// Entitlement identifier (zoals in RevenueCat dashboard)
+// Entitlement identifier (must match RevenueCat dashboard)
 const ENTITLEMENT_ID = 'NutriVault';
 
 // Check if running on native platform
@@ -25,15 +28,27 @@ const isNativePlatform = (): boolean => {
   return false;
 };
 
-// Get RevenueCat modules (only available on native)
-const getRevenueCatModules = async () => {
+// Dynamic import of RevenueCat modules (only available after Capacitor setup)
+let _purchasesModule: any = null;
+let _uiModule: any = null;
+let _initialized = false;
+
+const loadRevenueCatModules = async () => {
+  if (_purchasesModule && _uiModule) return { Purchases: _purchasesModule, RevenueCatUI: _uiModule };
   if (!isNativePlatform()) return null;
+
   try {
-    // These modules are only available after Capacitor setup
-    const purchases = (window as any).RevenueCatPurchases;
-    const ui = (window as any).RevenueCatUI;
-    if (purchases && ui) {
-      return { Purchases: purchases, RevenueCatUI: ui };
+    // These imports resolve at build time when Capacitor packages are installed
+    // They will fail gracefully if packages aren't yet installed
+    const [purchasesMod, uiMod] = await Promise.all([
+      import('@revenuecat/purchases-capacitor').catch(() => null),
+      import('@revenuecat/purchases-capacitor-ui').catch(() => null),
+    ]);
+
+    if (purchasesMod && uiMod) {
+      _purchasesModule = purchasesMod;
+      _uiModule = uiMod;
+      return { Purchases: purchasesMod.Purchases, RevenueCatUI: uiMod.RevenueCatUI, PAYWALL_RESULT: uiMod.PAYWALL_RESULT, LOG_LEVEL: purchasesMod.LOG_LEVEL };
     }
   } catch {}
   return null;
@@ -46,71 +61,179 @@ export const isRevenueCatConfigured = (): boolean => {
 
 /**
  * Initialize RevenueCat SDK
- * Call this when app starts
+ * Call this once when app starts (App.tsx useEffect)
  */
 export const initializePurchases = async (): Promise<void> => {
-  if (!isNativePlatform()) {
-    return;
+  if (!isNativePlatform() || !REVENUECAT_API_KEY || _initialized) return;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return;
+
+  try {
+    const { Purchases, LOG_LEVEL } = modules;
+
+    // Debug logging in dev, error-only in prod
+    const isDev = import.meta.env?.DEV;
+    await Purchases.setLogLevel({ level: isDev ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR });
+
+    await Purchases.configure({
+      apiKey: REVENUECAT_API_KEY,
+      // No appUserID = anonymous user (Mullvad-style, RevenueCat generates $RCAnonymousID)
+    });
+
+    _initialized = true;
+  } catch (error) {
+    console.error('RevenueCat init failed:', error);
+  }
+};
+
+/**
+ * Set the activation code as RevenueCat subscriber attribute
+ * Links the anonymous RevenueCat customer to our activation code
+ * This is essential for the webhook to know which code to extend
+ */
+export const setActivationCodeAttribute = async (code: string): Promise<void> => {
+  if (!isNativePlatform() || !_initialized) return;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return;
+
+  try {
+    await modules.Purchases.setAttributes({
+      attributes: { activation_code: { value: code } },
+    });
+  } catch (error) {
+    console.error('Failed to set activation code attribute:', error);
   }
 };
 
 /**
  * Get available subscription offerings
- * Price is €5/month (or equivalent in local currency via App Store)
+ * Returns the actual App Store/Play Store price via RevenueCat
+ * Falls back to locale-based estimate on web
  */
 export const getOfferings = async (): Promise<{
-  monthly: { price: string; priceNumber: number } | null;
+  monthly: { price: string; priceNumber: number; product?: any } | null;
 }> => {
-  // Get locale-appropriate price display
-  const locale = navigator.language || 'en-US';
-  const currency = locale.startsWith('en-US') ? 'USD' :
-                   locale.startsWith('en-GB') ? 'GBP' : 'EUR';
+  // Try RevenueCat first (native only)
+  if (isNativePlatform() && _initialized) {
+    const modules = await loadRevenueCatModules();
+    if (modules) {
+      try {
+        const { offerings } = await modules.Purchases.getOfferings();
+        const monthly = offerings?.current?.monthly;
+        if (monthly) {
+          return {
+            monthly: {
+              price: monthly.product.priceString,
+              priceNumber: monthly.product.price,
+              product: monthly,
+            },
+          };
+        }
+      } catch (error) {
+        console.error('Failed to get offerings:', error);
+      }
+    }
+  }
 
-  const priceNumber = currency === 'USD' ? 5 :
-                      currency === 'GBP' ? 4 : 5;
+  // Fallback: locale-based price estimate (web / RevenueCat unavailable)
+  const locale = navigator.language || 'en-US';
+  const country = locale.split('-')[1] || 'US';
+
+  const currencyMap: Record<string, { currency: string; amount: number }> = {
+    'US': { currency: 'USD', amount: 5 },
+    'GB': { currency: 'GBP', amount: 4 },
+    'AU': { currency: 'AUD', amount: 8 },
+    'CA': { currency: 'CAD', amount: 7 },
+    'JP': { currency: 'JPY', amount: 750 },
+    'CH': { currency: 'CHF', amount: 5 },
+  };
+
+  const euroCountries = ['DE', 'FR', 'ES', 'IT', 'NL', 'BE', 'AT', 'PT', 'IE', 'FI', 'GR'];
+  const isEuro = euroCountries.includes(country);
+  const { currency, amount } = currencyMap[country] || (isEuro ? { currency: 'EUR', amount: 5 } : { currency: 'USD', amount: 5 });
 
   const price = new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: currency,
+    currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(priceNumber);
+    maximumFractionDigits: 0,
+  }).format(amount);
 
-  return { monthly: { price, priceNumber } };
+  return { monthly: { price, priceNumber: amount } };
 };
 
 /**
  * Purchase monthly subscription
- * On native: uses RevenueCat Paywall UI
- * On web: simulates successful purchase for testing
+ * On native: presents RevenueCat Paywall UI (handles Apple/Google payment)
+ * On web: simulates successful purchase for development testing only
  */
 export const purchaseMonthly = async (): Promise<{
   success: boolean;
   error?: string;
 }> => {
   if (!isNativePlatform()) {
-    // Web mode - simulate successful purchase for testing
-    return { success: true };
+    // Web mode - simulate for development only
+    if (import.meta.env?.DEV) {
+      return { success: true };
+    }
+    return { success: false, error: 'Purchases only available in the app' };
   }
 
-  // Native mode - RevenueCat Paywall will be shown
-  // When Capacitor is set up, this will use RevenueCatUI.presentPaywall()
-  return { success: true };
+  const modules = await loadRevenueCatModules();
+  if (!modules) {
+    return { success: false, error: 'Payment system not available' };
+  }
+
+  try {
+    const { RevenueCatUI, PAYWALL_RESULT } = modules;
+    const { result } = await RevenueCatUI.presentPaywall();
+
+    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+      return { success: true };
+    }
+
+    if (result === PAYWALL_RESULT.CANCELLED) {
+      return { success: false, error: 'cancelled' };
+    }
+
+    return { success: false, error: 'Purchase was not completed' };
+  } catch (error: any) {
+    console.error('Purchase error:', error);
+
+    // RevenueCat error codes for common scenarios
+    if (error?.code === 1) {
+      return { success: false, error: 'cancelled' };
+    }
+
+    return { success: false, error: error?.message || 'Payment failed' };
+  }
 };
 
 /**
  * Check if user has active premium entitlement
+ * Use this to verify subscription status server-side via RevenueCat
  */
 export const checkEntitlement = async (): Promise<boolean> => {
-  if (!isNativePlatform()) {
+  if (!isNativePlatform() || !_initialized) return false;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return false;
+
+  try {
+    const { customerInfo } = await modules.Purchases.getCustomerInfo();
+    return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+  } catch (error) {
+    console.error('Entitlement check failed:', error);
     return false;
   }
-  // Will be implemented when Capacitor is set up
-  return false;
 };
 
 /**
  * Restore previous purchases
+ * Required by Apple App Store Review Guidelines (3.1.1)
+ * Must be accessible and functional
  */
 export const restorePurchases = async (): Promise<{
   success: boolean;
@@ -120,48 +243,57 @@ export const restorePurchases = async (): Promise<{
   if (!isNativePlatform()) {
     return { success: true, isSubscribed: false };
   }
-  // Will be implemented when Capacitor is set up
-  return { success: true, isSubscribed: false };
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) {
+    return { success: false, isSubscribed: false, error: 'Payment system not available' };
+  }
+
+  try {
+    const { customerInfo } = await modules.Purchases.restorePurchases();
+    const isSubscribed = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    return { success: true, isSubscribed };
+  } catch (error: any) {
+    console.error('Restore failed:', error);
+    return { success: false, isSubscribed: false, error: error?.message || 'Restore failed' };
+  }
 };
 
 /**
- * Get customer info
+ * Get customer info from RevenueCat
+ * Includes subscription status, entitlements, and management URL
  */
 export const getCustomerInfo = async () => {
-  if (!isNativePlatform()) {
+  if (!isNativePlatform() || !_initialized) return null;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return null;
+
+  try {
+    const { customerInfo } = await modules.Purchases.getCustomerInfo();
+    return customerInfo;
+  } catch (error) {
+    console.error('Failed to get customer info:', error);
     return null;
   }
-  // Will be implemented when Capacitor is set up
-  return null;
 };
 
-/*
- * ============================================
- * NATIVE IMPLEMENTATION (voor Capacitor setup)
- * ============================================
- *
- * Wanneer je Capacitor installeert, voeg dit toe aan je native code:
- *
- * 1. Install packages:
- *    npm install @revenuecat/purchases-capacitor @revenuecat/purchases-capacitor-ui
- *
- * 2. In je native App component (na Capacitor setup):
- *
- *    import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
- *    import { RevenueCatUI, PAYWALL_RESULT } from '@revenuecat/purchases-capacitor-ui';
- *
- *    // Initialize
- *    await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
- *    await Purchases.configure({ apiKey: REVENUECAT_API_KEY });
- *
- *    // Present paywall
- *    const { result } = await RevenueCatUI.presentPaywall();
- *    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
- *      // Success - generate activation code
- *    }
- *
- *    // Check entitlement
- *    const { customerInfo } = await Purchases.getCustomerInfo();
- *    const hasPremium = customerInfo.entitlements.active["premium"] !== undefined;
- *
+/**
+ * Get subscription management URL
+ * Apple: opens App Store subscription settings
+ * Google: opens Play Store subscription settings
+ * Required by Apple for subscription apps
  */
+export const getManagementURL = async (): Promise<string | null> => {
+  if (!isNativePlatform() || !_initialized) return null;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return null;
+
+  try {
+    const { customerInfo } = await modules.Purchases.getCustomerInfo();
+    return customerInfo.managementURL || null;
+  } catch {
+    return null;
+  }
+};
