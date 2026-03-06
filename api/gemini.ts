@@ -119,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }],
           generationConfig: {
             maxOutputTokens: 2048,
-            temperature: jsonMode ? 0.1 : 0.7,
+            temperature: jsonMode ? 0 : 0.7,
           }
         })
       }
