@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
-import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp } from 'lucide-react';
+import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp } from 'lucide-react';
 import { parseFoodInput } from '../services/gemini';
 import { getWorkouts, toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
@@ -14,10 +14,11 @@ interface DashboardProps {
   onRemoveItem: (item: FoodItem, date?: string) => void;
   onWaterUpdate?: (date: string, ml: number) => void;
   onSettingsClick: () => void;
+  onCoachClick?: () => void;
   isActive?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, isActive = true }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, isActive = true }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const todayDate = new Date().toISOString().split('T')[0];
   const dayLog = logs[selectedDate] || { date: selectedDate, items: [] };
@@ -278,8 +279,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       {/* Header with safe area */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between mb-2">
-          <button onClick={() => setShowAbout(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
-            <Info className="w-[18px] h-[18px] text-gray-400" />
+          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+            <Brain className="w-[18px] h-[18px] text-white" />
           </button>
 
           <div className="flex items-center">

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Info } from 'lucide-react';
+import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Info, Brain } from 'lucide-react';
 import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine } from '../services/storage';
 import { getWorkoutSuggestion, generateTrainingPlan } from '../services/gemini';
 import { WorkoutLog, WorkoutSuggestion, TrainingPlan, DayLog, WorkoutRoutine } from '../types';
 import { generateId } from '../utils/calculations';
 
-interface WorkoutsProps { logs: Record<string, DayLog>; onAddWorkout: (date: string, workout: WorkoutLog) => void; }
+interface WorkoutsProps { logs: Record<string, DayLog>; onAddWorkout: (date: string, workout: WorkoutLog) => void; onCoachClick?: () => void; }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -60,7 +60,7 @@ const STANDARD_LIBRARY = [
   }
 ];
 
-const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
+const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick }) => {
   const [viewMode, setViewMode] = useState<'LOG' | 'PLAN' | 'HISTORY' | 'FAVORITES'>('LOG');
   const [showHelp, setShowHelp] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
@@ -415,7 +415,9 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
-          <div className="w-10" />
+          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+            <Brain className="w-[18px] h-[18px] text-white" />
+          </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">Workouts</span>
           <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
             <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
@@ -424,7 +426,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
           {['LOG', 'PLAN', 'FAVORITES', 'HISTORY'].map(tab => (

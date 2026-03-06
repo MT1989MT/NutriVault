@@ -14,7 +14,6 @@ import Navigation from './components/Navigation';
 import Settings from './components/Settings';
 import AuthScreen from './components/AuthScreen';
 import Onboarding, { hasSeenOnboarding } from './components/Onboarding';
-import CoachBanner from './components/CoachBanner';
 
 type View = 'DASHBOARD' | 'RECIPES' | 'MOTIVATION' | 'PROFILE' | 'WORKOUTS' | 'HISTORY' | 'SETTINGS' | 'COACH';
 
@@ -78,22 +77,22 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden relative">
             {currentView === 'DASHBOARD' && (
               <div className="absolute inset-0 z-10">
-                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={() => setCurrentView('SETTINGS')} isActive={currentView === 'DASHBOARD'} />
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={() => setCurrentView('SETTINGS')} onCoachClick={() => setCurrentView('COACH')} isActive={currentView === 'DASHBOARD'} />
               </div>
             )}
             {currentView === 'WORKOUTS' && (
               <div className="absolute inset-0 z-10">
-                <Workouts logs={logs} onAddWorkout={handleAddWorkout} />
+                <Workouts logs={logs} onAddWorkout={handleAddWorkout} onCoachClick={() => setCurrentView('COACH')} />
               </div>
             )}
             {currentView === 'RECIPES' && (
               <div className="absolute inset-0 z-10">
-                <Recipes onLogRecipe={handleAddItems} />
+                <Recipes onLogRecipe={handleAddItems} onCoachClick={() => setCurrentView('COACH')} />
               </div>
             )}
             {currentView === 'HISTORY' && (
               <div className="absolute inset-0 z-10">
-                <History logs={logs} profile={profile} />
+                <History logs={logs} profile={profile} onCoachClick={() => setCurrentView('COACH')} />
               </div>
             )}
             {currentView === 'PROFILE' && (
@@ -112,9 +111,6 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
-          {currentView !== 'SETTINGS' && currentView !== 'COACH' && currentView !== 'PROFILE' && (
-            <CoachBanner onTap={() => setCurrentView('COACH')} logs={logs} profile={profile} />
-          )}
           {currentView !== 'SETTINGS' && currentView !== 'COACH' && <Navigation currentView={currentView} onChange={setCurrentView} />}
         </div>
       </div>

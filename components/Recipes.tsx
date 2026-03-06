@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Loader2, Save, X, Zap, Check, Flame, HelpCircle, Plus, Utensils, ShoppingCart, Trash2, BookOpen, Coffee, Sun, Moon, Cookie } from 'lucide-react';
+import { ChefHat, Loader2, Save, X, Zap, Check, Flame, HelpCircle, Plus, Utensils, ShoppingCart, Trash2, BookOpen, Coffee, Sun, Moon, Cookie, Brain } from 'lucide-react';
 import { getRecipeSuggestion } from '../services/gemini';
 import { getSavedRecipes, saveRecipe, deleteRecipe, getProfile } from '../services/storage';
 import { Recipe, FoodItem, MealType } from '../types';
@@ -49,9 +49,10 @@ const QUICK_MEALS = [
 
 interface RecipesProps {
   onLogRecipe?: (items: FoodItem[]) => void;
+  onCoachClick?: () => void;
 }
 
-const Recipes: React.FC<RecipesProps> = ({ onLogRecipe }) => {
+const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   const [input, setInput] = useState('');
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
@@ -198,7 +199,9 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe }) => {
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
-          <div className="w-10" />
+          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+            <Brain className="w-[18px] h-[18px] text-white" />
+          </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{tr('recipes')}</span>
           <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
             <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
@@ -207,7 +210,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
         <button onClick={() => setViewMode('QUICK')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'QUICK' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>

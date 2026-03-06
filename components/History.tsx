@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Flame, Dumbbell, TrendingDown, TrendingUp, Activity, Scale, Plus, X, Check, Droplets, Target, Utensils, Heart, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame, Dumbbell, TrendingDown, TrendingUp, Activity, Scale, Plus, X, Check, Droplets, Target, Utensils, Heart, Trophy, Brain } from 'lucide-react';
 import { getLogs, getProfile, saveLogs } from '../services/storage';
 import { t, getCurrentLanguage } from '../utils/i18n';
 import { calculateStreak } from '../utils/calculations';
@@ -8,9 +8,10 @@ import { DayLog, UserProfile } from '../types';
 interface HistoryProps {
   logs?: Record<string, DayLog>;
   profile?: UserProfile | null;
+  onCoachClick?: () => void;
 }
 
-const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile }) => {
+const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile, onCoachClick }) => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [weightInput, setWeightInput] = useState('');
@@ -188,8 +189,12 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
     <div className="h-full flex flex-col bg-[#FAFAF8]">
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
-        <div className="flex items-center justify-center mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+            <Brain className="w-[18px] h-[18px] text-white" />
+          </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('overview')}</span>
+          <div className="w-10" />
         </div>
         <div className="flex items-center justify-center gap-0">
           <button onClick={() => setWeekOffset(o => o - 1)} className="p-2 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth">
@@ -209,7 +214,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Weekly Summary */}
         <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
           <div className="grid grid-cols-3 gap-3 mb-3">
