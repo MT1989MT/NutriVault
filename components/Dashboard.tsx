@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
-import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp } from 'lucide-react';
-import { parseFoodInput } from '../services/gemini';
+import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp, Copy } from 'lucide-react';
+import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
 import { getWorkouts, toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
 import AnalysisModal from './AnalysisModal';
@@ -128,30 +128,39 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
   const getMealCalories = (type: MealType) => mealGroups[type].reduce((sum, i) => sum + i.calories, 0);
 
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
   const handleAnalyze = async () => {
-    if (!input.trim() || !selectedMealType) return;
+    if ((!input.trim() && !photoPreview) || !selectedMealType) return;
     setIsAnalyzing(true);
+    setAnalyzeError(null);
     try {
-      const result = await parseFoodInput(input);
+      let result;
+      if (photoPreview) {
+        // Photo-based analysis — extract base64 data from data URL
+        const base64Data = photoPreview.split(',')[1] || photoPreview;
+        result = await parseFoodFromPhoto(base64Data);
+      } else {
+        result = await parseFoodInput(input);
+      }
       if (!result || result.length === 0) {
-        alert("Could not identify any food items. Please try again with more detail.");
+        setAnalyzeError(tr('couldNotIdentifyFood') || "Could not identify any food items. Please try again with more detail.");
         return;
       }
       // Always show review modal so user can adjust individual items before logging
       setAnalyzedItems(result);
       setInput('');
-      setPhotoPreview(null);
     } catch (err: any) {
       const msg = err?.message || err?.toString?.() || 'unknown error';
       console.error('Food analysis error:', msg);
       if (msg.includes('API key not configured')) {
-        alert("Server API key is not configured. Please set GEMINI_API_KEY in your Vercel environment variables.");
+        setAnalyzeError("Server API key is not configured.");
       } else if (msg.includes('timed out')) {
-        alert("Request timed out. Please try again.");
+        setAnalyzeError(tr('requestTimedOut') || "Request timed out. Please try again.");
       } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        alert("Could not reach the server. Please check your internet connection.");
+        setAnalyzeError(tr('networkError') || "Could not reach the server. Check your connection.");
       } else {
-        alert(`Could not analyze food: ${msg}`);
+        setAnalyzeError(msg);
       }
     }
     finally { setIsAnalyzing(false); }
@@ -221,7 +230,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       timestamp: Date.now()
     };
     onItemsAdded([newItem], selectedDate);
+    addToRecentFoods(newItem);
     trackFoodFrequency(newItem);
+    setRecentFoods(getRecentFoods());
     setMostUsedFoods(getMostUsedFoods());
     setSelectedMealType(null);
   }, [selectedMealType, selectedDate, onItemsAdded]);
@@ -459,10 +470,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Add Food Modal */}
       {selectedMealType && !showManualEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setSelectedMealType(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }}>
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <button onClick={() => setSelectedMealType(null)} className="text-gray-400 text-sm font-medium">
+              <button onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }} className="text-gray-400 text-sm font-medium">
                 {tr('cancel')}
               </button>
               <div className="flex items-center gap-2">
@@ -488,7 +499,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                   autoFocus
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <button onClick={handleAnalyze} disabled={!input.trim() || isAnalyzing} className="p-3 rounded-xl bg-[#E07A5F] text-white disabled:opacity-50 active:scale-95 transition-transform">
+                  <button onClick={handleAnalyze} disabled={(!input.trim() && !photoPreview) || isAnalyzing} className="p-3 rounded-xl bg-[#E07A5F] text-white disabled:opacity-50 active:scale-95 transition-transform">
                     {isAnalyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                   </button>
                 </div>
@@ -496,6 +507,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             </div>
 
             <div className="px-4 pb-4 max-h-[40vh] overflow-y-auto">
+              {/* Error message */}
+              {analyzeError && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
+                  <span className="text-red-500 text-sm">{analyzeError}</span>
+                  <button onClick={() => setAnalyzeError(null)} className="shrink-0 text-red-300 hover:text-red-500">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Photo preview */}
               {photoPreview && (
                 <div className="mb-4 relative">
@@ -523,6 +544,34 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                   {tr('addManually')}
                 </button>
               </div>
+
+              {/* Copy from previous day */}
+              {(() => {
+                const prevDate = new Date(selectedDate);
+                prevDate.setDate(prevDate.getDate() - 1);
+                const prevDateStr = prevDate.toISOString().split('T')[0];
+                const prevItems = logs[prevDateStr]?.items?.filter(i => i.mealType === selectedMealType) || [];
+                if (prevItems.length === 0) return null;
+                const prevCals = prevItems.reduce((sum, i) => sum + i.calories, 0);
+                return (
+                  <button
+                    onClick={() => {
+                      const copied = prevItems.map(i => ({ ...i, id: generateId(), timestamp: Date.now() }));
+                      onItemsAdded(copied, selectedDate);
+                      copied.forEach(item => trackFoodFrequency(item));
+                      setMostUsedFoods(getMostUsedFoods());
+                      setSelectedMealType(null);
+                    }}
+                    className="w-full flex items-center gap-3 p-3.5 mb-4 bg-violet-50 border border-violet-100 rounded-xl hover:bg-violet-100 transition-colors active:scale-[0.98]"
+                  >
+                    <Copy className="w-4 h-4 text-violet-500 shrink-0" />
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-semibold text-violet-700">{tr('copyYesterday') || 'Copy yesterday\'s'} {getMealLabel(selectedMealType).toLowerCase()}</p>
+                      <p className="text-xs text-violet-400 mt-0.5">{prevItems.length} item{prevItems.length !== 1 ? 's' : ''} • {Math.round(prevCals)} kcal</p>
+                    </div>
+                  </button>
+                );
+              })()}
 
               {/* Most Used foods - quick log */}
               {mostUsedFoods.length > 0 && (
@@ -663,15 +712,34 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('protein')} (g)</label>
-                  <input type="number" value={manualForm.protein} onChange={(e) => setManualForm({ ...manualForm, protein: e.target.value })} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  <input type="number" value={manualForm.protein} onChange={(e) => {
+                    const p = e.target.value;
+                    const newForm = { ...manualForm, protein: p };
+                    // Auto-calc calories from macros if user hasn't manually set calories
+                    const autoCalc = (Number(p) || 0) * 4 + (Number(manualForm.carbs) || 0) * 4 + (Number(manualForm.fat) || 0) * 9;
+                    if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
+                    setManualForm(newForm);
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('carbs')} (g)</label>
-                  <input type="number" value={manualForm.carbs} onChange={(e) => setManualForm({ ...manualForm, carbs: e.target.value })} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  <input type="number" value={manualForm.carbs} onChange={(e) => {
+                    const c = e.target.value;
+                    const newForm = { ...manualForm, carbs: c };
+                    const autoCalc = (Number(manualForm.protein) || 0) * 4 + (Number(c) || 0) * 4 + (Number(manualForm.fat) || 0) * 9;
+                    if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
+                    setManualForm(newForm);
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('fat')} (g)</label>
-                  <input type="number" value={manualForm.fat} onChange={(e) => setManualForm({ ...manualForm, fat: e.target.value })} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  <input type="number" value={manualForm.fat} onChange={(e) => {
+                    const f = e.target.value;
+                    const newForm = { ...manualForm, fat: f };
+                    const autoCalc = (Number(manualForm.protein) || 0) * 4 + (Number(manualForm.carbs) || 0) * 4 + (Number(f) || 0) * 9;
+                    if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
+                    setManualForm(newForm);
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
                 </div>
               </div>
 
@@ -699,33 +767,51 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       )}
 
       {/* Edit Item Modal (Centered) */}
-      {itemToEdit && (
+      {itemToEdit && (() => {
+        // Calculate per-unit base values for accurate scaling
+        const itemGrams = (itemToEdit as any).grams || 0;
+        const calcEditPreview = () => {
+          let mult = 1;
+          if (editUnit === 'multiplier' && editGrams) {
+            mult = parseFloat(editGrams) || 1;
+          } else if (editUnit === 'grams' && editGrams && itemGrams > 0) {
+            mult = parseFloat(editGrams) / itemGrams;
+          } else if (editUnit === 'grams' && editGrams) {
+            mult = parseFloat(editGrams) / 100;
+          } else if (editUnit === 'pieces' && editGrams) {
+            mult = parseFloat(editGrams);
+          }
+          return {
+            calories: Math.round(itemToEdit.calories * mult),
+            protein: Math.round(itemToEdit.protein * mult),
+            carbs: Math.round(itemToEdit.carbs * mult),
+            fat: Math.round(itemToEdit.fat * mult),
+          };
+        };
+        const preview = calcEditPreview();
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setItemToEdit(null)}>
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <button onClick={() => setItemToEdit(null)} className="text-gray-400 text-sm font-medium">{tr('cancel')}</button>
               <h3 className="font-bold text-gray-900">{tr('editPortion')}</h3>
               <button onClick={() => {
-                let mult = 1;
                 let newDesc = itemToEdit.amountDescription;
                 if (editUnit === 'multiplier' && editGrams) {
-                  mult = parseFloat(editGrams) || 1;
-                  newDesc = `${mult}x portion`;
+                  const mult = parseFloat(editGrams) || 1;
+                  newDesc = mult === 1 ? itemToEdit.amountDescription : `${mult}x portion`;
                 } else if (editUnit === 'grams' && editGrams) {
-                  mult = parseFloat(editGrams) / 100;
-                  newDesc = `${editGrams}g`;
+                  newDesc = `~${editGrams}g`;
                 } else if (editUnit === 'pieces' && editGrams) {
-                  mult = parseFloat(editGrams);
                   newDesc = `${editGrams} pcs`;
                 }
                 onRemoveItem(itemToEdit, selectedDate);
                 onItemsAdded([{
                   ...itemToEdit,
+                  id: generateId(),
                   amountDescription: newDesc,
-                  calories: Math.round(itemToEdit.calories * mult),
-                  protein: Math.round(itemToEdit.protein * mult),
-                  carbs: Math.round(itemToEdit.carbs * mult),
-                  fat: Math.round(itemToEdit.fat * mult)
+                  ...preview,
                 }], selectedDate);
                 setItemToEdit(null);
                 setEditGrams(''); setEditUnit('multiplier');
@@ -738,7 +824,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
               <div className="flex bg-gray-100 rounded-xl p-1.5 mb-4">
                 {(['multiplier', 'grams', 'pieces'] as const).map(unit => (
-                  <button key={unit} onClick={() => { setEditUnit(unit); setEditGrams(unit === 'multiplier' ? '1' : ''); }}
+                  <button key={unit} onClick={() => { setEditUnit(unit); setEditGrams(unit === 'multiplier' ? '1' : unit === 'grams' && itemGrams > 0 ? String(itemGrams) : ''); }}
                     className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all active:scale-95 ${editUnit === unit ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
                     {unit === 'multiplier' ? tr('portion') : unit === 'grams' ? tr('grams') : tr('pieces')}
                   </button>
@@ -755,8 +841,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               )}
               {editUnit === 'grams' && (
                 <div className="grid grid-cols-4 gap-2.5 mb-4">
-                  {['50', '100', '150', '200'].map(g => (
-                    <button key={g} onClick={() => setEditGrams(g)} className={`py-3.5 rounded-xl text-base font-bold transition-all active:scale-95 min-h-[48px] ${editGrams === g ? 'bg-[#E07A5F] text-white' : 'bg-gray-100 text-gray-600'}`}>{g}g</button>
+                  {[50, 100, 150, 200].map(g => (
+                    <button key={g} onClick={() => setEditGrams(String(g))} className={`py-3.5 rounded-xl text-base font-bold transition-all active:scale-95 min-h-[48px] ${editGrams === String(g) ? 'bg-[#E07A5F] text-white' : 'bg-gray-100 text-gray-600'}`}>{g}g</button>
                   ))}
                 </div>
               )}
@@ -772,7 +858,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               <div className="flex gap-2.5 mb-4">
                 <input
                   type="number"
-                  placeholder={editUnit === 'multiplier' ? '1' : editUnit === 'grams' ? '100' : '1'}
+                  placeholder={editUnit === 'multiplier' ? '1' : editUnit === 'grams' ? String(itemGrams || 100) : '1'}
                   className="flex-1 bg-gray-100 rounded-xl px-4 py-4 outline-none text-base font-bold text-center"
                   value={editGrams}
                   onChange={(e) => setEditGrams(e.target.value)}
@@ -787,9 +873,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 <div className="bg-[#E07A5F]/10 rounded-xl p-3 mb-4">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-[#E07A5F] font-medium">{tr('total')}</span>
-                    <span className="text-lg font-black text-gray-900">
-                      {Math.round(itemToEdit.calories * (editUnit === 'grams' ? parseFloat(editGrams) / 100 : parseFloat(editGrams) || 1))} kcal
-                    </span>
+                    <span className="text-lg font-black text-gray-900">{preview.calories} kcal</span>
+                  </div>
+                  <div className="flex gap-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-gray-400">P {preview.protein}g</span>
+                    <span className="text-[10px] font-bold text-gray-400">C {preview.carbs}g</span>
+                    <span className="text-[10px] font-bold text-gray-400">F {preview.fat}g</span>
                   </div>
                 </div>
               )}
@@ -801,7 +890,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Analysis Modal */}
       {analyzedItems && selectedMealType && (

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { FoodItem } from '../types';
-import { Check, Minus, Plus, Trash2, X } from 'lucide-react';
+import { Check, Minus, Plus, Trash2, X, PenLine } from 'lucide-react';
 
 interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   grams?: number;
@@ -34,6 +34,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   );
 
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [editingNameIdx, setEditingNameIdx] = useState<number | null>(null);
 
   const activeItems = editableItems.filter(i => !i.removed);
 
@@ -74,8 +75,15 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     setExpandedIdx(null);
   };
 
+  const updateItemName = (idx: number, name: string) => {
+    setEditableItems(prev => prev.map((item, i) =>
+      i === idx ? { ...item, name } : item
+    ));
+  };
+
   const handleConfirm = () => {
-    const itemsToLog = activeItems.map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, grams, ...rest }) => rest);
+    // Preserve grams for edit-portion modal, strip internal calculation fields
+    const itemsToLog = activeItems.map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
     onConfirm(itemsToLog);
   };
 
@@ -105,10 +113,23 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                   {/* Item row - always visible */}
                   <button
                     className="w-full p-3 text-left"
-                    onClick={() => setExpandedIdx(isExpanded ? null : idx)}
+                    onClick={() => { setExpandedIdx(isExpanded ? null : idx); setEditingNameIdx(null); }}
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-bold text-gray-800 text-sm leading-tight pr-2">{item.name}</span>
+                      {editingNameIdx === idx ? (
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => updateItemName(idx, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setEditingNameIdx(null); }}
+                          onBlur={() => setEditingNameIdx(null)}
+                          className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="font-bold text-gray-800 text-sm leading-tight pr-2">{item.name}</span>
+                      )}
                       <span className="font-bold text-gray-900 text-sm shrink-0">{Math.round(item.calories)} kcal</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -188,14 +209,23 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                         </div>
                       </div>
 
-                      {/* Remove item */}
-                      <button
-                        onClick={() => removeItem(idx)}
-                        className="w-full py-2 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Remove
-                      </button>
+                      {/* Rename + Remove */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingNameIdx(idx)}
+                          className="flex-1 py-2 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                        >
+                          <PenLine className="w-3.5 h-3.5" />
+                          Rename
+                        </button>
+                        <button
+                          onClick={() => removeItem(idx)}
+                          className="flex-1 py-2 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
