@@ -145,12 +145,10 @@ export const parseFoodInput = async (input: string): Promise<Omit<FoodItem, 'id'
 "${safeInput}"
 
 RULES:
-1. BRANDED/KNOWN PRODUCTS (Big Mac, Whopper, KitKat, etc.): Return as ONE item with official nutritional values. Do NOT split into ingredients.
-2. HOMEMADE/COMPOSITE: Split into individual ingredients (e.g. "bread with cheese" → bread, cheese).
-3. GROUPING: When there are 2+ items from one meal/input, ALL items MUST have the same "group" field with a short natural meal name. Examples: "twee boterhammen met kaas" → group:"Boterhammen met kaas", "pasta with meat sauce" → group:"Pasta bolognese", "Big Mac menu" → group:"Big Mac Menu".
-4. Single items (1 result): omit "group".
-5. Macros must be FOR THE PORTION, not per 100g. Use official/database values, not estimates.
-6. Food names in SAME language as input. Handle typos, slang, any language.
+1. Split into individual ingredients (e.g. "bread with cheese" → bread, cheese). Keep single items single.
+2. When 2+ items: add "group" with a short meal name (e.g. "Boterhammen met kaas"). 1 item: omit "group".
+3. Return accurate macros FOR THE PORTION. Be precise — a Big Mac is 509 kcal, not 700.
+4. Food names in SAME language as input.
 
 JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true
@@ -172,11 +170,10 @@ export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<Food
       `Food database. Analyze this food photo into JSON.
 
 RULES:
-1. BRANDED/KNOWN PRODUCTS: Return as ONE item with official nutritional values. Do NOT split into ingredients.
-2. HOMEMADE/COMPOSITE: Split into visible components (bread, topping, sauce, drink, sides).
-3. GROUPING: When there are 2+ items, ALL items MUST share the same "group" field with a short natural meal name. Single items: omit "group".
-4. Estimate portions using plate/packaging/utensils for scale. Use official/database values for macros.
-5. Food names in ${langName}. Empty [] if no food visible.
+1. Identify each food item visible. Split composites into components (bread, topping, sauce, etc.).
+2. When 2+ items: add "group" with a short meal name. 1 item: omit "group".
+3. Estimate portions using plate/packaging for scale. Return accurate macros FOR THE PORTION.
+4. Food names in ${langName}. Empty [] if no food visible.
 
 JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true,
