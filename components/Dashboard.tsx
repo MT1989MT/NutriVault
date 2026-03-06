@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
-import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp, Copy } from 'lucide-react';
+import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, ChevronDown, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp, Copy } from 'lucide-react';
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
 import { getWorkouts, toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
@@ -17,6 +17,97 @@ interface DashboardProps {
   onCoachClick?: () => void;
   isActive?: boolean;
 }
+
+// Group meal items by groupName for display
+const MealItemList: React.FC<{ items: FoodItem[], onItemClick: (item: FoodItem) => void }> = memo(({ items, onItemClick }) => {
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+
+  // Build groups and ungrouped items preserving order
+  const { groups, ungrouped } = useMemo(() => {
+    const groups: { name: string; items: FoodItem[]; totalCal: number; totalP: number; totalC: number; totalF: number }[] = [];
+    const ungrouped: FoodItem[] = [];
+    const groupMap = new Map<string, number>();
+
+    items.forEach(item => {
+      if (item.groupName) {
+        const existing = groupMap.get(item.groupName);
+        if (existing !== undefined) {
+          groups[existing].items.push(item);
+          groups[existing].totalCal += item.calories;
+          groups[existing].totalP += item.protein;
+          groups[existing].totalC += item.carbs;
+          groups[existing].totalF += item.fat;
+        } else {
+          groupMap.set(item.groupName, groups.length);
+          groups.push({ name: item.groupName, items: [item], totalCal: item.calories, totalP: item.protein, totalC: item.carbs, totalF: item.fat });
+        }
+      } else {
+        ungrouped.push(item);
+      }
+    });
+    return { groups, ungrouped };
+  }, [items]);
+
+  const renderItem = (item: FoodItem, indented = false) => (
+    <div
+      key={item.id}
+      onClick={() => onItemClick(item)}
+      className={`flex items-center justify-between py-3 hover:bg-gray-50/50 cursor-pointer active:bg-gray-50 transition-smooth min-h-[54px] ${indented ? 'pl-8 pr-4' : 'px-4'}`}
+    >
+      <div className="flex-1 min-w-0 pr-3 flex items-center gap-3">
+        {item.photoUri && (
+          <img src={item.photoUri} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+        )}
+        <div className="min-w-0">
+          <p className={`font-medium text-gray-800 truncate ${indented ? 'text-[13px] text-gray-600' : 'text-[15px]'}`}>{item.name}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">{item.amountDescription}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className={`font-bold tabular-nums ${indented ? 'text-[13px] text-gray-700' : 'text-[15px] text-gray-900'}`}>{Math.round(item.calories)}</p>
+        <p className="text-[10px] text-gray-400 tabular-nums">P{Math.round(item.protein)} C{Math.round(item.carbs)} F{Math.round(item.fat)}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="divide-y divide-gray-50/80">
+      {groups.map((group) => {
+        const isExpanded = expandedGroup === group.name;
+        return (
+          <div key={`group-${group.name}`}>
+            <div
+              onClick={() => setExpandedGroup(isExpanded ? null : group.name)}
+              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 cursor-pointer active:bg-gray-50 transition-smooth min-h-[54px]"
+            >
+              <div className="flex-1 min-w-0 pr-3 flex items-center gap-2">
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-[#E07A5F] shrink-0" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-[#E07A5F] shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 text-[15px] truncate">{group.name}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{group.items.length} items</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-900 text-[15px] tabular-nums">{Math.round(group.totalCal)}</p>
+                <p className="text-[10px] text-gray-400 tabular-nums">P{Math.round(group.totalP)} C{Math.round(group.totalC)} F{Math.round(group.totalF)}</p>
+              </div>
+            </div>
+            {isExpanded && (
+              <div className="bg-gray-50/30">
+                {group.items.map(item => renderItem(item, true))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {ungrouped.map(item => renderItem(item))}
+    </div>
+  );
+});
 
 const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, isActive = true }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -393,29 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
               {/* Items */}
               {items.length > 0 ? (
-                <div className="divide-y divide-gray-50/80">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => { setItemToEdit(item); setEditGrams('1'); setEditUnit('multiplier'); }}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 cursor-pointer active:bg-gray-50 transition-smooth min-h-[54px]"
-                    >
-                      <div className="flex-1 min-w-0 pr-3 flex items-center gap-3">
-                        {item.photoUri && (
-                          <img src={item.photoUri} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-800 text-[15px] truncate">{item.name}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{item.amountDescription}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900 text-[15px] tabular-nums">{Math.round(item.calories)}</p>
-                        <p className="text-[10px] text-gray-400 tabular-nums">P{Math.round(item.protein)} C{Math.round(item.carbs)} F{Math.round(item.fat)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MealItemList items={items} onItemClick={(item) => { setItemToEdit(item); setEditGrams('1'); setEditUnit('multiplier'); }} />
               ) : (
                 <div className="px-4 py-3.5 text-sm text-gray-300 italic">
                   {budget} kcal {tr('left').toLowerCase()}
