@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Shield, Copy, X, Settings as SettingsIcon, LogOut, Check, Info, Heart, Target, Utensils, Lock, Database, Eye, Trash2, Download, Upload } from 'lucide-react';
+import { Shield, Copy, X, LogOut, Check, Info, Heart, Target, Utensils, Lock, Database, Eye, Trash2, Download, Upload, ExternalLink } from 'lucide-react';
 import { getSession, logout, addTime } from '../services/auth';
 import { getProfile, exportAllData, importAllData } from '../services/storage';
+import { getManagementURL, purchaseMonthly } from '../services/payments';
 import { UserProfile } from '../types';
 
 interface SettingsProps { onBack: () => void; }
@@ -28,9 +29,30 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handlePayment = async () => {
-    if (session && confirm("Extend subscription by 30 days?")) {
+    if (!session) return;
+
+    // On native: use RevenueCat/App Store payment flow
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+    if (isNative) {
+      const result = await purchaseMonthly();
+      if (result.success) {
+        await addTime(session.accountNumber, 1);
+        setDaysLeft(p => p + 30);
+      }
+      return;
+    }
+
+    // On web (dev): direct extend
+    if (confirm("Extend subscription by 30 days?")) {
       await addTime(session.accountNumber, 1);
       setDaysLeft(p => p + 30);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    const url = await getManagementURL();
+    if (url) {
+      window.open(url, '_blank');
     }
   };
 
@@ -209,6 +231,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <li>• Account number (anonymous identifier)</li>
                 </ul>
               </div>
+              <div className="bg-amber-50 rounded-xl p-3">
+                <h4 className="font-bold text-gray-900 text-xs mb-1">AI Processing</h4>
+                <p className="text-xs text-gray-500">Food descriptions are sent to Google Gemini for nutrition analysis. Only the food text is sent — no personal data, no account info, no tracking.</p>
+              </div>
               <div className="bg-green-50 rounded-xl p-3">
                 <p className="text-xs text-green-700 font-medium">✓ GDPR Compliant • No data retention • You own your data</p>
               </div>
@@ -241,6 +267,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             </div>
             <button onClick={handlePayment} className="text-[#E07A5F] text-xs font-bold bg-[#E07A5F]/8 px-4 py-2 rounded-xl transition-smooth active:scale-95">Extend</button>
           </div>
+          <button
+            onClick={handleManageSubscription}
+            className="w-full mt-3 text-gray-400 text-[10px] font-medium flex items-center justify-center gap-1"
+          >
+            Manage Subscription <ExternalLink className="w-2.5 h-2.5" />
+          </button>
         </div>
 
         {/* Data Backup */}
@@ -280,6 +312,26 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
           <button onClick={handleLogout} className="w-full bg-red-50 text-red-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
             <LogOut className="w-4 h-4" /> Logout
           </button>
+        </div>
+
+        {/* Legal links (Apple requirement) */}
+        <div className="flex justify-center gap-4 pb-4">
+          <a
+            href="https://nutrivault-seven.vercel.app/docs/privacy-policy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-gray-400 flex items-center gap-1"
+          >
+            Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
+          </a>
+          <a
+            href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-gray-400 flex items-center gap-1"
+          >
+            Terms of Use <ExternalLink className="w-2.5 h-2.5" />
+          </a>
         </div>
       </div>
     </div>

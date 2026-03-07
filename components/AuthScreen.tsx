@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, KeyRound, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Lock, KeyRound, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { createAccount, verifyKey, saveSession } from '../services/auth';
-import { purchaseMonthly, restorePurchases, getOfferings } from '../services/payments';
+import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute } from '../services/payments';
 import { t, getCurrentLanguage } from '../utils/i18n';
 
 interface AuthScreenProps {
   onAuthenticated: () => void;
 }
+
+// Pending purchase recovery key
+const PENDING_PURCHASE_KEY = 'nutrivault_pending_purchase';
 
 // Get locale-based price display
 const getLocalizedPrice = (): string => {
@@ -45,22 +48,55 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [price, setPrice] = useState(getLocalizedPrice());
   const lang = getCurrentLanguage();
 
-  // Load pricing from RevenueCat on mount (overrides locale-based price if available)
+  // Load pricing from RevenueCat on mount
   useEffect(() => {
     getOfferings().then(offerings => {
       if (offerings.monthly) {
         setPrice(offerings.monthly.price);
       }
     });
+
+    // Check for pending purchase that failed during code creation
+    checkPendingPurchase();
   }, []);
 
-  // Handle subscription purchase - goes directly to Apple/Google payment
+  /**
+   * Recovery: if a previous purchase succeeded but code creation failed,
+   * retry code creation automatically
+   */
+  const checkPendingPurchase = async () => {
+    const pending = localStorage.getItem(PENDING_PURCHASE_KEY);
+    if (!pending) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const acc = await createAccount();
+      if (acc && acc.key) {
+        localStorage.removeItem(PENDING_PURCHASE_KEY);
+        // Link code to RevenueCat customer
+        await setActivationCodeAttribute(acc.key);
+        setNewKey(acc.key);
+        setNewName(acc.name);
+        setView('CREATE');
+      } else {
+        setError(t('codeGenFailed'));
+      }
+    } catch {
+      setError(t('codeGenFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle subscription purchase
   const handlePurchase = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Process payment via RevenueCat/App Store/Google Play
+      // Step 1: Process payment via RevenueCat/App Store/Google Play
       const purchaseResult = await purchaseMonthly();
 
       if (!purchaseResult.success) {
@@ -73,14 +109,38 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         return;
       }
 
-      // Payment successful - Generate unique activation code
-      const acc = await createAccount();
+      // Step 2: Payment successful - mark as pending before code creation
+      // This ensures recovery if code creation fails
+      localStorage.setItem(PENDING_PURCHASE_KEY, Date.now().toString());
+
+      // Step 3: Generate unique activation code
+      let acc: { key: string; name: string } | null = null;
+      let retries = 3;
+
+      while (retries > 0 && !acc) {
+        acc = await createAccount();
+        if (!acc) {
+          retries--;
+          if (retries > 0) {
+            // Wait briefly before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
 
       if (!acc || !acc.key) {
+        // Payment succeeded but code creation failed
+        // The pending purchase marker remains for recovery on next app open
         setError(t('codeGenFailed'));
         setLoading(false);
         return;
       }
+
+      // Step 4: Success - clear pending marker
+      localStorage.removeItem(PENDING_PURCHASE_KEY);
+
+      // Step 5: Link code to RevenueCat customer for webhook-based renewal
+      await setActivationCodeAttribute(acc.key);
 
       // Show code to user
       setNewKey(acc.key);
@@ -94,7 +154,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
-  // Handle restore purchases
+  // Handle restore purchases (Apple App Store requirement 3.1.1)
   const handleRestore = async () => {
     setLoading(true);
     setError('');
@@ -103,12 +163,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       const result = await restorePurchases();
 
       if (result.isSubscribed) {
+        // User has an active subscription - check if they also have a code
         setError('');
         setView('LOGIN');
       } else {
         setError(t('noActiveSubscription'));
       }
-    } catch (err) {
+    } catch {
       setError(t('restoreFailed'));
     } finally {
       setLoading(false);
@@ -117,6 +178,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
   // Handle login with existing key
   const handleLogin = async () => {
+    if (!inputKey.replace(/\s/g, '')) return;
+
     setLoading(true);
     setError('');
 
@@ -221,6 +284,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             className="w-full bg-[#FAFAF8] p-5 rounded-2xl text-center text-xl font-mono font-bold tracking-widest outline-none mb-4 text-gray-900 placeholder-gray-400"
             value={inputKey}
             onChange={(e) => setInputKey(e.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
 
           {error && (
@@ -229,7 +295,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
           <button
             onClick={handleLogin}
-            disabled={loading}
+            disabled={loading || !inputKey.replace(/\s/g, '')}
             className="w-full bg-[#E07A5F] text-white font-bold py-4 rounded-2xl shadow-lg disabled:opacity-50"
           >
             {loading ? t('verifying') : t('access')}
@@ -239,7 +305,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     );
   }
 
-  // Welcome Screen - simplified with price, direct to payment
+  // Welcome Screen
   return (
     <div className="h-[100dvh] bg-[#FAFAF8] flex flex-col justify-center p-6 relative overflow-hidden">
       <div className="absolute top-[-20%] right-[-20%] w-[500px] h-[500px] bg-[#E07A5F]/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -299,7 +365,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </button>
           </div>
 
-          {/* Restore */}
+          {/* Restore Purchases (Apple requirement 3.1.1) */}
           <button
             onClick={handleRestore}
             disabled={loading}
@@ -308,6 +374,26 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <RefreshCw className="w-3 h-3" />
             {t('restorePurchases')}
           </button>
+
+          {/* Legal links (Apple requirement) */}
+          <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-gray-50">
+            <a
+              href="https://nutrivault-seven.vercel.app/docs/privacy-policy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-gray-400 flex items-center gap-1"
+            >
+              Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+            <a
+              href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-gray-400 flex items-center gap-1"
+            >
+              Terms of Use <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
         </div>
       </div>
     </div>
