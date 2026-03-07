@@ -140,59 +140,17 @@ export const parseFoodInput = async (input: string): Promise<Omit<FoodItem, 'id'
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `You are a precise food database. A user describes what they ate:
+      `Food database. Parse what the user ate into JSON.
 
 "${safeInput}"
 
-TASK: Break down into INDIVIDUAL ingredients. Each ingredient is a separate item.
+RULES:
+1. Split into individual ingredients (e.g. "bread with cheese" → bread, cheese). Keep single items single.
+2. When 2+ items: add "group" with a short meal name (e.g. "Boterhammen met kaas"). 1 item: omit "group".
+3. Return accurate macros FOR THE PORTION. Be precise — a Big Mac is 509 kcal, not 700.
+4. Food names in SAME language as input.
 
-SPLITTING RULES:
-- "bread with cheese and butter" → 3 items: bread, cheese, butter
-- "pasta with meat sauce" → 2 items: pasta, meat sauce (or further: pasta, ground beef, tomato sauce)
-- "coffee with milk" → 2 items: coffee, milk
-- "broodje kroket" → 2 items: broodje/bun, kroket
-- Single items stay single: "an apple" → 1 item: apple
-- Composite dishes that can't logically be split stay as 1 item: "pizza margherita", "sushi roll"
-- Handle typos, slang, any language, brand names
-
-BRANDED / KNOWN PRODUCTS (critical):
-- For branded items (Big Mac, Whopper, KitKat, etc.) or well-known dishes:
-  1. Look up the OFFICIAL nutritional values for the complete product
-  2. Break down into ingredients, but ENSURE the ingredient totals match the official total
-  3. Add "group" field with the product name so ingredients are grouped together
-  4. Example: "Big Mac" (official: ~550 kcal, 25g protein, 45g carbs, 30g fat)
-     → ingredients: sesame bun, 2x beef patty, American cheese, lettuce, onion, pickles, Big Mac sauce
-     → each with accurate macros, summing to ~550 kcal total
-- For homemade / non-branded food: omit the "group" field
-
-ACCURACY CROSS-CHECK:
-- After calculating all ingredients, verify the total is realistic
-- A Big Mac is ~550 kcal (NOT 700+). A broodje kroket is ~350 kcal. A cheese sandwich is ~300 kcal.
-- If your ingredient sum deviates >15% from the known total, adjust portions to match reality
-- Common calorie references: slice of bread ~90 kcal, egg ~90 kcal, banana ~105 kcal, apple ~80 kcal
-
-NUTRITIONAL DATA:
-- For each ingredient, determine the macros PER 100g from a reliable food database
-- Then estimate the realistic portion weight in grams for the context
-- Calculate final macros by scaling: (macros_per_100g × grams / 100)
-
-PORTION WEIGHTS (realistic defaults when unspecified):
-- Bread slice: 35g, bread roll/broodje: 50g, sesame bun (burger): 45g
-- Butter on bread: 10g, cheese on bread: 20g, ham/cold cuts: 20g
-- Mayo/ketchup/mustard: 15g, peanut butter: 15g, jam: 15g
-- Chicken breast (main): 150g, chicken on sandwich: 30g
-- Beef patty (fast food): 45g, beef patty (homemade): 100g
-- Rice/pasta (cooked, side): 150g, as main: 250g
-- Coffee/tea: 150ml, milk in coffee: 30ml, glass juice: 250ml
-- Egg: 60g, apple/banana: 150g, yogurt: 150g
-- Fast food sauce packet: 25g, dressing: 30g
-
-LANGUAGE: Food names in the SAME language as the input.
-
-JSON array, one object per ingredient:
-[{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]
-
-"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION (not per 100g). "group" = parent product name ONLY for branded/known products.`,
+JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true
     );
     if (!text) return [];
@@ -209,41 +167,15 @@ export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<Food
 
     const text = await callGemini(
       POWERFUL_MODEL,
-      `You are a precise food database analyzing a food photo.
+      `Food database. Analyze this food photo into JSON.
 
-TASK: Break down everything visible into INDIVIDUAL ingredients/items.
+RULES:
+1. Identify each food item visible. Split composites into components (bread, topping, sauce, etc.).
+2. When 2+ items: add "group" with a short meal name. 1 item: omit "group".
+3. Estimate portions using plate/packaging for scale. Return accurate macros FOR THE PORTION.
+4. Food names in ${langName}. Empty [] if no food visible.
 
-SPLITTING RULES:
-- Separate each visible component: bread, topping, sauce, drink, side dish
-- "Sandwich with cheese and ham" → bread, cheese, ham (3 items)
-- Don't forget: sauces, butter, dressing, cooking oil, drinks, sides, garnishes
-- Composite items that can't be split stay as 1: "pizza", "sushi roll", "kroket"
-
-NUTRITIONAL DATA (critical — be accurate):
-- For each item, determine macros per 100g from a reliable database
-- Use plate size, utensils, hands, packaging for scale to estimate portion weight
-- Calculate final macros: (macros_per_100g × grams / 100)
-
-PORTION ESTIMATION:
-- Sauces if visible but amount unclear: mayo = 15g, ketchup = 15g, butter = 10g, dressing = 25ml
-- Drinks: coffee = 150ml, juice = 250ml, wine = 150ml, beer = 330ml
-
-BRANDED / KNOWN PRODUCTS:
-- If you recognize a branded product (Big Mac, Whopper, KitKat, etc.):
-  1. Use OFFICIAL nutritional values as ground truth
-  2. Break into ingredients but ensure totals match the official values
-  3. Add "group" field with the product name
-- For non-branded food: omit "group" field
-
-ACCURACY CROSS-CHECK:
-- Verify ingredient totals are realistic (Big Mac ~550 kcal, not 700+)
-- Common references: bread slice ~90 kcal, egg ~90 kcal, banana ~105 kcal
-
-Food names in ${langName}.
-
-JSON (empty [] if no food): [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]
-
-"grams" = estimated portion weight. "p","c","f" = protein, carbs, fat in grams FOR THAT PORTION. "group" = parent product name ONLY for branded/known products.`,
+JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true,
       imageBase64
     );
