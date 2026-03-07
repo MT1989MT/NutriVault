@@ -38,6 +38,9 @@ const getLocalizedPrice = (): string => {
   }).format(amount);
 };
 
+// Dev mode detection
+const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [view, setView] = useState<'WELCOME' | 'CREATE' | 'LOGIN'>('WELCOME');
   const [loading, setLoading] = useState(false);
@@ -171,6 +174,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       }
     } catch {
       setError(t('restoreFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Dev mode: skip auth entirely (creates mock account + auto-login)
+  const handleDevSkip = async () => {
+    if (!IS_DEV) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const acc = await createAccount();
+      if (acc && acc.key) {
+        const result = await verifyKey(acc.key);
+        if (result.success && result.token && result.expiry) {
+          saveSession(acc.key, result.token, result.expiry, result.name);
+          onAuthenticated();
+          return;
+        }
+      }
+      setError('Dev skip failed');
+    } catch {
+      setError('Dev skip failed');
     } finally {
       setLoading(false);
     }
@@ -394,6 +421,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               Terms of Use <ExternalLink className="w-2.5 h-2.5" />
             </a>
           </div>
+
+          {/* Dev mode: skip auth for testing */}
+          {IS_DEV && (
+            <button
+              onClick={handleDevSkip}
+              disabled={loading}
+              className="w-full mt-3 py-2 text-xs font-mono text-orange-500 border border-dashed border-orange-300 rounded-xl bg-orange-50 disabled:opacity-50"
+            >
+              ⚡ DEV MODE — Skip Auth
+            </button>
+          )}
         </div>
       </div>
     </div>
