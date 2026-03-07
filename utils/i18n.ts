@@ -79,7 +79,9 @@ type TranslationKey =
   // Photo & quick-log
   | 'addPhoto' | 'mostUsed' | 'takePhoto' | 'choosePhoto' | 'photoSaved' | 'timesLogged'
   // Photo scan & weight goal
-  | 'scanFood' | 'analyzing' | 'targetWeight' | 'bmi' | 'toGoal' | 'rate' | 'weeksToGoal';
+  | 'scanFood' | 'analyzing' | 'targetWeight' | 'bmi' | 'toGoal' | 'rate' | 'weeksToGoal'
+  // Error messages & copy
+  | 'couldNotIdentifyFood' | 'requestTimedOut' | 'networkError' | 'copyYesterday';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -378,7 +380,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'BMI',
     toGoal: 'to goal',
     rate: 'rate',
-    weeksToGoal: 'weeks to goal'
+    weeksToGoal: 'weeks to goal',
+    couldNotIdentifyFood: 'Could not identify any food items. Please try again with more detail.',
+    requestTimedOut: 'Request timed out. Please try again.',
+    networkError: 'Could not reach the server. Check your connection.',
+    copyYesterday: "Copy yesterday's"
   },
   nl: {
     // Navigation
@@ -676,7 +682,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'BMI',
     toGoal: 'tot doel',
     rate: 'tempo',
-    weeksToGoal: 'weken tot doel'
+    weeksToGoal: 'weken tot doel',
+    couldNotIdentifyFood: 'Kon geen voedsel herkennen. Probeer het opnieuw met meer detail.',
+    requestTimedOut: 'Verzoek verlopen. Probeer het opnieuw.',
+    networkError: 'Kan de server niet bereiken. Controleer je verbinding.',
+    copyYesterday: "Kopieer gisteren's"
   },
   de: {
     // Navigation
@@ -974,7 +984,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'BMI',
     toGoal: 'zum Ziel',
     rate: 'Rate',
-    weeksToGoal: 'Wochen bis Ziel'
+    weeksToGoal: 'Wochen bis Ziel',
+    couldNotIdentifyFood: 'Es konnten keine Lebensmittel erkannt werden. Bitte versuche es mit mehr Details.',
+    requestTimedOut: 'Zeitüberschreitung. Bitte versuche es erneut.',
+    networkError: 'Server nicht erreichbar. Überprüfe deine Verbindung.',
+    copyYesterday: 'Gestern kopieren'
   },
   fr: {
     // Navigation
@@ -1272,7 +1286,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'IMC',
     toGoal: 'objectif',
     rate: 'rythme',
-    weeksToGoal: 'semaines restantes'
+    weeksToGoal: 'semaines restantes',
+    couldNotIdentifyFood: "Impossible d'identifier les aliments. Réessayez avec plus de détails.",
+    requestTimedOut: 'Délai expiré. Veuillez réessayer.',
+    networkError: 'Serveur inaccessible. Vérifiez votre connexion.',
+    copyYesterday: "Copier d'hier"
   },
   es: {
     // Navigation
@@ -1570,7 +1588,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'IMC',
     toGoal: 'al objetivo',
     rate: 'ritmo',
-    weeksToGoal: 'semanas para meta'
+    weeksToGoal: 'semanas para meta',
+    couldNotIdentifyFood: 'No se pudo identificar ningún alimento. Inténtalo de nuevo con más detalle.',
+    requestTimedOut: 'Tiempo de espera agotado. Inténtalo de nuevo.',
+    networkError: 'No se pudo conectar al servidor. Verifica tu conexión.',
+    copyYesterday: 'Copiar de ayer'
   },
   it: {
     // Navigation
@@ -1868,7 +1890,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     bmi: 'IMC',
     toGoal: 'all\'obiettivo',
     rate: 'ritmo',
-    weeksToGoal: 'settimane al traguardo'
+    weeksToGoal: 'settimane al traguardo',
+    couldNotIdentifyFood: 'Impossibile identificare gli alimenti. Riprova con più dettagli.',
+    requestTimedOut: 'Richiesta scaduta. Riprova.',
+    networkError: 'Impossibile raggiungere il server. Controlla la connessione.',
+    copyYesterday: 'Copia da ieri'
   }
 };
 

@@ -86,7 +86,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     const loadedMessages: ChatMessage[] = [];
     moods.forEach(m => {
       loadedMessages.push({ id: m.id + '_user', text: m.mood, sender: 'USER', timestamp: m.timestamp });
-      loadedMessages.push({ id: m.id + '_ai', text: m.advice, sender: 'AI', timestamp: m.timestamp + 1 });
+      loadedMessages.push({ id: m.id + '_ai', text: m.advice || '', sender: 'AI', timestamp: m.timestamp + 1 });
     });
     if (loadedMessages.length === 0) {
       const name = profile?.name || '';

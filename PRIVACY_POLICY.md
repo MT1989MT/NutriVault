@@ -1,6 +1,6 @@
 # Privacy Policy - NutriVault
 
-**Laatst bijgewerkt:** December 2025
+**Laatst bijgewerkt:** Maart 2026
 
 ## Samenvatting
 
@@ -102,8 +102,8 @@ Bij wijzigingen in dit privacybeleid wordt de "Laatst bijgewerkt" datum aangepas
 
 Vragen over privacy? Neem contact op:
 
-**Email:** [jouw-email@example.com]
-**Website:** [jouw-website.com]
+**Email:** support@nutrivault.app
+**Website:** https://mt1989mt.github.io/NutriVault/
 
 ---
 
