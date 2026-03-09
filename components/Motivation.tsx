@@ -30,8 +30,12 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     const todayLog = logs[today];
     const todayCalories = todayLog?.items?.reduce((s, i) => s + i.calories, 0) || 0;
     const todayProtein = todayLog?.items?.reduce((s, i) => s + i.protein, 0) || 0;
+    const todayCarbs = todayLog?.items?.reduce((s, i) => s + i.carbs, 0) || 0;
+    const todayFat = todayLog?.items?.reduce((s, i) => s + i.fat, 0) || 0;
     const todayWorkouts = todayLog?.workouts || [];
     const todayWorkoutMins = todayWorkouts.reduce((s, w) => s + w.durationMinutes, 0);
+    const todayWater = todayLog?.waterIntakeMl || 0;
+    const todayItemCount = todayLog?.items?.length || 0;
 
     // Last 7 days stats
     const last7Days: string[] = [];
@@ -42,42 +46,102 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     }
 
     const weekCalories = last7Days.reduce((s, date) => s + (logs[date]?.items?.reduce((sum, i) => sum + i.calories, 0) || 0), 0);
+    const weekProtein = last7Days.reduce((s, date) => s + (logs[date]?.items?.reduce((sum, i) => sum + i.protein, 0) || 0), 0);
     const weekWorkouts = last7Days.reduce((s, date) => s + (logs[date]?.workouts?.length || 0), 0);
     const daysTracked = last7Days.filter(date => logs[date]?.items?.length > 0).length;
 
-    // Recent foods
-    const recentFoods = todayLog?.items?.slice(-5).map(i => i.name).join(', ') || '';
+    // Average daily calories this week (only days with data)
+    const avgDailyCalories = daysTracked > 0 ? Math.round(weekCalories / daysTracked) : 0;
+    const avgDailyProtein = daysTracked > 0 ? Math.round(weekProtein / daysTracked) : 0;
+
+    // Today's foods with meal types
+    const todayFoodsByMeal: Record<string, string[]> = {};
+    todayLog?.items?.forEach(i => {
+      const meal = i.mealType || 'SNACK';
+      if (!todayFoodsByMeal[meal]) todayFoodsByMeal[meal] = [];
+      todayFoodsByMeal[meal].push(i.name);
+    });
+    const todayFoodsSummary = Object.entries(todayFoodsByMeal)
+      .map(([meal, foods]) => `${meal}: ${foods.join(', ')}`)
+      .join(' | ') || 'Nothing logged yet';
 
     // Recent workouts
-    const allWorkouts: { type: string; date: string }[] = [];
+    const allWorkouts: { type: string; date: string; duration: number }[] = [];
     Object.entries(logs).forEach(([date, log]: [string, DayLog]) => {
-      log.workouts?.forEach(w => allWorkouts.push({ type: w.type, date }));
+      log.workouts?.forEach(w => allWorkouts.push({ type: w.type, date, duration: w.durationMinutes }));
     });
-    const recentWorkouts = allWorkouts.slice(-3).map(w => w.type).join(', ') || '';
+    const recentWorkouts = allWorkouts.slice(-5).map(w => `${w.type} (${w.duration}min, ${w.date})`).join(', ') || '';
+
+    // Weight trend
+    const weightEntries: { date: string; weight: number }[] = [];
+    Object.entries(logs).forEach(([date, log]: [string, DayLog]) => {
+      if (log.weightLog) weightEntries.push({ date, weight: log.weightLog });
+    });
+    weightEntries.sort((a, b) => a.date.localeCompare(b.date));
+    const latestWeight = weightEntries.length > 0 ? weightEntries[weightEntries.length - 1] : null;
+    const weightTrend = weightEntries.length >= 2
+      ? (weightEntries[weightEntries.length - 1].weight - weightEntries[weightEntries.length - 2].weight)
+      : null;
 
     return {
       todayCalories,
       todayProtein,
+      todayCarbs,
+      todayFat,
       todayWorkoutMins,
+      todayWater,
+      todayItemCount,
+      todayFoodsSummary,
       weekCalories,
+      weekProtein,
       weekWorkouts,
       daysTracked,
-      recentFoods,
+      avgDailyCalories,
+      avgDailyProtein,
       recentWorkouts,
+      latestWeight,
+      weightTrend,
       goal: profile?.customCalories || profile?.tdee || 2000,
       weightKg: profile?.weightKg || 0,
-      goalType: profile?.goal || 'maintain'
+      goalType: profile?.goal || 'maintain',
+      targetWeightKg: profile?.targetWeightKg || 0,
+      dietaryPreferences: profile?.dietaryPreferences || [],
     };
   }, [logs, profile]);
 
   // Build context string for AI
   const buildUserContext = (): string => {
     const lines = [];
-    lines.push(`USER PROFILE: Goal: ${userStats.goalType}, Target: ${userStats.goal} kcal/day, Weight: ${userStats.weightKg}kg`);
-    lines.push(`TODAY: ${userStats.todayCalories} kcal eaten, ${userStats.todayProtein}g protein, ${userStats.todayWorkoutMins} min workout`);
-    lines.push(`THIS WEEK: ${userStats.weekCalories} total kcal, ${userStats.weekWorkouts} workouts, ${userStats.daysTracked}/7 days tracked`);
-    if (userStats.recentFoods) lines.push(`RECENT FOODS: ${userStats.recentFoods}`);
-    if (userStats.recentWorkouts) lines.push(`RECENT WORKOUTS: ${userStats.recentWorkouts}`);
+    const goalLabels: Record<string, string> = { LOSE: 'Weight loss', MAINTAIN: 'Maintain weight', GAIN: 'Muscle gain / bulk', FIT: 'General fitness' };
+
+    lines.push(`USER: ${profile?.name || 'Unknown'}, ${profile?.age || '?'}y, ${userStats.weightKg}kg${userStats.targetWeightKg ? ` → target ${userStats.targetWeightKg}kg` : ''}`);
+    lines.push(`GOAL: ${goalLabels[userStats.goalType] || userStats.goalType}, Daily target: ${userStats.goal} kcal`);
+    if (userStats.dietaryPreferences.length > 0) lines.push(`DIETARY PREFERENCES: ${userStats.dietaryPreferences.join(', ')}`);
+
+    lines.push('');
+    lines.push(`--- TODAY ---`);
+    lines.push(`Calories: ${userStats.todayCalories} / ${userStats.goal} kcal (${userStats.goal - userStats.todayCalories} remaining)`);
+    lines.push(`Macros: ${userStats.todayProtein}g protein, ${userStats.todayCarbs}g carbs, ${userStats.todayFat}g fat`);
+    lines.push(`Foods logged: ${userStats.todayFoodsSummary}`);
+    if (userStats.todayWorkoutMins > 0) lines.push(`Workout today: ${userStats.todayWorkoutMins} min`);
+    if (userStats.todayWater > 0) lines.push(`Water: ${(userStats.todayWater / 1000).toFixed(1)}L`);
+
+    lines.push('');
+    lines.push(`--- THIS WEEK (last 7 days) ---`);
+    lines.push(`Days tracked: ${userStats.daysTracked}/7`);
+    lines.push(`Avg daily: ${userStats.avgDailyCalories} kcal, ${userStats.avgDailyProtein}g protein`);
+    lines.push(`Workouts: ${userStats.weekWorkouts} sessions`);
+    if (userStats.recentWorkouts) lines.push(`Recent workouts: ${userStats.recentWorkouts}`);
+
+    if (userStats.latestWeight) {
+      lines.push('');
+      lines.push(`--- WEIGHT ---`);
+      lines.push(`Latest: ${userStats.latestWeight.weight}kg (${userStats.latestWeight.date})`);
+      if (userStats.weightTrend !== null) {
+        lines.push(`Trend: ${userStats.weightTrend > 0 ? '+' : ''}${userStats.weightTrend.toFixed(1)}kg since previous weigh-in`);
+      }
+    }
+
     return lines.join('\n');
   };
 
@@ -90,9 +154,28 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     });
     if (loadedMessages.length === 0) {
       const name = profile?.name || '';
-      const greeting = userStats.todayCalories > 0
-        ? `Hey${name ? ' ' + name : ''}! ${userStats.todayCalories} kcal so far today - how's your day going?`
-        : `Hey${name ? ' ' + name : ''}! What's up? Tell me about your day or ask me anything.`;
+      const hour = new Date().getHours();
+      const lang = (navigator.language || 'en').split('-')[0];
+      const isNL = lang === 'nl';
+      let greeting: string;
+
+      if (isNL) {
+        const timeGreet = hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Hoi' : 'Goedenavond';
+        if (userStats.todayCalories > 0) {
+          const remaining = userStats.goal - userStats.todayCalories;
+          greeting = `${timeGreet}${name ? ' ' + name : ''}! Je zit op ${userStats.todayCalories} kcal vandaag${remaining > 0 ? `, nog ${remaining} te gaan` : ''}. Waar kan ik mee helpen?`;
+        } else {
+          greeting = `${timeGreet}${name ? ' ' + name : ''}! Stel me een vraag, vraag advies, of gewoon kletsen — ik ben er voor je.`;
+        }
+      } else {
+        const timeGreet = hour < 12 ? 'Good morning' : hour < 18 ? 'Hey' : 'Good evening';
+        if (userStats.todayCalories > 0) {
+          const remaining = userStats.goal - userStats.todayCalories;
+          greeting = `${timeGreet}${name ? ' ' + name : ''}! You're at ${userStats.todayCalories} kcal today${remaining > 0 ? `, ${remaining} to go` : ''}. What can I help with?`;
+        } else {
+          greeting = `${timeGreet}${name ? ' ' + name : ''}! Ask me anything — nutrition advice, meal ideas, workout tips, or just chat.`;
+        }
+      }
       loadedMessages.push({ id: 'init', text: greeting, sender: 'AI', timestamp: Date.now() });
     }
     setMessages(loadedMessages.sort((a, b) => a.timestamp - b.timestamp));
@@ -138,7 +221,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
   };
 
   const getChatHistory = (): ChatHistoryItem[] => {
-    return messages.slice(-10).map(m => ({
+    return messages.slice(-16).map(m => ({
       role: m.sender === 'USER' ? 'user' as const : 'assistant' as const,
       content: m.text
     }));
@@ -174,33 +257,63 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
   const clearChat = () => {
     localStorage.removeItem('nutrivault_moods');
+    const lang = (navigator.language || 'en').split('-')[0];
+    const isNL = lang === 'nl';
+    const name = profile?.name ? ' ' + profile.name : '';
     setMessages([{
       id: 'init',
-      text: `Hey${profile?.name ? ' ' + profile.name : ''}! Fresh start. What's on your mind?`,
+      text: isNL
+        ? `Hey${name}! Schone lei. Waar wil je het over hebben?`
+        : `Hey${name}! Fresh start. What's on your mind?`,
       sender: 'AI',
       timestamp: Date.now()
     }]);
   };
 
-  // Smart suggested prompts based on user data
+  // Smart suggested prompts based on user data and time of day
   const suggestedPrompts = useMemo(() => {
-    const prompts = [];
+    const prompts: string[] = [];
+    const hour = new Date().getHours();
+    const lang = (navigator.language || 'en').split('-')[0];
+    const isNL = lang === 'nl';
 
+    // Time-based suggestions
     if (userStats.todayCalories === 0) {
-      prompts.push("What should I eat for breakfast?");
-    } else if (userStats.todayCalories < userStats.goal * 0.5) {
-      prompts.push("How am I doing today?");
+      if (hour < 11) {
+        prompts.push(isNL ? "Wat zal ik ontbijten?" : "What should I eat for breakfast?");
+      } else if (hour < 14) {
+        prompts.push(isNL ? "Wat zal ik lunchen?" : "What should I have for lunch?");
+      } else {
+        prompts.push(isNL ? "Wat zal ik eten vanavond?" : "What should I eat tonight?");
+      }
     } else if (userStats.todayCalories > userStats.goal) {
-      prompts.push("I went over my calories, help!");
+      prompts.push(isNL ? "Ik zit over mijn calorieën..." : "I went over my calories...");
+    } else {
+      const remaining = userStats.goal - userStats.todayCalories;
+      if (remaining > 500 && hour >= 17) {
+        prompts.push(isNL ? `Nog ${remaining} kcal over, tips?` : `${remaining} kcal left, suggestions?`);
+      } else {
+        prompts.push(isNL ? "Hoe gaat het vandaag?" : "How am I doing today?");
+      }
     }
 
-    if (userStats.todayWorkoutMins === 0) {
-      prompts.push("Give me a quick workout");
+    // Protein check
+    if (userStats.todayProtein < 50 && userStats.todayCalories > 500) {
+      prompts.push(isNL ? "Eet ik genoeg eiwit?" : "Am I eating enough protein?");
     }
 
-    prompts.push("Analyze my week");
-    prompts.push("Tips for my goal");
-    prompts.push("What should I eat next?");
+    // Workout suggestion
+    if (userStats.todayWorkoutMins === 0 && hour >= 8 && hour <= 20) {
+      prompts.push(isNL ? "Geef me een workout" : "Give me a quick workout");
+    }
+
+    // Weekly analysis
+    if (userStats.daysTracked >= 3) {
+      prompts.push(isNL ? "Analyseer mijn week" : "Analyze my week");
+    }
+
+    // General
+    prompts.push(isNL ? "Tips voor mijn doel" : "Tips for my goal");
 
     return prompts.slice(0, 4);
   }, [userStats]);
