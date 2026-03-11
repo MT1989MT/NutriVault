@@ -54,5 +54,9 @@
 	<string>NutriVault uses speech recognition to convert your voice input into meal and workout logs.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>NutriVault may save analyzed meal photos to your photo library.</string>
+	<key>MinimumOSVersion</key>
+	<string>15.0</string>
 </dict>
 </plist>
