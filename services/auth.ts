@@ -228,6 +228,23 @@ export const saveSession = (key: string, token: string, expiry: number, name?: s
  */
 export const getSession = (): Session | null => {
   try {
+    // Dev bypass: auto-create session for testing
+    if (IS_DEV) {
+      const str = localStorage.getItem(SESSION_KEY);
+      if (!str) {
+        const devSession: Session = {
+          accountNumber: 'DEV-0000-0000-0000',
+          token: 'dev-token',
+          subscriptionEnds: Date.now() + (1000 * 60 * 60 * 24 * 365),
+          name: 'Dev Tester',
+          expiry: Date.now() + (1000 * 60 * 60 * 24 * 365),
+          createdAt: Date.now()
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(devSession));
+        return devSession;
+      }
+    }
+
     const str = localStorage.getItem(SESSION_KEY);
     if (!str) return null;
 
