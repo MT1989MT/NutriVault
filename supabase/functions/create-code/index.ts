@@ -38,7 +38,7 @@ const FOODS = [
   'Quinoa', 'Saffron', 'Ginger', 'Wasabi', 'Matcha', 'Cacao', 'Tahini',
   'Kimchi', 'Kombucha', 'Tempeh', 'Arugula', 'Dragonfruit', 'Turmeric',
   'Cardamom', 'Cinnamon', 'Vanilla', 'Hazelnut', 'Almond', 'Cashew',
-  'Pistachio', 'Macadamia', 'Pecan', 'Blueberry', 'Raspberry', 'Pomegranate',
+  'Figberry', 'Macadamia', 'Pecan', 'Blueberry', 'Raspberry', 'Pomegranate',
   'Passionfruit', 'Lychee', 'Guava', 'Starfruit', 'Tamarind', 'Edamame',
   'Brioche', 'Focaccia', 'Pesto', 'Risotto', 'Burrata', 'Halloumi',
   'Mochi', 'Granola', 'Churro', 'Croissant', 'Biscotti', 'Tiramisu'

@@ -1,10 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// CORS origin whitelist (same as gemini.ts)
+const ALLOWED_ORIGINS = [
+  'https://nutrivault-seven.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'capacitor://localhost',
+  'ionic://localhost',
+  ...(process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || []),
+];
+
+function getAllowedOrigin(origin: string): string | null {
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (/^https:\/\/nutrivault(-[a-z0-9]+)*\.vercel\.app$/.test(origin)) return origin;
+  return null;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin || '';
+  const allowed = getAllowedOrigin(origin);
+
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', allowed);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', 'capacitor://localhost');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(200).end();
   }
 
