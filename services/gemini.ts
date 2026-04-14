@@ -53,8 +53,27 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 
+// Simple time-limited cache to avoid duplicate API calls for identical prompts
+const responseCache = new Map<string, { text: string; timestamp: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 30;
+
+const getCacheKey = (model: string, prompt: string, imageBase64?: string): string => {
+  // Use first 200 chars of prompt + model as key (images are never cached)
+  if (imageBase64) return '';
+  return `${model}:${prompt.substring(0, 200)}`;
+};
+
 // Call our secure API route (API key stays server-side) with retry logic
 const callGemini = async (model: string, prompt: string, jsonMode: boolean = false, imageBase64?: string): Promise<string> => {
+  // Check cache for non-image requests
+  const cacheKey = getCacheKey(model, prompt, imageBase64);
+  if (cacheKey) {
+    const cached = responseCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.text;
+    }
+  }
   const MAX_RETRIES = 2;
   let lastError: Error | null = null;
 
@@ -89,7 +108,19 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       }
 
       const data = await response.json();
-      return data.text || "";
+      const text = data.text || "";
+
+      // Store in cache for non-image requests
+      if (cacheKey && text) {
+        if (responseCache.size >= MAX_CACHE_SIZE) {
+          // Evict oldest entry
+          const oldestKey = responseCache.keys().next().value;
+          if (oldestKey) responseCache.delete(oldestKey);
+        }
+        responseCache.set(cacheKey, { text, timestamp: Date.now() });
+      }
+
+      return text;
     } catch (error: any) {
       clearTimeout(timeout);
       if (error.name === 'AbortError') {

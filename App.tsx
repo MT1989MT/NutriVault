@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FoodItem, UserProfile, WorkoutLog } from './types';
 import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake } from './services/storage';
 import { getSession } from './services/auth';
@@ -43,27 +43,30 @@ const App: React.FC = () => {
     setIsLoading(false);
   }, []);
 
-  const handleSaveProfile = (newProfile: UserProfile) => {
+  const handleSaveProfile = useCallback((newProfile: UserProfile) => {
     saveProfile(newProfile); setProfile(newProfile); setCurrentView('DASHBOARD');
-  };
-  const handleAddItems = (items: FoodItem[], date?: string) => {
+  }, []);
+  const handleAddItems = useCallback((items: FoodItem[], date?: string) => {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    addFoodsToLog(targetDate, items);
-    setLogs(getLogs());
-  };
-  const handleRemoveItem = (item: FoodItem, date?: string) => {
+    const updated = addFoodsToLog(targetDate, items);
+    setLogs(updated);
+  }, []);
+  const handleRemoveItem = useCallback((item: FoodItem, date?: string) => {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    removeFoodFromLog(targetDate, item.id);
-    setLogs(getLogs());
-  };
-  const handleAddWorkout = (date: string, workout: WorkoutLog) => {
-    addWorkoutToLog(date, workout);
-    setLogs(getLogs());
-  };
-  const handleWaterUpdate = (date: string, ml: number) => {
-    updateWaterIntake(date, ml);
-    setLogs(getLogs());
-  };
+    const updated = removeFoodFromLog(targetDate, item.id);
+    setLogs(updated);
+  }, []);
+  const handleAddWorkout = useCallback((date: string, workout: WorkoutLog) => {
+    const updated = addWorkoutToLog(date, workout);
+    setLogs(updated);
+  }, []);
+  const handleWaterUpdate = useCallback((date: string, ml: number) => {
+    const updated = updateWaterIntake(date, ml);
+    setLogs(updated);
+  }, []);
+  const goToSettings = useCallback(() => setCurrentView('SETTINGS'), []);
+  const goToCoach = useCallback(() => setCurrentView('COACH'), []);
+  const goToDashboard = useCallback(() => setCurrentView('DASHBOARD'), []);
 
   if (isLoading) return <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
@@ -77,37 +80,37 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden relative">
             {currentView === 'DASHBOARD' && (
               <div className="absolute inset-0 z-10">
-                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={() => setCurrentView('SETTINGS')} onCoachClick={() => setCurrentView('COACH')} isActive={currentView === 'DASHBOARD'} />
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} isActive />
               </div>
             )}
             {currentView === 'WORKOUTS' && (
               <div className="absolute inset-0 z-10">
-                <Workouts logs={logs} onAddWorkout={handleAddWorkout} onCoachClick={() => setCurrentView('COACH')} />
+                <Workouts logs={logs} onAddWorkout={handleAddWorkout} onCoachClick={goToCoach} />
               </div>
             )}
             {currentView === 'RECIPES' && (
               <div className="absolute inset-0 z-10">
-                <Recipes onLogRecipe={handleAddItems} onCoachClick={() => setCurrentView('COACH')} />
+                <Recipes onLogRecipe={handleAddItems} onCoachClick={goToCoach} />
               </div>
             )}
             {currentView === 'HISTORY' && (
               <div className="absolute inset-0 z-10">
-                <History logs={logs} profile={profile} onCoachClick={() => setCurrentView('COACH')} />
+                <History logs={logs} profile={profile} onCoachClick={goToCoach} />
               </div>
             )}
             {currentView === 'PROFILE' && (
               <div className="absolute inset-0 z-10">
-                <Profile existingProfile={profile} onSave={handleSaveProfile} onCancel={() => setCurrentView('DASHBOARD')} />
+                <Profile existingProfile={profile} onSave={handleSaveProfile} onCancel={goToDashboard} />
               </div>
             )}
             {currentView === 'SETTINGS' && (
               <div className="absolute inset-0 z-10">
-                <Settings onBack={() => setCurrentView('DASHBOARD')} />
+                <Settings onBack={goToDashboard} />
               </div>
             )}
             {currentView === 'COACH' && (
               <div className="absolute inset-0 z-10">
-                <Motivation onBack={() => setCurrentView('DASHBOARD')} logs={logs} profile={profile} />
+                <Motivation onBack={goToDashboard} logs={logs} profile={profile} />
               </div>
             )}
           </div>

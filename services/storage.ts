@@ -10,6 +10,21 @@ const SAVED_MEALS_KEY = 'nutrivault_saved_meals';
 const TRAINING_PLAN_KEY = 'nutrivault_training_plan';
 const SAVED_ROUTINES_KEY = 'nutrivault_saved_routines';
 
+// In-memory cache to avoid repeated JSON.parse/stringify on every read
+const cache = new Map<string, any>();
+
+const cachedGet = <T>(key: string, fallback: T): T => {
+  if (cache.has(key)) return cache.get(key);
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : fallback;
+    cache.set(key, parsed);
+    return parsed;
+  } catch {
+    return fallback;
+  }
+};
+
 // Safe localStorage write with quota error handling
 const safeSetItem = (key: string, value: string): void => {
   try {
@@ -22,15 +37,17 @@ const safeSetItem = (key: string, value: string): void => {
   }
 };
 
-export const saveProfile = (profile: UserProfile): void => safeSetItem(PROFILE_KEY, JSON.stringify(profile));
-export const getProfile = (): UserProfile | null => {
-  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch { return null; }
+// Write an already-parsed object: caches it in memory and persists to localStorage
+const cachedSet = <T>(key: string, data: T): void => {
+  cache.set(key, data);
+  safeSetItem(key, JSON.stringify(data));
 };
 
-export const saveLogs = (logs: Record<string, DayLog>): void => safeSetItem(LOGS_KEY, JSON.stringify(logs));
-export const getLogs = (): Record<string, DayLog> => {
-  try { return JSON.parse(localStorage.getItem(LOGS_KEY) || '{}'); } catch { return {}; }
-};
+export const saveProfile = (profile: UserProfile): void => cachedSet(PROFILE_KEY, profile);
+export const getProfile = (): UserProfile | null => cachedGet<UserProfile | null>(PROFILE_KEY, null);
+
+export const saveLogs = (logs: Record<string, DayLog>): void => cachedSet(LOGS_KEY, logs);
+export const getLogs = (): Record<string, DayLog> => cachedGet<Record<string, DayLog>>(LOGS_KEY, {});
 
 export const addFoodToLog = (date: string, item: FoodItem) => {
   const logs = getLogs();
@@ -98,71 +115,61 @@ export const addWorkoutToLog = (date: string, workout: WorkoutLog) => {
   return logs;
 };
 
-export const getTrainingPlan = (): TrainingPlan | null => {
-  try { return JSON.parse(localStorage.getItem(TRAINING_PLAN_KEY) || 'null'); } catch { return null; }
-};
+export const getTrainingPlan = (): TrainingPlan | null => cachedGet<TrainingPlan | null>(TRAINING_PLAN_KEY, null);
 export const saveTrainingPlan = (plan: TrainingPlan) => {
-  safeSetItem(TRAINING_PLAN_KEY, JSON.stringify(plan));
+  cachedSet(TRAINING_PLAN_KEY, plan);
   return plan;
 };
 
-export const getMoods = (): MoodLog[] => {
-  try { return JSON.parse(localStorage.getItem(MOODS_KEY) || '[]'); } catch { return []; }
-};
+export const getMoods = (): MoodLog[] => cachedGet<MoodLog[]>(MOODS_KEY, []);
 export const saveMood = (mood: MoodLog) => {
   const moods = getMoods();
   moods.push(mood);
   if (moods.length > 50) moods.shift();
-  safeSetItem(MOODS_KEY, JSON.stringify(moods));
+  cachedSet(MOODS_KEY, moods);
   return moods;
 };
 
-export const getSavedRecipes = (): Recipe[] => {
-  try { return JSON.parse(localStorage.getItem(RECIPES_KEY) || '[]'); } catch { return []; }
-};
+export const getSavedRecipes = (): Recipe[] => cachedGet<Recipe[]>(RECIPES_KEY, []);
 export const saveRecipe = (recipe: Recipe) => {
   const recipes = getSavedRecipes();
   const index = recipes.findIndex(r => r.id === recipe.id);
   if (index >= 0) recipes[index] = recipe; else recipes.push(recipe);
-  safeSetItem(RECIPES_KEY, JSON.stringify(recipes));
+  cachedSet(RECIPES_KEY, recipes);
   return recipes;
 };
 export const deleteRecipe = (id: string) => {
   const recipes = getSavedRecipes().filter(r => r.id !== id);
-  safeSetItem(RECIPES_KEY, JSON.stringify(recipes));
+  cachedSet(RECIPES_KEY, recipes);
   return recipes;
 };
 
 export interface SavedMeal { id: string; name: string; items: FoodItem[]; }
-export const getSavedMeals = (): SavedMeal[] => {
-  try { return JSON.parse(localStorage.getItem(SAVED_MEALS_KEY) || '[]'); } catch { return []; }
-};
+export const getSavedMeals = (): SavedMeal[] => cachedGet<SavedMeal[]>(SAVED_MEALS_KEY, []);
 export const saveCustomMeal = (name: string, items: FoodItem[]) => {
   const meals = getSavedMeals();
   const newMeal: SavedMeal = { id: generateId(), name, items: items.map(i => ({...i, id: generateId(), mealId: undefined, timestamp: Date.now() })) };
   meals.push(newMeal);
-  safeSetItem(SAVED_MEALS_KEY, JSON.stringify(meals));
+  cachedSet(SAVED_MEALS_KEY, meals);
   return meals;
 };
 export const deleteSavedMeal = (id: string) => {
   const meals = getSavedMeals().filter(m => m.id !== id);
-  safeSetItem(SAVED_MEALS_KEY, JSON.stringify(meals));
+  cachedSet(SAVED_MEALS_KEY, meals);
   return meals;
 };
 
-export const getSavedRoutines = (): WorkoutRoutine[] => {
-  try { return JSON.parse(localStorage.getItem(SAVED_ROUTINES_KEY) || '[]'); } catch { return []; }
-};
+export const getSavedRoutines = (): WorkoutRoutine[] => cachedGet<WorkoutRoutine[]>(SAVED_ROUTINES_KEY, []);
 export const saveRoutine = (routine: WorkoutRoutine) => {
   const routines = getSavedRoutines();
   const index = routines.findIndex(r => r.id === routine.id);
   if (index >= 0) routines[index] = routine; else routines.push(routine);
-  safeSetItem(SAVED_ROUTINES_KEY, JSON.stringify(routines));
+  cachedSet(SAVED_ROUTINES_KEY, routines);
   return routines;
 };
 export const deleteRoutine = (id: string) => {
   const routines = getSavedRoutines().filter(r => r.id !== id);
-  safeSetItem(SAVED_ROUTINES_KEY, JSON.stringify(routines));
+  cachedSet(SAVED_ROUTINES_KEY, routines);
   return routines;
 };
 
@@ -181,9 +188,7 @@ export interface FavoriteFood {
   caloriesPer100g?: number;
 }
 
-export const getFavoriteFoods = (): FavoriteFood[] => {
-  try { return JSON.parse(localStorage.getItem(FAVORITE_FOODS_KEY) || '[]'); } catch { return []; }
-};
+export const getFavoriteFoods = (): FavoriteFood[] => cachedGet<FavoriteFood[]>(FAVORITE_FOODS_KEY, []);
 
 export const saveFavoriteFood = (food: FavoriteFood) => {
   const foods = getFavoriteFoods();
@@ -191,20 +196,18 @@ export const saveFavoriteFood = (food: FavoriteFood) => {
   if (existing >= 0) foods[existing] = food;
   else foods.unshift(food); // Add to beginning
   if (foods.length > 50) foods.pop(); // Limit to 50
-  safeSetItem(FAVORITE_FOODS_KEY, JSON.stringify(foods));
+  cachedSet(FAVORITE_FOODS_KEY, foods);
   return foods;
 };
 
 export const deleteFavoriteFood = (id: string) => {
   const foods = getFavoriteFoods().filter(f => f.id !== id);
-  safeSetItem(FAVORITE_FOODS_KEY, JSON.stringify(foods));
+  cachedSet(FAVORITE_FOODS_KEY, foods);
   return foods;
 };
 
 // Recent foods - automatically saved from logging
-export const getRecentFoods = (): FoodItem[] => {
-  try { return JSON.parse(localStorage.getItem(RECENT_FOODS_KEY) || '[]'); } catch { return []; }
-};
+export const getRecentFoods = (): FoodItem[] => cachedGet<FoodItem[]>(RECENT_FOODS_KEY, []);
 
 export const addToRecentFoods = (item: FoodItem) => {
   const recent = getRecentFoods();
@@ -214,12 +217,12 @@ export const addToRecentFoods = (item: FoodItem) => {
   filtered.unshift({ ...item, id: generateId(), timestamp: Date.now() });
   // Keep only last 20
   const limited = filtered.slice(0, 20);
-  safeSetItem(RECENT_FOODS_KEY, JSON.stringify(limited));
+  cachedSet(RECENT_FOODS_KEY, limited);
   return limited;
 };
 
 export const clearRecentFoods = () => {
-  safeSetItem(RECENT_FOODS_KEY, '[]');
+  cachedSet(RECENT_FOODS_KEY, []);
   return [];
 };
 
@@ -237,9 +240,7 @@ interface FoodFrequency {
   amountDescription: string;
 }
 
-export const getFoodFrequencies = (): FoodFrequency[] => {
-  try { return JSON.parse(localStorage.getItem(FOOD_FREQUENCY_KEY) || '[]'); } catch { return []; }
-};
+export const getFoodFrequencies = (): FoodFrequency[] => cachedGet<FoodFrequency[]>(FOOD_FREQUENCY_KEY, []);
 
 export const trackFoodFrequency = (item: FoodItem) => {
   const freqs = getFoodFrequencies();
@@ -269,7 +270,7 @@ export const trackFoodFrequency = (item: FoodItem) => {
   // Keep top 50 by frequency
   freqs.sort((a, b) => b.count - a.count);
   const limited = freqs.slice(0, 50);
-  safeSetItem(FOOD_FREQUENCY_KEY, JSON.stringify(limited));
+  cachedSet(FOOD_FREQUENCY_KEY, limited);
   return limited;
 };
 

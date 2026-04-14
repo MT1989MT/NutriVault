@@ -16,12 +16,18 @@ export default defineConfig(() => {
         },
       },
       build: {
-        chunkSizeWarningLimit: 1000,
+        chunkSizeWarningLimit: 500,
+        sourcemap: false,
         rollupOptions: {
           external: [
             '@revenuecat/purchases-capacitor',
             '@revenuecat/purchases-capacitor-ui',
           ],
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom'],
+            },
+          },
         },
       },
       plugins: [tailwindcss(), react()],

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
 import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, ChevronDown, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp, Copy } from 'lucide-react';
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
-import { getWorkouts, toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
+import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
 import AnalysisModal from './AnalysisModal';
 import { t as tr, getCurrentLanguage } from '../utils/i18n';
@@ -121,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const [editGrams, setEditGrams] = useState('');
   const [editUnit, setEditUnit] = useState<'multiplier' | 'grams' | 'pieces'>('multiplier');
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
-  const [activeCalories, setActiveCalories] = useState(0);
+  // activeCalories is now a derived useMemo value (activeCaloriesComputed) — no state needed
   const [showAbout, setShowAbout] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
@@ -134,6 +134,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const [mostUsedFoods, setMostUsedFoods] = useState<ReturnType<typeof getMostUsedFoods>>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Stable callback for MealItemList — prevents memo() invalidation on every render
+  const handleMealItemClick = useCallback((item: FoodItem) => {
+    setItemToEdit(item);
+    setEditGrams('1');
+    setEditUnit('multiplier');
+  }, []);
 
   // Calculate streak using shared utility
   const streak = useMemo(() => calculateStreak(logs), [logs]);
@@ -153,10 +160,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
     return new Date(dateStr).toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
-  useEffect(() => {
-    const burned = getWorkouts().filter(w => w.date === selectedDate).reduce((acc, w) => acc + (w.durationMinutes * (w.elevatedHeartRate ? 8 : 5)), 0);
-    setActiveCalories(burned);
-  }, [logs, selectedDate]);
+  // Compute active calories directly from the day's workouts — no need to scan all logs
+  const activeCaloriesComputed = useMemo(() => {
+    const dayWorkouts = dayLog.workouts || [];
+    return dayWorkouts.reduce((acc, w) => acc + (w.durationMinutes * (w.elevatedHeartRate ? 8 : 5)), 0);
+  }, [dayLog.workouts]);
 
   useEffect(() => {
     setRecentFoods(getRecentFoods());
@@ -192,7 +200,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const totals = useMemo(() => dayLog.items.reduce((acc, i) => ({ cal: acc.cal + i.calories, p: acc.p + i.protein, c: acc.c + i.carbs, f: acc.f + i.fat }), { cal: 0, p: 0, c: 0, f: 0 }), [dayLog.items]);
 
   const baseTarget = profile.customCalories || profile.tdee;
-  const targetCalories = Math.max(1200, baseTarget + (profile.ignoreWorkoutCalories ? 0 : activeCalories));
+  const targetCalories = Math.max(1200, baseTarget + (profile.ignoreWorkoutCalories ? 0 : activeCaloriesComputed));
   const remaining = targetCalories - totals.cal;
 
   const totalMacroGrams = totals.p + totals.c + totals.f;
@@ -484,7 +492,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
               {/* Items */}
               {items.length > 0 ? (
-                <MealItemList items={items} onItemClick={(item) => { setItemToEdit(item); setEditGrams('1'); setEditUnit('multiplier'); }} />
+                <MealItemList items={items} onItemClick={handleMealItemClick} />
               ) : (
                 <div className="px-4 py-3.5 text-sm text-gray-300 italic">
                   {budget} kcal {tr('left').toLowerCase()}
