@@ -24,59 +24,71 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
   const [currentStyle, setCurrentStyle] = useState<CoachPersonality>(profile?.coachPersonality || 'FRIENDLY');
   const [showHelp, setShowHelp] = useState(false);
 
-  // Calculate user stats from logs
+  // Calculate user stats from logs — single-pass where possible
   const userStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayLog = logs[today];
-    const todayCalories = todayLog?.items?.reduce((s, i) => s + i.calories, 0) || 0;
-    const todayProtein = todayLog?.items?.reduce((s, i) => s + i.protein, 0) || 0;
-    const todayCarbs = todayLog?.items?.reduce((s, i) => s + i.carbs, 0) || 0;
-    const todayFat = todayLog?.items?.reduce((s, i) => s + i.fat, 0) || 0;
-    const todayWorkouts = todayLog?.workouts || [];
-    const todayWorkoutMins = todayWorkouts.reduce((s, w) => s + w.durationMinutes, 0);
-    const todayWater = todayLog?.waterIntakeMl || 0;
-    const todayItemCount = todayLog?.items?.length || 0;
+    const todayItems = todayLog?.items || [];
 
-    // Last 7 days stats
-    const last7Days: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      last7Days.push(d.toISOString().split('T')[0]);
+    // Single pass for today's macros
+    let todayCalories = 0, todayProtein = 0, todayCarbs = 0, todayFat = 0;
+    const todayFoodsByMeal: Record<string, string[]> = {};
+    for (let i = 0; i < todayItems.length; i++) {
+      const item = todayItems[i];
+      todayCalories += item.calories;
+      todayProtein += item.protein;
+      todayCarbs += item.carbs;
+      todayFat += item.fat;
+      const meal = item.mealType || 'SNACK';
+      if (!todayFoodsByMeal[meal]) todayFoodsByMeal[meal] = [];
+      todayFoodsByMeal[meal].push(item.name);
     }
 
-    const weekCalories = last7Days.reduce((s, date) => s + (logs[date]?.items?.reduce((sum, i) => sum + i.calories, 0) || 0), 0);
-    const weekProtein = last7Days.reduce((s, date) => s + (logs[date]?.items?.reduce((sum, i) => sum + i.protein, 0) || 0), 0);
-    const weekWorkouts = last7Days.reduce((s, date) => s + (logs[date]?.workouts?.length || 0), 0);
-    const daysTracked = last7Days.filter(date => logs[date]?.items?.length > 0).length;
+    const todayWorkouts = todayLog?.workouts || [];
+    let todayWorkoutMins = 0;
+    for (let i = 0; i < todayWorkouts.length; i++) todayWorkoutMins += todayWorkouts[i].durationMinutes;
+    const todayWater = todayLog?.waterIntakeMl || 0;
 
-    // Average daily calories this week (only days with data)
-    const avgDailyCalories = daysTracked > 0 ? Math.round(weekCalories / daysTracked) : 0;
-    const avgDailyProtein = daysTracked > 0 ? Math.round(weekProtein / daysTracked) : 0;
-
-    // Today's foods with meal types
-    const todayFoodsByMeal: Record<string, string[]> = {};
-    todayLog?.items?.forEach(i => {
-      const meal = i.mealType || 'SNACK';
-      if (!todayFoodsByMeal[meal]) todayFoodsByMeal[meal] = [];
-      todayFoodsByMeal[meal].push(i.name);
-    });
     const todayFoodsSummary = Object.entries(todayFoodsByMeal)
       .map(([meal, foods]) => `${meal}: ${foods.join(', ')}`)
       .join(' | ') || 'Nothing logged yet';
 
-    // Recent workouts
-    const allWorkouts: { type: string; date: string; duration: number }[] = [];
-    Object.entries(logs).forEach(([date, log]: [string, DayLog]) => {
-      log.workouts?.forEach(w => allWorkouts.push({ type: w.type, date, duration: w.durationMinutes }));
-    });
-    const recentWorkouts = allWorkouts.slice(-5).map(w => `${w.type} (${w.duration}min, ${w.date})`).join(', ') || '';
+    // Last 7 days — single pass per day
+    const last7Days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      last7Days.push(d.toISOString().split('T')[0]);
+    }
 
-    // Weight trend
+    let weekCalories = 0, weekProtein = 0, weekWorkouts = 0, daysTracked = 0;
+    for (const date of last7Days) {
+      const dayItems = logs[date]?.items;
+      if (dayItems && dayItems.length > 0) {
+        daysTracked++;
+        for (let i = 0; i < dayItems.length; i++) {
+          weekCalories += dayItems[i].calories;
+          weekProtein += dayItems[i].protein;
+        }
+      }
+      weekWorkouts += logs[date]?.workouts?.length || 0;
+    }
+    const avgDailyCalories = daysTracked > 0 ? Math.round(weekCalories / daysTracked) : 0;
+    const avgDailyProtein = daysTracked > 0 ? Math.round(weekProtein / daysTracked) : 0;
+
+    // Recent workouts + weight trend — single pass over all logs
+    const recentWorkoutsArr: { type: string; date: string; duration: number }[] = [];
     const weightEntries: { date: string; weight: number }[] = [];
-    Object.entries(logs).forEach(([date, log]: [string, DayLog]) => {
+    const entries = Object.entries(logs);
+    for (let i = 0; i < entries.length; i++) {
+      const [date, log] = entries[i] as [string, DayLog];
+      if (log.workouts) {
+        for (let j = 0; j < log.workouts.length; j++) {
+          recentWorkoutsArr.push({ type: log.workouts[j].type, date, duration: log.workouts[j].durationMinutes });
+        }
+      }
       if (log.weightLog) weightEntries.push({ date, weight: log.weightLog });
-    });
+    }
+    const recentWorkouts = recentWorkoutsArr.slice(-5).map(w => `${w.type} (${w.duration}min, ${w.date})`).join(', ') || '';
     weightEntries.sort((a, b) => a.date.localeCompare(b.date));
     const latestWeight = weightEntries.length > 0 ? weightEntries[weightEntries.length - 1] : null;
     const weightTrend = weightEntries.length >= 2
@@ -84,23 +96,10 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
       : null;
 
     return {
-      todayCalories,
-      todayProtein,
-      todayCarbs,
-      todayFat,
-      todayWorkoutMins,
-      todayWater,
-      todayItemCount,
-      todayFoodsSummary,
-      weekCalories,
-      weekProtein,
-      weekWorkouts,
-      daysTracked,
-      avgDailyCalories,
-      avgDailyProtein,
-      recentWorkouts,
-      latestWeight,
-      weightTrend,
+      todayCalories, todayProtein, todayCarbs, todayFat, todayWorkoutMins, todayWater,
+      todayItemCount: todayItems.length, todayFoodsSummary,
+      weekCalories, weekProtein, weekWorkouts, daysTracked, avgDailyCalories, avgDailyProtein,
+      recentWorkouts, latestWeight, weightTrend,
       goal: profile?.customCalories || profile?.tdee || 2000,
       weightKg: profile?.weightKg || 0,
       goalType: profile?.goal || 'maintain',
@@ -109,8 +108,8 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     };
   }, [logs, profile]);
 
-  // Build context string for AI
-  const buildUserContext = (): string => {
+  // Build context string for AI — memoized since it only changes when stats/profile change
+  const userContext = useMemo(() => {
     const lines = [];
     const goalLabels: Record<string, string> = { LOSE: 'Weight loss', MAINTAIN: 'Maintain weight', GAIN: 'Muscle gain / bulk', FIT: 'General fitness' };
 
@@ -143,7 +142,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     }
 
     return lines.join('\n');
-  };
+  }, [userStats, profile]);
 
   useEffect(() => {
     const moods = getMoods();
@@ -220,12 +219,12 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     'HUMOROUS': 'bg-purple-500 text-white'
   };
 
-  const getChatHistory = (): ChatHistoryItem[] => {
+  const chatHistory = useMemo((): ChatHistoryItem[] => {
     return messages.slice(-16).map(m => ({
       role: m.sender === 'USER' ? 'user' as const : 'assistant' as const,
       content: m.text
     }));
-  };
+  }, [messages]);
 
   const handleSend = async (customInput?: string) => {
     const textToSend = customInput || input;
@@ -235,9 +234,6 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     setInput('');
     setLoading(true);
     setTimeout(scrollToBottom, 100);
-
-    const chatHistory = getChatHistory();
-    const userContext = buildUserContext();
 
     const advice = await getMotivationMessage(
       userMsg.text,

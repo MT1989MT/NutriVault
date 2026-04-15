@@ -55,41 +55,56 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
   }, [weekOffset]);
 
   const dailyData = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const weightFactor = (profile?.weightKg || 75) / 75;
     return weekDates.map(date => {
       const log = logs[date];
       const items = log?.items || [];
-      const eaten = items.reduce((s, i) => s + i.calories, 0);
-      const protein = items.reduce((s, i) => s + i.protein, 0);
-      const carbs = items.reduce((s, i) => s + i.carbs, 0);
-      const fat = items.reduce((s, i) => s + i.fat, 0);
+      // Single pass over items for all macro totals
+      let eaten = 0, protein = 0, carbs = 0, fat = 0;
+      for (let i = 0; i < items.length; i++) {
+        eaten += items[i].calories;
+        protein += items[i].protein;
+        carbs += items[i].carbs;
+        fat += items[i].fat;
+      }
       const dayWorkouts = log?.workouts || [];
-      const weightFactor = (profile?.weightKg || 75) / 75; // Scale relative to 75kg reference
-      const burned = dayWorkouts.reduce((s, w) => s + Math.round(w.durationMinutes * (w.elevatedHeartRate ? 8 : 5) * weightFactor), 0);
-      const isToday = date === new Date().toISOString().split('T')[0];
+      let burned = 0;
+      for (let i = 0; i < dayWorkouts.length; i++) {
+        burned += Math.round(dayWorkouts[i].durationMinutes * (dayWorkouts[i].elevatedHeartRate ? 8 : 5) * weightFactor);
+      }
       const d = new Date(date);
-      return { date, eaten, burned, protein, carbs, fat, isToday, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };
+      return { date, eaten, burned, protein, carbs, fat, isToday: date === todayStr, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };
     });
   }, [weekDates, logs]);
 
   const weekStats = useMemo(() => {
-    const daysWithData = dailyData.filter(d => d.hasData);
-    const totalEaten = dailyData.reduce((s, d) => s + d.eaten, 0);
-    const totalBurned = dailyData.reduce((s, d) => s + d.burned, 0);
-    const avgEaten = daysWithData.length ? Math.round(totalEaten / daysWithData.length) : 0;
-    const avgProtein = daysWithData.length ? Math.round(daysWithData.reduce((s, d) => s + d.protein, 0) / daysWithData.length) : 0;
-    const avgCarbs = daysWithData.length ? Math.round(daysWithData.reduce((s, d) => s + d.carbs, 0) / daysWithData.length) : 0;
-    const avgFat = daysWithData.length ? Math.round(daysWithData.reduce((s, d) => s + d.fat, 0) / daysWithData.length) : 0;
+    // Single pass over dailyData for all aggregations
+    let totalEaten = 0, totalBurned = 0, sumProtein = 0, sumCarbs = 0, sumFat = 0, daysTracked = 0, onTarget = 0, totalWater = 0;
+    for (let i = 0; i < dailyData.length; i++) {
+      const d = dailyData[i];
+      totalEaten += d.eaten;
+      totalBurned += d.burned;
+      totalWater += logs[d.date]?.waterIntakeMl || 0;
+      if (d.hasData) {
+        daysTracked++;
+        sumProtein += d.protein;
+        sumCarbs += d.carbs;
+        sumFat += d.fat;
+        if (Math.abs(d.eaten - targetCalories) <= 200) onTarget++;
+      }
+    }
+    const avgEaten = daysTracked ? Math.round(totalEaten / daysTracked) : 0;
+    const avgProtein = daysTracked ? Math.round(sumProtein / daysTracked) : 0;
+    const avgCarbs = daysTracked ? Math.round(sumCarbs / daysTracked) : 0;
+    const avgFat = daysTracked ? Math.round(sumFat / daysTracked) : 0;
     const totalMacros = avgProtein + avgCarbs + avgFat;
     const proteinPct = totalMacros > 0 ? Math.round((avgProtein / totalMacros) * 100) : 0;
     const carbsPct = totalMacros > 0 ? Math.round((avgCarbs / totalMacros) * 100) : 0;
     const fatPct = totalMacros > 0 ? Math.round((avgFat / totalMacros) * 100) : 0;
-    // Days within ±200 kcal of target
-    const onTarget = daysWithData.filter(d => Math.abs(d.eaten - targetCalories) <= 200).length;
-    // Average water intake
-    const totalWater = weekDates.reduce((s, date) => s + (logs[date]?.waterIntakeMl || 0), 0);
-    const avgWater = daysWithData.length ? Math.round(totalWater / daysWithData.length) : 0;
-    return { totalEaten, totalBurned, avgEaten, avgProtein, avgCarbs, avgFat, proteinPct, carbsPct, fatPct, daysTracked: daysWithData.length, onTarget, avgWater };
-  }, [dailyData, weekDates, logs, targetCalories]);
+    const avgWater = daysTracked ? Math.round(totalWater / daysTracked) : 0;
+    return { totalEaten, totalBurned, avgEaten, avgProtein, avgCarbs, avgFat, proteinPct, carbsPct, fatPct, daysTracked, onTarget, avgWater };
+  }, [dailyData, logs, targetCalories]);
 
   const streak = useMemo(() => calculateStreak(logs), [logs]);
 
@@ -142,7 +157,16 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
       }
     }
 
-    return { current, change, avg10, entries, bmi, bmiCategory, goalProgress, targetWeight, weeklyRate, weeksToGoal };
+    // Pre-compute min/max to avoid redundant map() calls in SVG render
+    let minWeight = Infinity, maxWeight = -Infinity;
+    for (let i = 0; i < entries.length; i++) {
+      if (entries[i].weight < minWeight) minWeight = entries[i].weight;
+      if (entries[i].weight > maxWeight) maxWeight = entries[i].weight;
+    }
+    if (!isFinite(minWeight)) minWeight = current;
+    if (!isFinite(maxWeight)) maxWeight = current;
+
+    return { current, change, avg10, entries, bmi, bmiCategory, goalProgress, targetWeight, weeklyRate, weeksToGoal, minWeight, maxWeight };
   }, [logs, profile]);
 
   // Workout overview for the week
@@ -491,8 +515,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
                   {/* Weight line */}
                   {weightData.entries.length >= 2 && (() => {
                     const entries = weightData.entries;
-                    const minW = Math.min(...entries.map(e => e.weight)) - 0.5;
-                    const maxW = Math.max(...entries.map(e => e.weight)) + 0.5;
+                    const minW = weightData.minWeight - 0.5;
+                    const maxW = weightData.maxWeight + 0.5;
                     const range = maxW - minW || 1;
                     const points = entries.map((e, i) => {
                       const x = entries.length === 1 ? 150 : (i / (entries.length - 1)) * 280 + 10;
@@ -526,8 +550,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
               </div>
               {/* Weight range */}
               <div className="flex justify-between mt-0.5 px-1">
-                <span className="text-[9px] text-blue-400 font-bold">{Math.min(...weightData.entries.map(e => e.weight))} kg</span>
-                <span className="text-[9px] text-blue-400 font-bold">{Math.max(...weightData.entries.map(e => e.weight))} kg</span>
+                <span className="text-[9px] text-blue-400 font-bold">{weightData.minWeight} kg</span>
+                <span className="text-[9px] text-blue-400 font-bold">{weightData.maxWeight} kg</span>
               </div>
             </div>
           ) : (

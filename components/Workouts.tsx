@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Info, Brain } from 'lucide-react';
 import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine } from '../services/storage';
@@ -88,55 +88,87 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
   const [draggedDay, setDraggedDay] = useState<string | null>(null);
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
 
-  const [isSessionActive, setIsSessionActive] = useState(false);
-  const [sessionState, setSessionState] = useState<'PREP' | 'WORK' | 'REST' | 'FINISHED'>('PREP');
-  const [exerciseIdx, setExerciseIdx] = useState(0);
-  const [setNum, setSetNum] = useState(1);
-  const [timer, setTimer] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
-  const [restDuration, setRestDuration] = useState(60);
+  // Consolidated session state — single object prevents cascading re-renders from 7 separate setters
+  interface SessionData { active: boolean; phase: 'PREP' | 'WORK' | 'REST' | 'FINISHED'; exerciseIdx: number; setNum: number; timer: number; elapsed: number; restDuration: number; }
+  const [session, setSession] = useState<SessionData>({ active: false, phase: 'PREP', exerciseIdx: 0, setNum: 1, timer: 0, elapsed: 0, restDuration: 60 });
+  // Convenience aliases for read access (no extra re-renders)
+  const isSessionActive = session.active;
+  const sessionState = session.phase;
+  const exerciseIdx = session.exerciseIdx;
+  const setNum = session.setNum;
+  const timer = session.timer;
+  const elapsed = session.elapsed;
+  const restDuration = session.restDuration;
 
   const allWorkouts = useMemo(() => Object.values(logs).flatMap((l: DayLog) => l.workouts || []).sort((a, b) => b.timestamp - a.timestamp), [logs]);
 
   useEffect(() => { setTrainingPlan(getTrainingPlan()); setFavorites(getSavedRoutines()); }, []);
 
+  // Use ref so the interval callback always reads the latest session without re-creating the interval
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
   useEffect(() => {
-    let int: any;
-    if (isSessionActive) int = setInterval(() => {
-      setElapsed(t => t + 1);
-      if (sessionState === 'PREP' || sessionState === 'REST') {
-        if (timer > 1) setTimer(t => t - 1);
-        else if (sessionState === 'PREP') { setSessionState('WORK'); setTimer(0); }
-        else startNextSet();
-      } else if (sessionState === 'WORK') setTimer(t => t + 1);
+    if (!isSessionActive) return;
+    const int = setInterval(() => {
+      setSession(prev => {
+        const next = { ...prev, elapsed: prev.elapsed + 1 };
+        if (prev.phase === 'PREP' || prev.phase === 'REST') {
+          if (prev.timer > 1) { next.timer = prev.timer - 1; }
+          else if (prev.phase === 'PREP') { next.phase = 'WORK'; next.timer = 0; }
+          else {
+            // REST done → advance to next set/exercise inline
+            const exercises = suggestion?.exercises;
+            if (exercises) {
+              const maxSets = parseInt(exercises[prev.exerciseIdx]?.sets) || 3;
+              if (prev.setNum < maxSets) { next.setNum = prev.setNum + 1; next.phase = 'WORK'; next.timer = 0; }
+              else if (prev.exerciseIdx < exercises.length - 1) { next.exerciseIdx = prev.exerciseIdx + 1; next.setNum = 1; next.phase = 'WORK'; next.timer = 0; }
+              else next.phase = 'FINISHED';
+            }
+          }
+        } else if (prev.phase === 'WORK') { next.timer = prev.timer + 1; }
+        return next;
+      });
     }, 1000);
     return () => clearInterval(int);
-  }, [isSessionActive, sessionState, timer]);
+  }, [isSessionActive, suggestion]);
 
   const showFeedback = (msg: string) => { setFeedback(msg); setTimeout(() => setFeedback(null), 1500); };
-  const startSession = () => { setIsSessionActive(true); setSessionState('PREP'); setTimer(5); setElapsed(0); setExerciseIdx(0); setSetNum(1); };
+  const startSession = () => setSession(prev => ({ ...prev, active: true, phase: 'PREP', timer: 5, elapsed: 0, exerciseIdx: 0, setNum: 1 }));
 
   const startNextSet = () => {
     if (!suggestion) return;
-    const ex = suggestion.exercises[exerciseIdx];
-    const maxSets = parseInt(ex.sets) || 3;
-    if (setNum < maxSets) { setSetNum(s => s + 1); setSessionState('WORK'); setTimer(0); }
-    else if (exerciseIdx < suggestion.exercises.length - 1) { setExerciseIdx(i => i + 1); setSetNum(1); setSessionState('WORK'); setTimer(0); }
-    else setSessionState('FINISHED');
+    setSession(prev => {
+      const ex = suggestion.exercises[prev.exerciseIdx];
+      const maxSets = parseInt(ex.sets) || 3;
+      if (prev.setNum < maxSets) return { ...prev, setNum: prev.setNum + 1, phase: 'WORK', timer: 0 };
+      if (prev.exerciseIdx < suggestion.exercises.length - 1) return { ...prev, exerciseIdx: prev.exerciseIdx + 1, setNum: 1, phase: 'WORK', timer: 0 };
+      return { ...prev, phase: 'FINISHED' };
+    });
   };
 
   const handleSetDone = () => {
     if (!suggestion) return;
-    if (setNum < (parseInt(suggestion.exercises[exerciseIdx].sets) || 3) || exerciseIdx < suggestion.exercises.length - 1) {
-      if (restDuration === 0) startNextSet();
-      else { setSessionState('REST'); setTimer(restDuration); }
-    } else setSessionState('FINISHED');
+    setSession(prev => {
+      if (prev.setNum < (parseInt(suggestion.exercises[prev.exerciseIdx].sets) || 3) || prev.exerciseIdx < suggestion.exercises.length - 1) {
+        if (prev.restDuration === 0) {
+          // Inline startNextSet logic
+          const ex = suggestion.exercises[prev.exerciseIdx];
+          const maxSets = parseInt(ex.sets) || 3;
+          if (prev.setNum < maxSets) return { ...prev, setNum: prev.setNum + 1, phase: 'WORK', timer: 0 };
+          if (prev.exerciseIdx < suggestion.exercises.length - 1) return { ...prev, exerciseIdx: prev.exerciseIdx + 1, setNum: 1, phase: 'WORK', timer: 0 };
+          return { ...prev, phase: 'FINISHED' };
+        }
+        return { ...prev, phase: 'REST', timer: prev.restDuration };
+      }
+      return { ...prev, phase: 'FINISHED' };
+    });
   };
 
   const saveSession = () => {
     if (!suggestion) return;
     onAddWorkout(new Date().toISOString().split('T')[0], { id: generateId(), date: new Date().toISOString().split('T')[0], type: suggestion.title, durationMinutes: Math.ceil(elapsed / 60), elevatedHeartRate: true, timestamp: Date.now() });
-    setIsSessionActive(false); setShowGenerator(false); setSuggestion(null); showFeedback("Workout Logged!");
+    setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); showFeedback("Workout Logged!");
   };
 
   const handleCreatePlan = async () => {
@@ -175,7 +207,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
   const handleLibraryStart = () => {
     setSuggestion(buildLibrarySuggestion());
     setShowLibrary(false); setShowGenerator(true); setSelectedLibraryItems([]);
-    setIsSessionActive(true); setSessionState('PREP'); setTimer(5); setElapsed(0); setExerciseIdx(0); setSetNum(1);
+    setSession(prev => ({ ...prev, active: true, phase: 'PREP', timer: 5, elapsed: 0, exerciseIdx: 0, setNum: 1 }));
   };
 
   const saveEditDay = () => {
@@ -296,7 +328,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
         <div className="fixed inset-0 z-[100] bg-[#1A1C1E] text-white flex flex-col">
           <div className="shrink-0 flex justify-between items-center p-4 border-b border-white/10" style={{paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)'}}>
             {isSessionActive ? <div className="font-mono text-xl font-bold">{Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}</div> : <h2 className="font-bold">{suggestion?.title || "New Workout"}</h2>}
-            <button onClick={() => { setIsSessionActive(false); setShowGenerator(false); setSuggestion(null); }} className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
+            <button onClick={() => { setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); }} className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col items-center justify-center" style={{paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
@@ -361,7 +393,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                     <label className="text-[10px] text-gray-400 uppercase font-bold mb-1.5 block">Rest Between Sets</label>
                     <div className="grid grid-cols-5 gap-1">
                       {[0, 30, 45, 60, 90].map(s => (
-                        <button key={s} onClick={() => setRestDuration(s)} className={`py-2 rounded-lg text-[10px] font-bold ${restDuration === s ? 'bg-[#E07A5F]' : 'bg-white/10'}`}>{s === 0 ? 'None' : `${s}s`}</button>
+                        <button key={s} onClick={() => setSession(prev => ({ ...prev, restDuration: s }))} className={`py-2 rounded-lg text-[10px] font-bold ${restDuration === s ? 'bg-[#E07A5F]' : 'bg-white/10'}`}>{s === 0 ? 'None' : `${s}s`}</button>
                       ))}
                     </div>
                   </div>
@@ -386,8 +418,8 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                     <div>
                       <div className="text-7xl font-bold mb-6">{timer}</div>
                       <div className="flex justify-center gap-2 mb-4">
-                        <button onClick={() => setTimer(t => Math.max(0, t - 15))} className="bg-white/10 px-4 py-2 rounded-lg font-bold text-sm">-15s</button>
-                        <button onClick={() => setTimer(t => t + 15)} className="bg-white/10 px-4 py-2 rounded-lg font-bold text-sm">+15s</button>
+                        <button onClick={() => setSession(prev => ({ ...prev, timer: Math.max(0, prev.timer - 15) }))} className="bg-white/10 px-4 py-2 rounded-lg font-bold text-sm">-15s</button>
+                        <button onClick={() => setSession(prev => ({ ...prev, timer: prev.timer + 15 }))} className="bg-white/10 px-4 py-2 rounded-lg font-bold text-sm">+15s</button>
                       </div>
                       <button onClick={startNextSet} className="w-full bg-[#E07A5F] py-3 rounded-xl font-bold">Skip →</button>
                     </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChefHat, Loader2, Save, X, Zap, Check, Flame, HelpCircle, Plus, Utensils, ShoppingCart, Trash2, BookOpen, Coffee, Sun, Moon, Cookie, Brain } from 'lucide-react';
 import { getRecipeSuggestion } from '../services/gemini';
 import { getSavedRecipes, saveRecipe, deleteRecipe, getProfile } from '../services/storage';
@@ -65,7 +65,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   const [shoppingInput, setShoppingInput] = useState('');
   const [expandedQuickMeal, setExpandedQuickMeal] = useState<string | null>(null);
   const [mealTypeModal, setMealTypeModal] = useState<{ recipe?: Recipe; quickMeal?: typeof QUICK_MEALS[0]['meals'][0] } | null>(null);
-  const profile = getProfile();
+  const profile = useMemo(() => getProfile(), []);
 
   useEffect(() => {
     setSavedRecipes(getSavedRecipes().reverse());
@@ -73,8 +73,14 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
     if (savedList) setShoppingList(JSON.parse(savedList));
   }, []);
 
+  // Debounce shopping list writes — avoids a localStorage write on every single item toggle/add/remove
+  const shoppingWriteTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    localStorage.setItem('nutrivault_shopping', JSON.stringify(shoppingList));
+    clearTimeout(shoppingWriteTimer.current);
+    shoppingWriteTimer.current = setTimeout(() => {
+      localStorage.setItem('nutrivault_shopping', JSON.stringify(shoppingList));
+    }, 500);
+    return () => clearTimeout(shoppingWriteTimer.current);
   }, [shoppingList]);
 
   const quickIdeas = ['🥗 Healthy salad', '🍗 Chicken dish', '🥣 Quick breakfast', '🍝 Pasta'];
