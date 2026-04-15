@@ -1,9 +1,9 @@
 import { FoodItem, Recipe, WorkoutSuggestion, WorkoutLog, TrainingPlan, CoachPersonality } from "../types";
 import { generateId } from "../utils/calculations";
 
-// Gemini model mapping - using available model names
-const FAST_MODEL = "gemini-2.0-flash";
-const POWERFUL_MODEL = "gemini-2.0-flash";
+// Gemini model mapping — gemini-2.0-flash deprecated March 2026, shutdown June 2026
+const FAST_MODEL = "gemini-2.5-flash";
+const POWERFUL_MODEL = "gemini-2.5-flash";
 
 const cleanJsonOutput = (text: string): string => {
   if (!text) return "[]";
@@ -92,8 +92,10 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.detail || errorData.error || `API error: ${response.status}`;
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.detail || errorData?.error
+          || (response.status === 500 ? 'Server error — please try again in a moment.'
+              : `API error: ${response.status}`);
         const error = new Error(errorMsg);
         // Don't retry on client errors (400-level) except 429
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
