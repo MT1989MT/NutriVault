@@ -139,7 +139,10 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   };
 
   const handleConfirm = () => {
-    const itemsToLog = activeItems.map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
+    const itemsToLog = activeItems
+      .filter(i => i.calories > 0 || i.protein > 0 || i.carbs > 0 || i.fat > 0)
+      .map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
+    if (itemsToLog.length === 0) return;
     onConfirm(itemsToLog);
   };
 
@@ -150,7 +153,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     return (
       <div key={idx} className={`rounded-xl border transition-all ${isExpanded ? 'border-[#E07A5F]/30 bg-[#FAFAF8]' : 'border-gray-100 bg-gray-50/80'} ${indented ? 'ml-3' : ''}`}>
         <button
-          className="w-full p-3 text-left"
+          className="w-full p-3 text-left min-h-[52px]"
           onClick={() => { setExpandedIdx(isExpanded ? null : idx); setEditingNameIdx(null); }}
         >
           <div className="flex justify-between items-start mb-1">
@@ -162,7 +165,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => { if (e.key === 'Enter') setEditingNameIdx(null); }}
                 onBlur={() => setEditingNameIdx(null)}
-                className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1"
+                className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1 focus:ring-2 focus:ring-[#E07A5F]/30"
                 autoFocus
               />
             ) : (
@@ -189,7 +192,8 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={() => updateItemGrams(idx, (item.grams || 100) - 10)}
-                className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+                aria-label="Decrease 10 grams"
+                className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Minus className="w-4 h-4 text-gray-600" />
               </button>
@@ -199,14 +203,15 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                   type="number"
                   value={item.grams || ''}
                   onChange={(e) => updateItemGrams(idx, parseInt(e.target.value) || 0)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-center text-base font-bold text-gray-900 outline-none focus:border-[#E07A5F]/40"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-center text-base font-bold text-gray-900 outline-none focus:border-[#E07A5F]/40 focus:ring-2 focus:ring-[#E07A5F]/30"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold">g</span>
               </div>
 
               <button
                 onClick={() => updateItemGrams(idx, (item.grams || 100) + 10)}
-                className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+                aria-label="Increase 10 grams"
+                className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Plus className="w-4 h-4 text-gray-600" />
               </button>
@@ -217,7 +222,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                 <button
                   key={g}
                   onClick={() => updateItemGrams(idx, g)}
-                  className={`py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                  className={`py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 min-h-[44px] ${
                     item.grams === g
                       ? 'bg-[#E07A5F] text-white'
                       : 'bg-white border border-gray-200 text-gray-600'
@@ -246,14 +251,16 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
             <div className="flex gap-2">
               <button
                 onClick={() => setEditingNameIdx(idx)}
-                className="flex-1 py-2 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                aria-label={`Rename ${item.name}`}
+                className="flex-1 py-2.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform min-h-[44px]"
               >
                 <PenLine className="w-3.5 h-3.5" />
                 Rename
               </button>
               <button
                 onClick={() => removeItem(idx)}
-                className="flex-1 py-2 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                aria-label={`Remove ${item.name}`}
+                className="flex-1 py-2.5 bg-red-50 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform min-h-[44px]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Remove
@@ -266,11 +273,11 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[#2D3436]/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[#2D3436]/40 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Review analyzed food items">
       <div className="bg-white w-full max-w-sm rounded-t-[1.5rem] sm:rounded-[1.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[80vh] flex flex-col" style={{ marginBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
-          <button onClick={onCancel} className="text-gray-400 p-1">
+          <button onClick={onCancel} aria-label="Close" className="text-gray-400 w-11 h-11 flex items-center justify-center rounded-xl active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]">
             <X className="w-5 h-5" />
           </button>
           <h2 className="text-base font-bold text-gray-900">Review & Adjust</h2>

@@ -150,7 +150,9 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
     const protein = Math.max(0, Math.round(Number(item.p ?? item.protein) || 0));
     const carbs = Math.max(0, Math.round(Number(item.c ?? item.carbs ?? item.carbohydrates) || 0));
     const fat = Math.max(0, Math.round(Number(item.f ?? item.fat ?? item.fats) || 0));
-    const grams = Math.max(0, Math.round(Number(item.grams ?? item.weight ?? item.g) || 0));
+    // Default to 100g when AI omits weight — AnalysisModal uses grams for per-100g base calc
+    const rawGrams = Math.round(Number(item.grams ?? item.weight ?? item.g) || 0);
+    const grams = rawGrams > 0 ? rawGrams : 100;
 
     // Always calculate calories from macros — Atwater is ground truth
     const cal = (protein * 4) + (carbs * 4) + (fat * 9);

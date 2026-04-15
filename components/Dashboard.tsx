@@ -236,9 +236,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
     try {
       let result;
       if (photoPreview) {
-        // Photo-based analysis — extract base64 data from data URL
-        const base64Data = photoPreview.split(',')[1] || photoPreview;
-        result = await parseFoodFromPhoto(base64Data);
+        // Photo-based analysis — send full data URL (API extracts mime type + base64)
+        result = await parseFoodFromPhoto(photoPreview);
       } else {
         result = await parseFoodInput(input);
       }
@@ -248,7 +247,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       }
       // Always show review modal so user can adjust individual items before logging
       setAnalyzedItems(result);
-      setInput('');
     } catch (err: any) {
       const msg = err?.message || err?.toString?.() || 'unknown error';
       console.error('Food analysis error:', msg);
@@ -549,10 +547,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Add Food Modal */}
       {selectedMealType && !showManualEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }} role="dialog" aria-modal="true" aria-label="Add food">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setSelectedMealType(null); setAnalyzeError(null); setInput(''); setPhotoPreview(null); }} role="dialog" aria-modal="true" aria-label="Add food">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <button onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }} className="text-gray-400 text-sm font-medium">
+              <button onClick={() => { setSelectedMealType(null); setAnalyzeError(null); setInput(''); setPhotoPreview(null); }} className="text-gray-400 text-sm font-medium">
                 {tr('cancel')}
               </button>
               <div className="flex items-center gap-2">
@@ -735,7 +733,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Manual Entry Modal (Centered) */}
       {showManualEntry && selectedMealType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setShowManualEntry(false); setSelectedMealType(null); }} role="dialog" aria-modal="true" aria-label="Add food manually">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setShowManualEntry(false); setSelectedMealType(null); setPhotoPreview(null); setInput(''); }} role="dialog" aria-modal="true" aria-label="Add food manually">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <button onClick={() => setShowManualEntry(false)} className="text-gray-400 text-sm font-medium">{tr('back')}</button>
@@ -938,7 +936,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 <input
                   type="number"
                   placeholder={editUnit === 'multiplier' ? '1' : editUnit === 'grams' ? String(itemGrams || 100) : '1'}
-                  className="flex-1 bg-gray-100 rounded-xl px-4 py-4 outline-none text-base font-bold text-center"
+                  className="flex-1 bg-gray-100 rounded-xl px-4 py-4 outline-none text-base font-bold text-center focus:ring-2 focus:ring-[#E07A5F]/30"
                   value={editGrams}
                   onChange={(e) => setEditGrams(e.target.value)}
                 />
@@ -982,7 +980,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             itemsToAdd.forEach(item => { addToRecentFoods(item); trackFoodFrequency(item); });
             setRecentFoods(getRecentFoods());
             setMostUsedFoods(getMostUsedFoods());
+            setInput('');
             setPhotoPreview(null);
+            setAnalyzeError(null);
             setAnalyzedItems(null);
             setSelectedMealType(null);
           }}
