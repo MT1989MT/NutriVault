@@ -1,25 +1,14 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkRateLimit } from './_ratelimit';
+const { checkRateLimit } = require('./_ratelimit');
 
-/**
- * Diagnostic endpoint — visit /api/debug-gemini in the browser to see what's working.
- * Tests: Node.js version, fetch availability, API key, Gemini API connectivity.
- * DELETE THIS FILE before going to production.
- */
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
-  const checks: Record<string, string> = {};
+module.exports = async function handler(req, res) {
+  const checks = {};
 
-  // 1. Node.js version
   checks.nodeVersion = process.version;
-
-  // 2. fetch availability
   checks.fetchAvailable = typeof fetch === 'function' ? 'yes' : 'NO — fetch is undefined (need Node 18+)';
 
-  // 3. API key configured
   const apiKey = process.env.GEMINI_API_KEY;
   checks.apiKeySet = apiKey ? `yes (${apiKey.substring(0, 8)}...)` : 'NO — GEMINI_API_KEY not set';
 
-  // 4. Test Gemini API with a minimal request
   if (apiKey && typeof fetch === 'function') {
     try {
       const geminiRes = await fetch(
@@ -36,24 +25,25 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
 
       if (geminiRes.ok) {
         const data = await geminiRes.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '(empty)';
+        const text = (data.candidates && data.candidates[0] && data.candidates[0].content
+          && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+          && data.candidates[0].content.parts[0].text) || '(empty)';
         checks.geminiApi = `OK — responded: "${text.trim()}"`;
       } else {
         const errorText = await geminiRes.text();
         checks.geminiApi = `FAILED — status ${geminiRes.status}: ${errorText.substring(0, 300)}`;
       }
-    } catch (err: any) {
+    } catch (err) {
       checks.geminiApi = `ERROR — ${err.message}`;
     }
   } else {
     checks.geminiApi = 'skipped (missing key or fetch)';
   }
 
-  // 5. Rate limit module
   try {
     const result = await checkRateLimit('debug-test');
     checks.rateLimit = `OK — remaining: ${result.remaining}`;
-  } catch (err: any) {
+  } catch (err) {
     checks.rateLimit = `ERROR — ${err.message}`;
   }
 
@@ -62,4 +52,4 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     timestamp: new Date().toISOString(),
     checks
   });
-}
+};

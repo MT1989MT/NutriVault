@@ -1,9 +1,9 @@
 // Simple in-memory rate limiter for Vercel serverless functions
 // No external dependencies — works reliably on all plans
 
-const memoryMap = new Map<string, { count: number; resetAt: number }>();
+const memoryMap = new Map();
 
-export async function checkRateLimit(ip: string): Promise<{ limited: boolean; remaining: number }> {
+async function checkRateLimit(ip) {
   const now = Date.now();
   const windowMs = 60_000;
   const maxRequests = 30;
@@ -18,3 +18,5 @@ export async function checkRateLimit(ip: string): Promise<{ limited: boolean; re
   const remaining = Math.max(0, maxRequests - entry.count);
   return { limited: entry.count > maxRequests, remaining };
 }
+
+module.exports = { checkRateLimit };
