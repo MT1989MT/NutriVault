@@ -38,8 +38,9 @@ const getLocalizedPrice = (): string => {
   }).format(amount);
 };
 
-// Dev mode detection
+// Dev / test mode detection
 const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+const IS_TEST_MODE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE === 'true';
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [view, setView] = useState<'WELCOME' | 'CREATE' | 'LOGIN'>('WELCOME');
@@ -179,13 +180,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
-  // Dev mode: skip auth entirely (creates mock account + auto-login)
+  // Dev / test mode: skip auth entirely (creates local session + auto-login)
   const handleDevSkip = async () => {
-    if (!IS_DEV) return;
+    if (!IS_DEV && !IS_TEST_MODE) return;
     setLoading(true);
     setError('');
 
     try {
+      // In test mode on production, create a local session directly
+      // (Supabase create-code requires payment; this bypasses that for testing)
+      if (IS_TEST_MODE && !IS_DEV) {
+        const testKey = 'TEST-' + Date.now().toString().slice(-12).replace(/(.{4})/g, '$1-').slice(0, -1);
+        const token = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+        const expiry = Date.now() + (1000 * 60 * 60 * 24 * 365); // 1 year
+        saveSession(testKey, token, expiry, 'Test User');
+        onAuthenticated();
+        return;
+      }
+
       const acc = await createAccount();
       if (acc && acc.key) {
         const result = await verifyKey(acc.key);
@@ -422,14 +434,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </a>
           </div>
 
-          {/* Dev mode: skip auth for testing */}
-          {IS_DEV && (
+          {/* Dev / test mode: skip auth for testing */}
+          {(IS_DEV || IS_TEST_MODE) && (
             <button
               onClick={handleDevSkip}
               disabled={loading}
               className="w-full mt-3 py-2 text-xs font-mono text-orange-500 border border-dashed border-orange-300 rounded-xl bg-orange-50 disabled:opacity-50"
             >
-              ⚡ DEV MODE — Skip Auth
+              {IS_TEST_MODE && !IS_DEV ? 'TEST MODE — Free Access' : 'DEV MODE — Skip Auth'}
             </button>
           )}
         </div>
