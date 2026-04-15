@@ -1,7 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors } from './_cors';
+const { applyCors } = require('./_cors');
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   if (applyCors(req, res)) return;
 
   if (req.method !== 'POST') {
@@ -35,8 +34,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json(data);
-  } catch (error: any) {
+  } catch (error) {
     console.error('[API] create-code proxy error:', error.message);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};

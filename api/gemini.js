@@ -1,13 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { applyCors } from './_cors';
-import { checkRateLimit } from './_ratelimit';
+const { applyCors } = require('./_cors');
+const { checkRateLimit } = require('./_ratelimit');
 
 // Per-function config — ensures Vercel allows enough time for Gemini API calls
-export const config = {
-  maxDuration: 30,
-};
+const config = { maxDuration: 30 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req, res) {
   const start = Date.now();
 
   try {
@@ -19,13 +16,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Rate limiting (non-blocking — failure falls through)
     try {
-      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+      const clientIp = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
       const { limited, remaining } = await checkRateLimit(clientIp);
       res.setHeader('X-RateLimit-Remaining', remaining.toString());
       if (limited) {
         return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
       }
-    } catch {
+    } catch (_) {
       // Rate limiting failure should not block the request
     }
 
@@ -50,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Build parts array
-    const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = [{
+    const parts = [{
       text: jsonMode
         ? `You are a helpful assistant. Always respond with valid JSON only, no markdown code blocks, no explanation.\n\n${prompt}`
         : prompt
@@ -102,21 +99,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const text = (data.candidates && data.candidates[0] && data.candidates[0].content
+        && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+        && data.candidates[0].content.parts[0].text) || '';
 
       return res.status(200).json({ text, _ms: Date.now() - start });
-    } catch (fetchError: any) {
+    } catch (fetchError) {
       clearTimeout(timeout);
       if (fetchError.name === 'AbortError') {
         return res.status(504).json({ error: 'Gemini API timed out', _ms: Date.now() - start });
       }
       throw fetchError;
     }
-  } catch (error: any) {
-    console.error('[API] Unhandled error:', error?.message || error);
+  } catch (error) {
+    console.error('[API] Unhandled error:', error && error.message || error);
     return res.status(500).json({
-      error: error?.message || 'Internal server error',
+      error: (error && error.message) || 'Internal server error',
       _ms: Date.now() - start
     });
   }
 }
+
+module.exports = handler;
+module.exports.config = config;

@@ -1,5 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const ALLOWED_ORIGINS = [
   'https://nutrivault-seven.vercel.app',
   'http://localhost:3000',
@@ -12,8 +10,8 @@ const ALLOWED_ORIGINS = [
  * Set CORS headers on the response. Returns true if this was a preflight
  * OPTIONS request (caller should end the response in that case).
  */
-export function applyCors(req: VercelRequest, res: VercelResponse): boolean {
-  const extraOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || [];
+function applyCors(req, res) {
+  const extraOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   const allAllowed = [...ALLOWED_ORIGINS, ...extraOrigins];
   const origin = req.headers.origin || '';
 
@@ -23,7 +21,6 @@ export function applyCors(req: VercelRequest, res: VercelResponse): boolean {
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
-    // Capacitor iOS WKWebView doesn't send an origin header
     res.setHeader('Access-Control-Allow-Origin', 'capacitor://localhost');
   }
 
@@ -36,3 +33,5 @@ export function applyCors(req: VercelRequest, res: VercelResponse): boolean {
   }
   return false;
 }
+
+module.exports = { applyCors };
