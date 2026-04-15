@@ -115,7 +115,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         <div className="flex items-center justify-between">
           <div className="w-10" />
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">Settings</span>
-          <button onClick={onBack} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
+          <button onClick={onBack} aria-label="Close settings" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <X className="w-[18px] h-[18px] text-gray-400" />
           </button>
         </div>
@@ -123,7 +123,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
       {/* About Modal */}
       {showAbout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="About NutriVault">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-5 text-center">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
@@ -174,14 +174,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
       {/* Privacy Modal */}
       {showPrivacy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Privacy policy">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-white" />
                 <h3 className="font-bold text-white">Privacy & Data Policy</h3>
               </div>
-              <button onClick={() => setShowPrivacy(false)} className="p-1 hover:bg-white/20 rounded-lg">
+              <button onClick={() => setShowPrivacy(false)} aria-label="Close" className="p-2 hover:bg-white/20 rounded-lg">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>

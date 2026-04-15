@@ -320,7 +320,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
           {onBack ? (
-            <button onClick={onBack} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+            <button onClick={onBack} aria-label="Go back" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
               <ArrowLeft className="w-[18px] h-[18px] text-gray-400" />
             </button>
           ) : (
@@ -331,10 +331,10 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
             <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{tr('coach')}</span>
           </div>
           <div className="flex gap-1.5">
-            <button onClick={clearChat} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+            <button onClick={clearChat} aria-label="Clear chat" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
               <Trash2 className="w-[18px] h-[18px] text-gray-400" />
             </button>
-            <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+            <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
               <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
             </button>
           </div>
@@ -371,7 +371,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
         {/* Style Selector */}
         <div className="flex items-center justify-center gap-2">
-          <button onClick={cycleStyle} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${styleColors[currentStyle]}`}>
+          <button onClick={cycleStyle} aria-label={`Switch coach style, currently ${getStyleLabel()}`} className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 min-h-[44px] ${styleColors[currentStyle]}`}>
             {getStyleIcon()}
             <span>{getStyleLabel()} Mode</span>
           </button>
@@ -407,7 +407,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
               <button
                 key={idx}
                 onClick={() => handleSend(prompt)}
-                className="px-4 py-2.5 bg-white hover:bg-[#E07A5F]/10 text-gray-600 text-sm rounded-xl transition-colors shadow-sm border border-gray-100 active:scale-95"
+                className="px-4 py-3 bg-white hover:bg-[#E07A5F]/10 text-gray-600 text-sm rounded-xl transition-colors shadow-sm border border-gray-100 active:scale-95 min-h-[44px]"
               >
                 {prompt}
               </button>
@@ -422,7 +422,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
           <input
             type="text"
             placeholder={tr('askAnything') + "..."}
-            className="flex-1 bg-transparent px-3 py-3 outline-none text-gray-800 text-base"
+            className="flex-1 bg-transparent px-3 py-3 outline-none text-gray-800 text-base focus:ring-2 focus:ring-[#E07A5F]/30 rounded-lg"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -431,6 +431,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
           <button
             onClick={() => handleSend()}
             disabled={loading || !input.trim()}
+            aria-label="Send message"
             className="w-12 h-12 bg-[#E07A5F] text-white rounded-xl disabled:opacity-50 flex items-center justify-center active:scale-95"
           >
             <Send className="w-5 h-5" />
@@ -440,14 +441,14 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
       {/* Help Modal */}
       {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="AI Coach help">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain className="w-5 h-5 text-white" />
                 <h3 className="font-bold text-white">AI Personal Trainer</h3>
               </div>
-              <button onClick={() => setShowHelp(false)} className="p-2 hover:bg-white/20 rounded-lg active:scale-95">
+              <button onClick={() => setShowHelp(false)} aria-label="Close help" className="p-2 hover:bg-white/20 rounded-lg active:scale-95">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>

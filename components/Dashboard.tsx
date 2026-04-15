@@ -56,7 +56,7 @@ const MealItemList: React.FC<{ items: FoodItem[], onItemClick: (item: FoodItem) 
     >
       <div className="flex-1 min-w-0 pr-3 flex items-center gap-3">
         {item.photoUri && (
-          <img src={item.photoUri} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+          <img src={item.photoUri} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
         )}
         <div className="min-w-0">
           <p className={`font-medium text-gray-800 truncate ${indented ? 'text-[13px] text-gray-600' : 'text-[15px]'}`}>{item.name}</p>
@@ -389,7 +389,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       {/* Header with safe area */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between mb-2">
-          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <Brain className="w-[18px] h-[18px] text-white" />
           </button>
 
@@ -397,13 +397,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">Nutri</span><span className="text-[20px] font-extrabold text-[#E07A5F] font-display tracking-tight">Vault</span>
           </div>
 
-          <button onClick={onSettingsClick} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
+          <button onClick={onSettingsClick} aria-label="Settings" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <Settings className="w-[18px] h-[18px] text-gray-400" />
           </button>
         </div>
         <div className="flex items-center justify-center gap-0">
-          <button onClick={() => navigateDate(-1)} className="p-2 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth">
-            <ChevronLeft className="w-4.5 h-4.5" />
+          <button onClick={() => navigateDate(-1)} aria-label="Previous day" className="p-2.5 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <span className="text-gray-600 font-semibold text-[13px] min-w-[90px] text-center font-display tracking-tight">
             {formatDateHeader(selectedDate)}
@@ -411,9 +411,10 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
           <button
             onClick={() => navigateDate(1)}
             disabled={selectedDate >= todayDate}
-            className={`p-2 active:scale-90 transition-smooth ${selectedDate >= todayDate ? 'text-gray-200' : 'text-gray-300 hover:text-gray-500'}`}
+            aria-label="Next day"
+            className={`p-2.5 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center ${selectedDate >= todayDate ? 'text-gray-200' : 'text-gray-300 hover:text-gray-500'}`}
           >
-            <ChevronRight className="w-4.5 h-4.5" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -483,7 +484,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                   )}
                   <button
                     onClick={() => setSelectedMealType(mealType)}
-                    className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm shadow-[#E07A5F]/20"
+                    aria-label={`Add food to ${getMealLabel(mealType).toLowerCase()}`}
+                    className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm shadow-[#E07A5F]/20"
                   >
                     <Plus className="w-4 h-4 text-white" strokeWidth={2.5} />
                   </button>
@@ -515,11 +517,11 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.min(100, ((dayLog.waterIntakeMl || 0) / 2500) * 100)}%` }} />
           </div>
           <div className="flex items-center justify-center gap-2">
-            <button onClick={() => onWaterUpdate?.(selectedDate, -250)} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
-              <Minus className="w-3.5 h-3.5 text-gray-400" />
+            <button onClick={() => onWaterUpdate?.(selectedDate, -250)} aria-label="Remove 250ml water" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
+              <Minus className="w-4 h-4 text-gray-400" />
             </button>
             {[250, 500].map(ml => (
-              <button key={ml} onClick={() => onWaterUpdate?.(selectedDate, ml)} className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl text-xs font-bold active:scale-90 transition-smooth hover:bg-blue-100">
+              <button key={ml} onClick={() => onWaterUpdate?.(selectedDate, ml)} aria-label={`Add ${ml}ml water`} className="flex-1 bg-blue-50 text-blue-600 py-2.5 rounded-xl text-xs font-bold active:scale-90 transition-smooth hover:bg-blue-100 min-h-[44px]">
                 +{ml}ml
               </button>
             ))}
@@ -535,7 +537,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 <button
                   key={h}
                   onClick={() => toggleHabit(selectedDate, h)}
-                  className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-smooth active:scale-90 min-h-[42px] ${dayLog.habitsCompleted?.includes(h) ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200' : 'bg-gray-50 text-gray-400'}`}
+                  className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-smooth active:scale-90 min-h-[44px] ${dayLog.habitsCompleted?.includes(h) ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200' : 'bg-gray-50 text-gray-400'}`}
                 >
                   {h}
                 </button>
@@ -547,7 +549,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Add Food Modal */}
       {selectedMealType && !showManualEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }} role="dialog" aria-modal="true" aria-label="Add food">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <button onClick={() => { setSelectedMealType(null); setAnalyzeError(null); }} className="text-gray-400 text-sm font-medium">
@@ -571,7 +573,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full bg-gray-50 rounded-xl py-4 px-4 pr-16 outline-none text-base text-gray-800 placeholder-gray-400"
+                  className="w-full bg-gray-50 rounded-xl py-4 px-4 pr-16 outline-none text-base text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-[#E07A5F]/30"
                   onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   autoFocus
                 />
@@ -586,9 +588,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
             <div className="px-4 pb-4 max-h-[40vh] overflow-y-auto">
               {/* Error message */}
               {analyzeError && (
-                <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
+                <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2" role="alert">
                   <span className="text-red-500 text-sm">{analyzeError}</span>
-                  <button onClick={() => setAnalyzeError(null)} className="shrink-0 text-red-300 hover:text-red-500">
+                  <button onClick={() => setAnalyzeError(null)} aria-label="Dismiss error" className="shrink-0 text-red-300 hover:text-red-500 p-1">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -598,7 +600,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               {photoPreview && (
                 <div className="mb-4 relative">
                   <img src={photoPreview} alt="Food" className="w-full h-32 object-cover rounded-xl" />
-                  <button onClick={() => setPhotoPreview(null)} className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
+                  <button onClick={() => setPhotoPreview(null)} aria-label="Remove photo" className="absolute top-2 right-2 w-9 h-9 bg-black/50 rounded-full flex items-center justify-center">
                     <X className="w-4 h-4 text-white" />
                   </button>
                 </div>
@@ -733,7 +735,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Manual Entry Modal (Centered) */}
       {showManualEntry && selectedMealType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setShowManualEntry(false); setSelectedMealType(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => { setShowManualEntry(false); setSelectedMealType(null); }} role="dialog" aria-modal="true" aria-label="Add food manually">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <button onClick={() => setShowManualEntry(false)} className="text-gray-400 text-sm font-medium">{tr('back')}</button>
@@ -746,7 +748,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               {photoPreview ? (
                 <div className="relative">
                   <img src={photoPreview} alt="Food" className="w-full h-36 object-cover rounded-xl" />
-                  <button onClick={() => setPhotoPreview(null)} className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
+                  <button onClick={() => setPhotoPreview(null)} aria-label="Remove photo" className="absolute top-2 right-2 w-9 h-9 bg-black/50 rounded-full flex items-center justify-center">
                     <X className="w-4 h-4 text-white" />
                   </button>
                 </div>
@@ -760,7 +762,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 </button>
               )}
 
-              <input type="text" value={manualForm.name} onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })} placeholder={tr('foodName')} autoComplete="off" className="w-full bg-gray-100 rounded-xl py-4 px-4 outline-none text-base text-gray-800 placeholder-gray-400 font-medium" autoFocus />
+              <input type="text" value={manualForm.name} onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })} placeholder={tr('foodName')} autoComplete="off" className="w-full bg-gray-100 rounded-xl py-4 px-4 outline-none text-base text-gray-800 placeholder-gray-400 font-medium focus:ring-2 focus:ring-[#E07A5F]/30" autoFocus />
 
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-sm font-bold text-gray-500 mb-3">{tr('servingSize')}</p>
@@ -785,7 +787,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('calories')} *</label>
-                  <input type="number" value={manualForm.calories} onChange={(e) => setManualForm({ ...manualForm, calories: e.target.value })} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  <input type="number" value={manualForm.calories} onChange={(e) => setManualForm({ ...manualForm, calories: e.target.value })} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold focus:ring-2 focus:ring-[#E07A5F]/30" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('protein')} (g)</label>
@@ -796,7 +798,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                     const autoCalc = (Number(p) || 0) * 4 + (Number(manualForm.carbs) || 0) * 4 + (Number(manualForm.fat) || 0) * 9;
                     if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
                     setManualForm(newForm);
-                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold focus:ring-2 focus:ring-[#E07A5F]/30" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('carbs')} (g)</label>
@@ -806,7 +808,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                     const autoCalc = (Number(manualForm.protein) || 0) * 4 + (Number(c) || 0) * 4 + (Number(manualForm.fat) || 0) * 9;
                     if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
                     setManualForm(newForm);
-                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold focus:ring-2 focus:ring-[#E07A5F]/30" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium mb-1.5 block">{tr('fat')} (g)</label>
@@ -816,7 +818,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                     const autoCalc = (Number(manualForm.protein) || 0) * 4 + (Number(manualForm.carbs) || 0) * 4 + (Number(f) || 0) * 9;
                     if (autoCalc > 0 && !manualForm.calories) newForm.calories = String(Math.round(autoCalc));
                     setManualForm(newForm);
-                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold" />
+                  }} placeholder="0" className="w-full bg-gray-100 rounded-xl py-3.5 px-4 outline-none text-base font-bold focus:ring-2 focus:ring-[#E07A5F]/30" />
                 </div>
               </div>
 
@@ -868,7 +870,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
         const preview = calcEditPreview();
 
         return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setItemToEdit(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setItemToEdit(null)} role="dialog" aria-modal="true" aria-label="Edit portion">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <button onClick={() => setItemToEdit(null)} className="text-gray-400 text-sm font-medium">{tr('cancel')}</button>
@@ -990,7 +992,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* About Modal */}
       {showAbout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setShowAbout(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setShowAbout(false)} role="dialog" aria-modal="true" aria-label="About NutriVault">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-5 text-center">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-2">

@@ -1,6 +1,7 @@
 
 import { DayLog, UserProfile, WorkoutLog, MoodLog, Recipe, FoodItem, TrainingPlan, WorkoutRoutine } from '../types';
 import { generateId } from '../utils/calculations';
+import * as idb from './indexeddb';
 
 const PROFILE_KEY = 'nutrivault_profile';
 const LOGS_KEY = 'nutrivault_logs';
@@ -9,9 +10,14 @@ const RECIPES_KEY = 'nutrivault_saved_recipes';
 const SAVED_MEALS_KEY = 'nutrivault_saved_meals';
 const TRAINING_PLAN_KEY = 'nutrivault_training_plan';
 const SAVED_ROUTINES_KEY = 'nutrivault_saved_routines';
+const IDB_MIGRATED_KEY = 'nutrivault_idb_migrated';
 
 // In-memory cache to avoid repeated JSON.parse/stringify on every read
 const cache = new Map<string, any>();
+
+// IndexedDB state: once initialized, writes are synced to IDB in background
+let idbReady = false;
+let idbWriteTimer: ReturnType<typeof setTimeout> | null = null;
 
 const cachedGet = <T>(key: string, fallback: T): T => {
   if (cache.has(key)) return cache.get(key);
@@ -37,11 +43,52 @@ const safeSetItem = (key: string, value: string): void => {
   }
 };
 
-// Write an already-parsed object: caches it in memory and persists to localStorage
+// Write an already-parsed object: caches it in memory and persists to localStorage + IDB
 const cachedSet = <T>(key: string, data: T): void => {
   cache.set(key, data);
   safeSetItem(key, JSON.stringify(data));
+
+  // Background-sync food logs to IndexedDB (debounced)
+  if (key === LOGS_KEY && idbReady) {
+    if (idbWriteTimer) clearTimeout(idbWriteTimer);
+    idbWriteTimer = setTimeout(() => {
+      idb.saveDayLogs(data as Record<string, DayLog>).catch(err =>
+        console.warn('[Storage] IDB write failed:', err)
+      );
+    }, 300);
+  }
 };
+
+/**
+ * Initialize IndexedDB: migrate existing localStorage logs on first run,
+ * then load all logs from IDB into memory for faster subsequent reads.
+ * Call this once on app startup. Non-blocking — falls back to localStorage if IDB fails.
+ */
+export async function initializeStorage(): Promise<void> {
+  try {
+    const available = await idb.isIndexedDBAvailable();
+    if (!available) return;
+
+    const migrated = localStorage.getItem(IDB_MIGRATED_KEY);
+    if (!migrated) {
+      // One-time migration: copy localStorage logs into IndexedDB
+      const logs = cachedGet<Record<string, DayLog>>(LOGS_KEY, {});
+      if (Object.keys(logs).length > 0) {
+        await idb.migrateLogsToIDB(logs);
+      }
+      localStorage.setItem(IDB_MIGRATED_KEY, '1');
+    }
+
+    // Load from IDB into memory cache (IDB is source of truth after migration)
+    const idbLogs = await idb.getAllLogs();
+    if (Object.keys(idbLogs).length > 0) {
+      cache.set(LOGS_KEY, idbLogs);
+    }
+    idbReady = true;
+  } catch (err) {
+    console.warn('[Storage] IndexedDB init failed, using localStorage only:', err);
+  }
+}
 
 export const saveProfile = (profile: UserProfile): void => cachedSet(PROFILE_KEY, profile);
 export const getProfile = (): UserProfile | null => cachedGet<UserProfile | null>(PROFILE_KEY, null);

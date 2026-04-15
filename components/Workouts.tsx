@@ -250,9 +250,9 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
       {/* Help Modal */}
       {showHelp && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Workouts help">
           <div className="bg-white w-full max-w-sm rounded-2xl p-5 relative">
-            <button onClick={() => setShowHelp(false)} className="absolute top-3 right-3 p-1"><X className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => setShowHelp(false)} aria-label="Close help" className="absolute top-3 right-3 p-2"><X className="w-5 h-5 text-gray-400" /></button>
             <h2 className="text-lg font-bold mb-3">How Workouts Work</h2>
             <div className="text-sm text-gray-600 space-y-2 mb-4">
               <p><b>Log:</b> Generate workouts or quick manual entry</p>
@@ -268,13 +268,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
       {/* Edit Day Modal */}
       {editingDay && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Edit training day">
           <div className="bg-white w-full max-w-xs rounded-2xl p-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold">{editingDay}</h3>
-              <button onClick={() => setEditingDay(null)} className="p-1"><X className="w-4 h-4" /></button>
+              <button onClick={() => setEditingDay(null)} aria-label="Close" className="p-2"><X className="w-5 h-5" /></button>
             </div>
-            <input className="w-full bg-gray-50 px-3 py-2.5 rounded-xl mb-3 outline-none text-sm" placeholder="Focus (empty = rest)" value={editFocus} onChange={(e) => setEditFocus(e.target.value)} autoFocus />
+            <input className="w-full bg-gray-50 px-3 py-2.5 rounded-xl mb-3 outline-none text-sm focus:ring-2 focus:ring-[#E07A5F]/30" placeholder="Focus (empty = rest)" value={editFocus} onChange={(e) => setEditFocus(e.target.value)} autoFocus />
             <div className="flex gap-1.5 mb-4">
               {[30, 45, 60, 90].map(m => (
                 <button key={m} onClick={() => setEditDuration(m.toString())} className={`flex-1 py-2 rounded-lg text-xs font-bold ${editDuration === m.toString() ? 'bg-black text-white' : 'bg-gray-100'}`}>{m}m</button>
@@ -290,7 +290,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
         <div className="fixed inset-0 z-[100] bg-[#FAFAF8] flex flex-col">
           <div className="shrink-0 px-4 py-3 bg-white border-b flex justify-between items-center" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
             <h2 className="font-bold">Exercise Library ({selectedLibraryItems.length}/25)</h2>
-            <button onClick={() => setShowLibrary(false)} className="p-2"><X className="w-5 h-5" /></button>
+            <button onClick={() => setShowLibrary(false)} aria-label="Close library" className="p-2"><X className="w-5 h-5" /></button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {STANDARD_LIBRARY.map((cat, i) => (
@@ -328,7 +328,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
         <div className="fixed inset-0 z-[100] bg-[#1A1C1E] text-white flex flex-col">
           <div className="shrink-0 flex justify-between items-center p-4 border-b border-white/10" style={{paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)'}}>
             {isSessionActive ? <div className="font-mono text-xl font-bold">{Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}</div> : <h2 className="font-bold">{suggestion?.title || "New Workout"}</h2>}
-            <button onClick={() => { setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); }} className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
+            <button onClick={() => { setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); }} aria-label="Close workout" className="p-2 bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col items-center justify-center" style={{paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
@@ -447,11 +447,11 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
-          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <Brain className="w-[18px] h-[18px] text-white" />
           </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">Workouts</span>
-          <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+          <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
           </button>
         </div>
@@ -462,7 +462,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
           {['LOG', 'PLAN', 'FAVORITES', 'HISTORY'].map(tab => (
-            <button key={tab} onClick={() => setViewMode(tab as any)} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${viewMode === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+            <button key={tab} onClick={() => setViewMode(tab as any)} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all min-h-[44px] ${viewMode === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
               {tab === 'FAVORITES' ? 'Saved' : tab.charAt(0) + tab.slice(1).toLowerCase()}
             </button>
           ))}
@@ -480,9 +480,9 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
             </button>
             <div className="bg-white p-4 rounded-2xl card-shadow">
               <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Quick Log</h3>
-              <input placeholder="Activity (e.g. Running, Yoga)" className="w-full bg-gray-50 rounded-xl px-4 py-3 mb-2.5 outline-none text-sm text-gray-800 placeholder-gray-400" value={manualType} onChange={e => setManualType(e.target.value)} />
+              <input placeholder="Activity (e.g. Running, Yoga)" aria-label="Activity type" className="w-full bg-gray-50 rounded-xl px-4 py-3 mb-2.5 outline-none text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-[#E07A5F]/30" value={manualType} onChange={e => setManualType(e.target.value)} />
               <div className="flex gap-2">
-                <input placeholder="Minutes" type="number" className="w-24 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm text-gray-800 placeholder-gray-400" value={manualDuration} onChange={e => setManualDuration(e.target.value)} />
+                <input placeholder="Minutes" type="number" aria-label="Duration in minutes" className="w-24 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-[#E07A5F]/30" value={manualDuration} onChange={e => setManualDuration(e.target.value)} />
                 <button onClick={handleManualLog} disabled={!manualType || !manualDuration} className="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-40 active:scale-[0.98] transition-smooth">Log Activity</button>
               </div>
             </div>

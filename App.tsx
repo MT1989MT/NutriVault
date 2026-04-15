@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FoodItem, UserProfile, WorkoutLog } from './types';
-import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake } from './services/storage';
+import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake, initializeStorage } from './services/storage';
 import { getSession } from './services/auth';
 import { initializePurchases } from './services/payments';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -51,6 +51,14 @@ const App: React.FC = () => {
       try { setLogs(getLogs()); } catch {}
     }
     setIsLoading(false);
+
+    // Initialize IndexedDB in background (non-blocking)
+    // After IDB loads, update logs from the IDB source of truth
+    initializeStorage().then(() => {
+      if (session) {
+        try { setLogs(getLogs()); } catch {}
+      }
+    }).catch(() => {});
   }, []);
 
   const handleSaveProfile = useCallback((newProfile: UserProfile) => {

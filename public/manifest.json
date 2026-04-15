@@ -1,0 +1,21 @@
+{
+  "name": "NutriVault",
+  "short_name": "NutriVault",
+  "description": "Privacy-first nutrition & fitness tracking with AI-powered food logging",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFAF8",
+  "theme_color": "#E07A5F",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "food"],
+  "lang": "en",
+  "scope": "/"
+}

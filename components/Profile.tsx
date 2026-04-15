@@ -76,7 +76,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
-          <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+          <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
           </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('profile')}</span>
@@ -89,29 +89,29 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
         {/* Name */}
         <div className="bg-white p-2.5 rounded-xl shadow-sm">
           <label className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">{t('nickname')}</label>
-          <input type="text" className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm" placeholder={t('yourName')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} onFocus={handleInputFocus} />
+          <input type="text" className="w-full bg-transparent outline-none font-bold text-gray-900 text-sm focus:ring-2 focus:ring-[#E07A5F]/30 rounded-md" placeholder={t('yourName')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} onFocus={handleInputFocus} />
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-4 gap-1.5">
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">{t('age')}</label>
-            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={ageStr} onChange={(e) => setAgeStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('age', ageStr)} onFocus={handleInputFocus} />
+            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900 focus:ring-2 focus:ring-[#E07A5F]/30 rounded-md" value={ageStr} onChange={(e) => setAgeStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('age', ageStr)} onFocus={handleInputFocus} />
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">{t('sex')}</label>
-            <select className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}>
+            <select className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900 focus:ring-2 focus:ring-[#E07A5F]/30 rounded-md" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}>
               <option value={Gender.MALE}>M</option>
               <option value={Gender.FEMALE}>F</option>
             </select>
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">cm</label>
-            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={heightStr} onChange={(e) => setHeightStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('heightCm', heightStr)} onFocus={handleInputFocus} />
+            <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900 focus:ring-2 focus:ring-[#E07A5F]/30 rounded-md" value={heightStr} onChange={(e) => setHeightStr(e.target.value.replace(/[^0-9]/g, ''))} onBlur={() => syncNumericField('heightCm', heightStr)} onFocus={handleInputFocus} />
           </div>
           <div className="bg-white p-2 rounded-lg shadow-sm text-center">
             <label className="text-[8px] font-bold text-gray-400 uppercase block mb-0.5">kg</label>
-            <input type="text" inputMode="decimal" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900" value={weightStr} onChange={(e) => setWeightStr(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => syncNumericField('weightKg', weightStr)} onFocus={handleInputFocus} />
+            <input type="text" inputMode="decimal" className="w-full bg-transparent outline-none font-bold text-center text-base text-gray-900 focus:ring-2 focus:ring-[#E07A5F]/30 rounded-md" value={weightStr} onChange={(e) => setWeightStr(e.target.value.replace(/[^0-9.]/g, ''))} onBlur={() => syncNumericField('weightKg', weightStr)} onFocus={handleInputFocus} />
           </div>
         </div>
 

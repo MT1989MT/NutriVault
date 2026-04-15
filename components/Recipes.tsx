@@ -205,11 +205,11 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
-          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <Brain className="w-[18px] h-[18px] text-white" />
           </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{tr('recipes')}</span>
-          <button onClick={() => setShowHelp(true)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+          <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
           </button>
         </div>
@@ -219,16 +219,16 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
       <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-        <button onClick={() => setViewMode('QUICK')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'QUICK' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+        <button onClick={() => setViewMode('QUICK')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'QUICK' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
           <Zap className="w-3.5 h-3.5" /> Quick
         </button>
-        <button onClick={() => setViewMode('CREATE')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'CREATE' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+        <button onClick={() => setViewMode('CREATE')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'CREATE' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
           <ChefHat className="w-3.5 h-3.5" /> Create
         </button>
-        <button onClick={() => setViewMode('SAVED')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'SAVED' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+        <button onClick={() => setViewMode('SAVED')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'SAVED' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
           <Save className="w-3.5 h-3.5" /> Saved
         </button>
-        <button onClick={() => setViewMode('SHOPPING')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${viewMode === 'SHOPPING' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+        <button onClick={() => setViewMode('SHOPPING')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'SHOPPING' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
           <ShoppingCart className="w-3.5 h-3.5" /> List
         </button>
       </div>
@@ -427,8 +427,8 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
             {/* Add Item */}
             <div className="bg-white rounded-2xl p-4 card-shadow">
               <div className="flex gap-2">
-                <input type="text" placeholder="Add item..." className="flex-1 bg-gray-50 rounded-xl py-2.5 px-4 outline-none text-gray-900 placeholder-gray-400 text-sm" value={shoppingInput} onChange={(e) => setShoppingInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addShoppingItem()} />
-                <button onClick={addShoppingItem} disabled={!shoppingInput.trim()} className="bg-[#E07A5F] text-white p-2.5 rounded-xl disabled:opacity-50">
+                <input type="text" placeholder="Add item..." aria-label="Shopping list item" className="flex-1 bg-gray-50 rounded-xl py-2.5 px-4 outline-none text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#E07A5F]/30" value={shoppingInput} onChange={(e) => setShoppingInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addShoppingItem()} />
+                <button onClick={addShoppingItem} disabled={!shoppingInput.trim()} aria-label="Add to shopping list" className="bg-[#E07A5F] text-white p-3 rounded-xl disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center">
                   <Plus className="w-4 h-4"/>
                 </button>
               </div>
@@ -452,11 +452,11 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
                 <div className="space-y-2">
                   {shoppingList.map(item => (
                     <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <button onClick={() => toggleShoppingItem(item.id)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
-                        {item.checked && <Check className="w-3 h-3 text-white" />}
+                      <button onClick={() => toggleShoppingItem(item.id)} aria-label={item.checked ? `Uncheck ${item.name}` : `Check ${item.name}`} className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
+                        {item.checked && <Check className="w-3.5 h-3.5 text-white" />}
                       </button>
                       <span className={`flex-1 text-sm ${item.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>{item.name}</span>
-                      <button onClick={() => removeShoppingItem(item.id)} className="p-1 text-gray-300 hover:text-red-400">
+                      <button onClick={() => removeShoppingItem(item.id)} aria-label={`Remove ${item.name}`} className="p-2 text-gray-300 hover:text-red-400">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -471,14 +471,14 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
 
       {/* Help Modal */}
       {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Recipes help">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ChefHat className="w-5 h-5 text-white" />
                 <h3 className="font-bold text-white">Recipes</h3>
               </div>
-              <button onClick={() => setShowHelp(false)} className="p-1 hover:bg-white/20 rounded-lg">
+              <button onClick={() => setShowHelp(false)} aria-label="Close help" className="p-2 hover:bg-white/20 rounded-lg">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
@@ -505,7 +505,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
 
       {/* Meal Type Selection Modal */}
       {mealTypeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setMealTypeModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setMealTypeModal(null)} role="dialog" aria-modal="true" aria-label="Select meal type">
           <div className="bg-white w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-100 text-center">
               <h3 className="font-bold text-gray-900">{tr('addFood')}</h3>

@@ -214,15 +214,15 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
       {/* Header */}
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between mb-2">
-          <button onClick={onCoachClick} className="w-10 h-10 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm">
+          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <Brain className="w-[18px] h-[18px] text-white" />
           </button>
           <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('overview')}</span>
           <div className="w-10" />
         </div>
         <div className="flex items-center justify-center gap-0">
-          <button onClick={() => setWeekOffset(o => o - 1)} className="p-2 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth">
-            <ChevronLeft className="w-4.5 h-4.5" />
+          <button onClick={() => setWeekOffset(o => o - 1)} aria-label="Previous week" className="p-2.5 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <span className="text-gray-600 font-semibold text-[13px] min-w-[100px] text-center font-display tracking-tight">
             {getWeekLabel()}
@@ -230,9 +230,10 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
           <button
             onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
             disabled={weekOffset >= 0}
-            className={`p-2 active:scale-90 transition-smooth ${weekOffset >= 0 ? 'text-gray-200' : 'text-gray-300 hover:text-gray-500'}`}
+            aria-label="Next week"
+            className={`p-2.5 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center ${weekOffset >= 0 ? 'text-gray-200' : 'text-gray-300 hover:text-gray-500'}`}
           >
-            <ChevronRight className="w-4.5 h-4.5" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -420,8 +421,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
               <Scale className="w-3.5 h-3.5 text-blue-500" />
               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">WEIGHT TIMELINE</span>
             </div>
-            <button onClick={() => setShowWeightInput(true)} className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
-              <Plus className="w-3.5 h-3.5 text-gray-500" />
+            <button onClick={() => setShowWeightInput(true)} aria-label="Log weight" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
+              <Plus className="w-4 h-4 text-gray-500" />
             </button>
           </div>
 
@@ -619,15 +620,15 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
 
         {/* Weight Input Modal */}
         {showWeightInput && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Log weight">
             <div className="bg-white w-full max-w-xs rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Scale className="w-5 h-5 text-[#E07A5F]" />
                   <h3 className="font-bold">Log Weight</h3>
                 </div>
-                <button onClick={() => setShowWeightInput(false)} className="p-1">
-                  <X className="w-4 h-4 text-gray-400" />
+                <button onClick={() => setShowWeightInput(false)} aria-label="Close" className="p-2 -mr-1">
+                  <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
               <div className="relative mb-4">
@@ -638,7 +639,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
                   placeholder={weightData.current ? weightData.current.toString() : "70.0"}
                   value={weightInput}
                   onChange={(e) => setWeightInput(e.target.value)}
-                  className="w-full bg-gray-50 px-4 py-3 pr-12 rounded-xl outline-none text-lg font-bold text-center"
+                  aria-label="Weight in kg"
+                  className="w-full bg-gray-50 px-4 py-3 pr-12 rounded-xl outline-none text-lg font-bold text-center focus:ring-2 focus:ring-[#E07A5F]/30"
                   autoFocus
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">kg</span>
