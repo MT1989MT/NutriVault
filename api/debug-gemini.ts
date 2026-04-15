@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { checkRateLimit } from './_ratelimit';
 
 /**
  * Diagnostic endpoint — visit /api/debug-gemini in the browser to see what's working.
@@ -50,7 +51,6 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
 
   // 5. Rate limit module
   try {
-    const { checkRateLimit } = await import('./_ratelimit');
     const result = await checkRateLimit('debug-test');
     checks.rateLimit = `OK — remaining: ${result.remaining}`;
   } catch (err: any) {
