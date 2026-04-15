@@ -93,7 +93,8 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const error = new Error(errorData.error || `API error: ${response.status}`);
+        const errorMsg = errorData.detail || errorData.error || `API error: ${response.status}`;
+        const error = new Error(errorMsg);
         // Don't retry on client errors (400-level) except 429
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
           throw error;
