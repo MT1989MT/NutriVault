@@ -21,8 +21,6 @@
     "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor/core": "^7.4.4",
     "@capacitor/ios": "^7.4.5",
-    "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.37.0",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
