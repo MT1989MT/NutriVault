@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt too long' });
     }
 
-    const allowedModels = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    const allowedModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
     if (!allowedModels.includes(model)) {
       return res.status(400).json({ error: 'Invalid model' });
     }
