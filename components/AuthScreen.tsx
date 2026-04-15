@@ -40,7 +40,10 @@ const getLocalizedPrice = (): string => {
 
 // Dev / test mode detection
 const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
-const IS_TEST_MODE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE === 'true';
+// VITE_TEST_MODE is a build-time env var — set it in Vercel project settings before deploying.
+// Also supports ?testmode URL param as a runtime fallback for quick testing.
+const IS_TEST_MODE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE === 'true')
+  || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('testmode'));
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [view, setView] = useState<'WELCOME' | 'CREATE' | 'LOGIN'>('WELCOME');
