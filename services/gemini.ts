@@ -92,10 +92,12 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       });
 
       if (!response.ok) {
+        // Try JSON first; fall back to raw text so we can see what Vercel returned
+        const cloned = response.clone();
         const errorData = await response.json().catch(() => null);
+        const rawText = errorData ? null : await cloned.text().catch(() => '');
         const errorMsg = errorData?.detail || errorData?.error
-          || (response.status === 500 ? 'Server error — please try again in a moment.'
-              : `API error: ${response.status}`);
+          || (rawText ? `Server error: ${rawText.slice(0, 120)}` : `API error: ${response.status}`);
         const error = new Error(errorMsg);
         // Don't retry on client errors (400-level) except 429
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
