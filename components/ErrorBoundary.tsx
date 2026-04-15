@@ -36,13 +36,23 @@ class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   }
 
+  /** Strip potentially sensitive data from error messages shown to users */
+  private sanitizeErrorMessage(message: string): string {
+    // Remove URLs, file paths, API keys, tokens, and stack traces
+    return message
+      .replace(/https?:\/\/\S+/g, '[url]')
+      .replace(/\/[\w./]+\.\w+/g, '[path]')
+      .replace(/[A-Za-z0-9_-]{20,}/g, '[redacted]')
+      .slice(0, 200);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center p-6">
+        <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center p-6" role="alert" aria-live="assertive">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-lg text-center">
             <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">!</span>
+              <span className="text-2xl" aria-hidden="true">!</span>
             </div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">Something went wrong</h2>
             <p className="text-sm text-gray-500 mb-6">
@@ -51,19 +61,21 @@ class ErrorBoundary extends Component<Props, State> {
             {this.state.error && (
               <div className="bg-gray-50 rounded-xl p-3 mb-4 text-left">
                 <p className="text-xs text-gray-400 font-mono break-all">
-                  {this.state.error.message}
+                  {this.sanitizeErrorMessage(this.state.error.message)}
                 </p>
               </div>
             )}
             <div className="space-y-2">
               <button
                 onClick={this.handleReset}
+                aria-label="Try again"
                 className="w-full bg-[#E07A5F] text-white font-bold py-3 rounded-xl active:scale-[0.98] transition-transform"
               >
                 Try Again
               </button>
               <button
                 onClick={this.handleClearAndReset}
+                aria-label="Reload app"
                 className="w-full bg-gray-100 text-gray-600 font-medium py-3 rounded-xl active:scale-[0.98] transition-transform text-sm"
               >
                 Reload App

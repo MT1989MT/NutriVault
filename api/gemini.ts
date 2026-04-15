@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors } from './_cors';
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -17,32 +18,7 @@ function isRateLimited(ip: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS - allow known origins + Capacitor (which may send no origin)
-  const allowedOrigins = [
-    'https://nutrivault-seven.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'capacitor://localhost',
-    'ionic://localhost',
-    // Extra origins from env (comma-separated)
-    ...(process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) || []),
-  ];
-  const origin = req.headers.origin || '';
-  // Match exact origins or Vercel preview deployments for this project only
-  const isAllowed = allowedOrigins.includes(origin)
-    || /^https:\/\/nutrivault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
-  if (isAllowed) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    // Capacitor iOS WKWebView does not send origin header — allow but restrict methods
-    res.setHeader('Access-Control-Allow-Origin', 'capacitor://localhost');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (applyCors(req, res)) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -81,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Build parts array - supports text-only or text+image (multimodal)
-    const parts: any[] = [{
+    const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = [{
       text: jsonMode
         ? `You are a helpful assistant. Always respond with valid JSON only, no markdown code blocks, no explanation.\n\n${prompt}`
         : prompt

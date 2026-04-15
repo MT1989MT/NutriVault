@@ -1,19 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FoodItem, UserProfile, WorkoutLog } from './types';
 import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake } from './services/storage';
 import { getSession } from './services/auth';
 import { initializePurchases } from './services/payments';
 import ErrorBoundary from './components/ErrorBoundary';
-import Profile from './components/Profile';
-import Dashboard from './components/Dashboard';
-import Recipes from './components/Recipes';
-import Motivation from './components/Motivation';
-import Workouts from './components/Workouts';
-import History from './components/History';
 import Navigation from './components/Navigation';
-import Settings from './components/Settings';
 import AuthScreen from './components/AuthScreen';
 import Onboarding, { hasSeenOnboarding } from './components/Onboarding';
+
+// Eagerly loaded: Dashboard is the primary view, always needed first
+import Dashboard from './components/Dashboard';
+import Profile from './components/Profile';
+
+// Lazy-loaded: these views are only needed when navigated to
+const Recipes = lazy(() => import('./components/Recipes'));
+const Motivation = lazy(() => import('./components/Motivation'));
+const Workouts = lazy(() => import('./components/Workouts'));
+const History = lazy(() => import('./components/History'));
+const Settings = lazy(() => import('./components/Settings'));
+
+const ViewFallback = () => (
+  <div className="h-full w-full flex items-center justify-center bg-[#FAFAF8]">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E07A5F]" />
+  </div>
+);
 
 type View = 'DASHBOARD' | 'RECIPES' | 'MOTIVATION' | 'PROFILE' | 'WORKOUTS' | 'HISTORY' | 'SETTINGS' | 'COACH';
 
@@ -83,36 +93,38 @@ const App: React.FC = () => {
                 <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} isActive />
               </div>
             )}
-            {currentView === 'WORKOUTS' && (
-              <div className="absolute inset-0 z-10">
-                <Workouts logs={logs} onAddWorkout={handleAddWorkout} onCoachClick={goToCoach} />
-              </div>
-            )}
-            {currentView === 'RECIPES' && (
-              <div className="absolute inset-0 z-10">
-                <Recipes onLogRecipe={handleAddItems} onCoachClick={goToCoach} />
-              </div>
-            )}
-            {currentView === 'HISTORY' && (
-              <div className="absolute inset-0 z-10">
-                <History logs={logs} profile={profile} onCoachClick={goToCoach} />
-              </div>
-            )}
             {currentView === 'PROFILE' && (
               <div className="absolute inset-0 z-10">
                 <Profile existingProfile={profile} onSave={handleSaveProfile} onCancel={goToDashboard} />
               </div>
             )}
-            {currentView === 'SETTINGS' && (
-              <div className="absolute inset-0 z-10">
-                <Settings onBack={goToDashboard} />
-              </div>
-            )}
-            {currentView === 'COACH' && (
-              <div className="absolute inset-0 z-10">
-                <Motivation onBack={goToDashboard} logs={logs} profile={profile} />
-              </div>
-            )}
+            <Suspense fallback={<div className="absolute inset-0 z-10"><ViewFallback /></div>}>
+              {currentView === 'WORKOUTS' && (
+                <div className="absolute inset-0 z-10">
+                  <Workouts logs={logs} onAddWorkout={handleAddWorkout} onCoachClick={goToCoach} />
+                </div>
+              )}
+              {currentView === 'RECIPES' && (
+                <div className="absolute inset-0 z-10">
+                  <Recipes onLogRecipe={handleAddItems} onCoachClick={goToCoach} />
+                </div>
+              )}
+              {currentView === 'HISTORY' && (
+                <div className="absolute inset-0 z-10">
+                  <History logs={logs} profile={profile} onCoachClick={goToCoach} />
+                </div>
+              )}
+              {currentView === 'SETTINGS' && (
+                <div className="absolute inset-0 z-10">
+                  <Settings onBack={goToDashboard} />
+                </div>
+              )}
+              {currentView === 'COACH' && (
+                <div className="absolute inset-0 z-10">
+                  <Motivation onBack={goToDashboard} logs={logs} profile={profile} />
+                </div>
+              )}
+            </Suspense>
           </div>
           {currentView !== 'SETTINGS' && currentView !== 'COACH' && <Navigation currentView={currentView} onChange={setCurrentView} />}
         </div>

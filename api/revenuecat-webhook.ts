@@ -1,4 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { timingSafeEqual } from 'crypto';
+
+/** Constant-time string comparison to prevent timing attacks */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /**
  * RevenueCat Webhook Handler
@@ -16,7 +23,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
-    // Webhooks don't need CORS, but handle gracefully
     return res.status(200).end();
   }
 
@@ -24,8 +30,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify webhook authenticity
-  const authHeader = req.headers.authorization;
+  // Verify webhook authenticity with timing-safe comparison
+  const authHeader = req.headers.authorization || '';
   const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
@@ -33,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Webhook not configured' });
   }
 
-  if (authHeader !== `Bearer ${webhookSecret}`) {
+  if (!safeEqual(authHeader, `Bearer ${webhookSecret}`)) {
     console.error('[Webhook] Invalid authorization header');
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -112,9 +118,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('[Webhook] Error:', error.message);
-    // Return 200 to prevent RevenueCat from retrying indefinitely
-    // Log the error for investigation
-    return res.status(200).json({ success: false, error: 'Processing error logged' });
+    // Return 500 so RevenueCat retries — a transient edge function failure
+    // should not silently swallow a subscription extension
+    return res.status(500).json({ error: 'Processing failed, will retry' });
   }
 }
 
