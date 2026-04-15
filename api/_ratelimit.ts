@@ -1,15 +1,30 @@
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-
 // Distributed rate limiter using Upstash Redis
-// Falls back to in-memory if UPSTASH env vars are not set
+// Falls back to in-memory if @upstash packages are unavailable or Redis is not configured
 
-let ratelimit: Ratelimit | null = null;
+// Lazy-loaded to prevent module import crashes from breaking the entire API handler
+let ratelimitModule: any = null;
+let redisModule: any = null;
+let ratelimit: any = null;
+let modulesLoaded = false;
 
-// In-memory fallback for when Redis is not configured
+// In-memory fallback for when Redis is not configured or packages unavailable
 const memoryMap = new Map<string, { count: number; resetAt: number }>();
 
-function getOrCreateRatelimit(): Ratelimit | null {
+async function loadModules(): Promise<boolean> {
+  if (modulesLoaded) return ratelimitModule !== null;
+
+  try {
+    ratelimitModule = await import('@upstash/ratelimit');
+    redisModule = await import('@upstash/redis');
+    modulesLoaded = true;
+    return true;
+  } catch {
+    modulesLoaded = true;
+    return false;
+  }
+}
+
+async function getOrCreateRatelimit(): Promise<any> {
   if (ratelimit) return ratelimit;
 
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -17,14 +32,21 @@ function getOrCreateRatelimit(): Ratelimit | null {
 
   if (!url || !token) return null;
 
-  ratelimit = new Ratelimit({
-    redis: new Redis({ url, token }),
-    limiter: Ratelimit.slidingWindow(30, '60 s'), // 30 requests per 60 seconds
-    analytics: false,
-    prefix: 'nutrivault:ratelimit',
-  });
+  const loaded = await loadModules();
+  if (!loaded) return null;
 
-  return ratelimit;
+  try {
+    const redis = new redisModule.Redis({ url, token });
+    ratelimit = new ratelimitModule.Ratelimit({
+      redis,
+      limiter: ratelimitModule.Ratelimit.slidingWindow(30, '60 s'),
+      analytics: false,
+      prefix: 'nutrivault:ratelimit',
+    });
+    return ratelimit;
+  } catch {
+    return null;
+  }
 }
 
 function memoryRateLimit(ip: string): { limited: boolean; remaining: number } {
@@ -49,18 +71,17 @@ function memoryRateLimit(ip: string): { limited: boolean; remaining: number } {
  * Returns { limited, remaining }.
  */
 export async function checkRateLimit(ip: string): Promise<{ limited: boolean; remaining: number }> {
-  const rl = getOrCreateRatelimit();
-
-  if (!rl) {
-    // Fallback to in-memory rate limiting
-    return memoryRateLimit(ip);
-  }
-
   try {
+    const rl = await getOrCreateRatelimit();
+
+    if (!rl) {
+      return memoryRateLimit(ip);
+    }
+
     const result = await rl.limit(ip);
     return { limited: !result.success, remaining: result.remaining };
   } catch {
-    // Redis unreachable — fall back to memory
+    // Any failure — fall back to memory
     return memoryRateLimit(ip);
   }
 }

@@ -10,11 +10,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Distributed rate limiting (Upstash Redis with in-memory fallback)
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
-  const { limited, remaining } = await checkRateLimit(clientIp);
-  res.setHeader('X-RateLimit-Remaining', remaining.toString());
-  if (limited) {
-    return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+  try {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+    const { limited, remaining } = await checkRateLimit(clientIp);
+    res.setHeader('X-RateLimit-Remaining', remaining.toString());
+    if (limited) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+    }
+  } catch (rlError: any) {
+    // Rate limiting failure should not block the request
+    console.warn('[API] Rate limit check failed, proceeding:', rlError?.message);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -25,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { model, prompt, jsonMode, imageBase64 } = req.body;
+    const { model, prompt, jsonMode, imageBase64 } = req.body || {};
 
     if (!model || !prompt) {
       return res.status(400).json({ error: 'Missing model or prompt' });
