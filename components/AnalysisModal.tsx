@@ -27,12 +27,14 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   const [editableItems, setEditableItems] = useState<EditableItem[]>(() =>
     initialItems.map(item => {
       const g = (item as any).grams || 100;
+      // Prefer AI-provided per-100g values (precise) over deriving from rounded absolute values
+      const itemAny = item as any;
       return {
         ...item,
         grams: g,
-        baseProteinPer100g: g > 0 ? (item.protein / g) * 100 : item.protein,
-        baseCarbsPer100g: g > 0 ? (item.carbs / g) * 100 : item.carbs,
-        baseFatPer100g: g > 0 ? (item.fat / g) * 100 : item.fat,
+        baseProteinPer100g: itemAny.proteinPer100g ?? (g > 0 ? (item.protein / g) * 100 : item.protein),
+        baseCarbsPer100g: itemAny.carbsPer100g ?? (g > 0 ? (item.carbs / g) * 100 : item.carbs),
+        baseFatPer100g: itemAny.fatPer100g ?? (g > 0 ? (item.fat / g) * 100 : item.fat),
         removed: false,
       };
     })

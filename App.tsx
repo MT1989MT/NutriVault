@@ -3,6 +3,7 @@ import { FoodItem, UserProfile, WorkoutLog } from './types';
 import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, addWorkoutToLog, updateWaterIntake, initializeStorage } from './services/storage';
 import { getSession } from './services/auth';
 import { initializePurchases } from './services/payments';
+import { installGlobalHandlers, createLogger } from './services/logger';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import AuthScreen from './components/AuthScreen';
@@ -36,8 +37,13 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    const log = createLogger('App');
+
+    // Install global window.onerror + unhandledrejection handlers (idempotent)
+    installGlobalHandlers();
+
     // Initialize RevenueCat for in-app purchases
-    initializePurchases();
+    initializePurchases().catch(err => log.warn('RevenueCat init skipped', err));
 
     // Check if onboarding should be shown
     if (!hasSeenOnboarding()) {
@@ -47,8 +53,8 @@ const App: React.FC = () => {
     const session = getSession();
     if (session) {
       setIsAuthenticated(true);
-      try { setProfile(getProfile()); } catch {}
-      try { setLogs(getLogs()); } catch {}
+      try { setProfile(getProfile()); } catch (e) { log.error('Failed to load profile', e); }
+      try { setLogs(getLogs()); } catch (e) { log.error('Failed to load logs', e); }
     }
     setIsLoading(false);
 
@@ -56,9 +62,9 @@ const App: React.FC = () => {
     // After IDB loads, update logs from the IDB source of truth
     initializeStorage().then(() => {
       if (session) {
-        try { setLogs(getLogs()); } catch {}
+        try { setLogs(getLogs()); } catch (e) { log.error('Failed to reload logs from IDB', e); }
       }
-    }).catch(() => {});
+    }).catch(err => log.warn('IndexedDB init failed, using localStorage', err));
   }, []);
 
   const handleSaveProfile = useCallback((newProfile: UserProfile) => {

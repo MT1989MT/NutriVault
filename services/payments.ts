@@ -10,6 +10,10 @@
  * 4. Set entitlement ID to 'NutriVault'
  */
 
+import { createLogger } from './logger';
+
+const log = createLogger('Payments');
+
 // RevenueCat Configuration
 const REVENUECAT_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_REVENUECAT_API_KEY) || '';
 
@@ -83,7 +87,7 @@ export const initializePurchases = async (): Promise<void> => {
 
     _initialized = true;
   } catch (error) {
-    console.error('RevenueCat init failed:', error);
+    log.error('RevenueCat init failed', error);
   }
 };
 
@@ -103,7 +107,7 @@ export const setActivationCodeAttribute = async (code: string): Promise<void> =>
       attributes: { activation_code: { value: code } },
     });
   } catch (error) {
-    console.error('Failed to set activation code attribute:', error);
+    log.error('Failed to set activation code attribute', error);
   }
 };
 
@@ -132,7 +136,7 @@ export const getOfferings = async (): Promise<{
           };
         }
       } catch (error) {
-        console.error('Failed to get offerings:', error);
+        log.error('Failed to get offerings', error);
       }
     }
   }
@@ -200,7 +204,7 @@ export const purchaseMonthly = async (): Promise<{
 
     return { success: false, error: 'Purchase was not completed' };
   } catch (error: any) {
-    console.error('Purchase error:', error);
+    log.error('Purchase failed', error);
 
     // RevenueCat error codes for common scenarios
     if (error?.code === 1) {
@@ -225,7 +229,7 @@ export const checkEntitlement = async (): Promise<boolean> => {
     const { customerInfo } = await modules.Purchases.getCustomerInfo();
     return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
   } catch (error) {
-    console.error('Entitlement check failed:', error);
+    log.error('Entitlement check failed', error);
     return false;
   }
 };
@@ -254,7 +258,7 @@ export const restorePurchases = async (): Promise<{
     const isSubscribed = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
     return { success: true, isSubscribed };
   } catch (error: any) {
-    console.error('Restore failed:', error);
+    log.error('Restore failed', error);
     return { success: false, isSubscribed: false, error: error?.message || 'Restore failed' };
   }
 };
@@ -273,7 +277,7 @@ export const getCustomerInfo = async () => {
     const { customerInfo } = await modules.Purchases.getCustomerInfo();
     return customerInfo;
   } catch (error) {
-    console.error('Failed to get customer info:', error);
+    log.error('Failed to get customer info', error);
     return null;
   }
 };

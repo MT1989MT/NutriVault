@@ -14,6 +14,9 @@ const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VIT
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
 import { API_BASE_URL } from './config';
+import { createLogger } from './logger';
+
+const log = createLogger('Supabase');
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = (): boolean => {
@@ -69,7 +72,7 @@ export const createActivationCode = async (): Promise<{ code: string; name: stri
     if (result.error) throw new Error(result.error);
     return { code: result.code, name: result.name };
   } catch (error) {
-    console.error('Failed to create activation code:', error);
+    log.error('Failed to create activation code', error);
     return null;
   }
 };
@@ -92,7 +95,7 @@ export const verifyActivationCode = async (code: string): Promise<{
       name: result.name,
     };
   } catch (error) {
-    console.error('Failed to verify code:', error);
+    log.error('Failed to verify code', error);
     return null; // null = Supabase unavailable, fallback to mock
   }
 };
@@ -108,7 +111,7 @@ export const extendSubscription = async (code: string, months: number): Promise<
     const result = await callApiRoute('extend-subscription', { code, months });
     return result.success === true;
   } catch (error) {
-    console.error('Failed to extend subscription:', error);
+    log.error('Failed to extend subscription', error);
     return false;
   }
 };

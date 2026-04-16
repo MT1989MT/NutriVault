@@ -4,8 +4,11 @@ import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Bra
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
 import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
+import { createLogger } from '../services/logger';
 import AnalysisModal from './AnalysisModal';
 import { t as tr, getCurrentLanguage } from '../utils/i18n';
+
+const log = createLogger('Dashboard');
 
 interface DashboardProps {
   profile: UserProfile;
@@ -249,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       setAnalyzedItems(result);
     } catch (err: any) {
       const msg = err?.message || err?.toString?.() || 'unknown error';
-      console.error('Food analysis error:', msg);
+      log.error('Food analysis failed', err);
       if (msg.includes('API key not configured')) {
         setAnalyzeError("Server API key is not configured.");
       } else if (msg.includes('timed out')) {

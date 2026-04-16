@@ -1,7 +1,10 @@
 
 import { DayLog, UserProfile, WorkoutLog, MoodLog, Recipe, FoodItem, TrainingPlan, WorkoutRoutine } from '../types';
 import { generateId } from '../utils/calculations';
+import { createLogger } from './logger';
 import * as idb from './indexeddb';
+
+const log = createLogger('Storage');
 
 const PROFILE_KEY = 'nutrivault_profile';
 const LOGS_KEY = 'nutrivault_logs';
@@ -37,7 +40,7 @@ const safeSetItem = (key: string, value: string): void => {
     localStorage.setItem(key, value);
   } catch (e) {
     if (e instanceof DOMException && (e.code === 22 || e.name === 'QuotaExceededError')) {
-      console.error('[Storage] Quota exceeded for key:', key);
+      log.error(`Quota exceeded for key: ${key}`);
     }
     throw e;
   }
@@ -53,7 +56,7 @@ const cachedSet = <T>(key: string, data: T): void => {
     if (idbWriteTimer) clearTimeout(idbWriteTimer);
     idbWriteTimer = setTimeout(() => {
       idb.saveDayLogs(data as Record<string, DayLog>).catch(err =>
-        console.warn('[Storage] IDB write failed:', err)
+        log.warn('IDB write failed', err)
       );
     }, 300);
   }
@@ -86,7 +89,7 @@ export async function initializeStorage(): Promise<void> {
     }
     idbReady = true;
   } catch (err) {
-    console.warn('[Storage] IndexedDB init failed, using localStorage only:', err);
+    log.warn('IndexedDB init failed, using localStorage only', err);
   }
 }
 
@@ -285,6 +288,10 @@ interface FoodFrequency {
   carbs: number;
   fat: number;
   amountDescription: string;
+  // Per-100g base values for cross-session consistency
+  proteinPer100g?: number;
+  carbsPer100g?: number;
+  fatPer100g?: number;
 }
 
 export const getFoodFrequencies = (): FoodFrequency[] => cachedGet<FoodFrequency[]>(FOOD_FREQUENCY_KEY, []);
@@ -292,16 +299,28 @@ export const getFoodFrequencies = (): FoodFrequency[] => cachedGet<FoodFrequency
 export const trackFoodFrequency = (item: FoodItem) => {
   const freqs = getFoodFrequencies();
   const key = item.name.toLowerCase().trim();
+
+  // Extract per-100g values if the pipeline attached them (from AI per-100g response)
+  const itemAny = item as any;
+  const p100 = typeof itemAny.proteinPer100g === 'number' ? itemAny.proteinPer100g : undefined;
+  const c100 = typeof itemAny.carbsPer100g === 'number' ? itemAny.carbsPer100g : undefined;
+  const f100 = typeof itemAny.fatPer100g === 'number' ? itemAny.fatPer100g : undefined;
+  const hasPer100g = p100 !== undefined;
+
   const existing = freqs.findIndex(f => f.name.toLowerCase().trim() === key);
   if (existing >= 0) {
     freqs[existing].count += 1;
     freqs[existing].lastLogged = Date.now();
-    // Update nutritional data to latest values
     freqs[existing].calories = item.calories;
     freqs[existing].protein = item.protein;
     freqs[existing].carbs = item.carbs;
     freqs[existing].fat = item.fat;
     freqs[existing].amountDescription = item.amountDescription;
+    if (hasPer100g) {
+      freqs[existing].proteinPer100g = p100;
+      freqs[existing].carbsPer100g = c100;
+      freqs[existing].fatPer100g = f100;
+    }
   } else {
     freqs.push({
       name: item.name,
@@ -311,7 +330,8 @@ export const trackFoodFrequency = (item: FoodItem) => {
       protein: item.protein,
       carbs: item.carbs,
       fat: item.fat,
-      amountDescription: item.amountDescription
+      amountDescription: item.amountDescription,
+      ...(hasPer100g ? { proteinPer100g: p100, carbsPer100g: c100, fatPer100g: f100 } : {}),
     });
   }
   // Keep top 50 by frequency
@@ -319,6 +339,24 @@ export const trackFoodFrequency = (item: FoodItem) => {
   const limited = freqs.slice(0, 50);
   cachedSet(FOOD_FREQUENCY_KEY, limited);
   return limited;
+};
+
+/**
+ * Look up stored per-100g nutritional values for a food by name.
+ * Returns stored values if the food has been logged at least once before,
+ * giving consistent macros across sessions for repeat foods.
+ */
+export const lookupFoodNutrition = (name: string): { p100: number; c100: number; f100: number } | null => {
+  if (!name) return null;
+  const key = name.toLowerCase().trim();
+
+  const freqs = getFoodFrequencies();
+  const match = freqs.find(f => f.name.toLowerCase().trim() === key);
+  if (match && match.proteinPer100g !== undefined && match.carbsPer100g !== undefined && match.fatPer100g !== undefined) {
+    return { p100: match.proteinPer100g, c100: match.carbsPer100g, f100: match.fatPer100g };
+  }
+
+  return null;
 };
 
 export const getMostUsedFoods = (limit: number = 6): FoodFrequency[] => {

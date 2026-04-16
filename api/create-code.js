@@ -1,4 +1,7 @@
 const { applyCors } = require('./_cors');
+const { createLogger } = require('./_logger');
+
+const log = createLogger('CreateCode');
 
 module.exports = async function handler(req, res) {
   if (applyCors(req, res)) return;
@@ -12,7 +15,7 @@ module.exports = async function handler(req, res) {
   const edgeSecret = process.env.EDGE_FUNCTION_SECRET;
 
   if (!supabaseUrl || !supabaseAnonKey || !edgeSecret) {
-    console.error('[API] Missing SUPABASE_URL, SUPABASE_ANON_KEY, or EDGE_FUNCTION_SECRET');
+    log.error('Missing SUPABASE_URL, SUPABASE_ANON_KEY, or EDGE_FUNCTION_SECRET');
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
@@ -30,12 +33,13 @@ module.exports = async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
+      log.warn(`Edge function returned ${response.status}`, data.error);
       return res.status(response.status).json({ error: data.error || 'Failed to create code' });
     }
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error('[API] create-code proxy error:', error.message);
+    log.error('create-code proxy error', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };

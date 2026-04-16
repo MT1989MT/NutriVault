@@ -4,6 +4,9 @@ import {
   verifyActivationCode,
   extendSubscription
 } from "./supabase";
+import { createLogger } from "./logger";
+
+const log = createLogger('Auth');
 
 // Local storage keys
 const SESSION_KEY = 'nutrivault_auth_session';
@@ -81,7 +84,7 @@ export const createAccount = async (): Promise<{ key: string; name: string } | n
     }
     // If Supabase fails in production, do NOT fall back to mock
     if (!IS_DEV) {
-      console.error('Account creation failed: Supabase unavailable');
+      log.error('Account creation failed: Supabase unavailable');
       return null;
     }
   }

@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Lock, KeyRound, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { createAccount, verifyKey, saveSession } from '../services/auth';
 import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute } from '../services/payments';
+import { createLogger } from '../services/logger';
 import { t, getCurrentLanguage } from '../utils/i18n';
+
+const log = createLogger('AuthScreen');
 
 interface AuthScreenProps {
   onAuthenticated: () => void;
@@ -154,7 +157,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       setNewName(acc.name);
       setView('CREATE');
     } catch (err) {
-      console.error('Purchase error:', err);
+      log.error('Purchase flow failed', err);
       setError(t('somethingWentWrong'));
     } finally {
       setLoading(false);

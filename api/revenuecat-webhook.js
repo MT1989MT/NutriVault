@@ -1,4 +1,7 @@
 const { timingSafeEqual } = require('crypto');
+const { createLogger } = require('./_logger');
+
+const log = createLogger('Webhook');
 
 /** Constant-time string comparison to prevent timing attacks */
 function safeEqual(a, b) {
@@ -38,12 +41,12 @@ module.exports = async function handler(req, res) {
   const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    console.error('[Webhook] REVENUECAT_WEBHOOK_SECRET not configured');
+    log.error('REVENUECAT_WEBHOOK_SECRET not configured');
     return res.status(500).json({ error: 'Webhook not configured' });
   }
 
   if (!safeEqual(authHeader, `Bearer ${webhookSecret}`)) {
-    console.error('[Webhook] Invalid authorization header');
+    log.warn('Invalid authorization header');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -52,7 +55,7 @@ module.exports = async function handler(req, res) {
   const edgeSecret = process.env.EDGE_FUNCTION_SECRET;
 
   if (!supabaseUrl || !supabaseAnonKey || !edgeSecret) {
-    console.error('[Webhook] Missing server configuration');
+    log.error('Missing server configuration');
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
@@ -66,7 +69,7 @@ module.exports = async function handler(req, res) {
     const subscriberAttributes = event.subscriber_attributes || {};
     const activationCode = subscriberAttributes.activation_code && subscriberAttributes.activation_code.value;
 
-    console.log(`[Webhook] Event: ${eventType}, has code: ${!!activationCode}`);
+    log.info(`Event: ${eventType}, has code: ${!!activationCode}`);
 
     switch (eventType) {
       case 'INITIAL_PURCHASE':
@@ -76,7 +79,7 @@ module.exports = async function handler(req, res) {
             code: activationCode,
             months: 1,
           });
-          console.log('[Webhook] Extended code for initial purchase');
+          log.info('Extended code for initial purchase');
         }
         break;
       }
@@ -87,31 +90,31 @@ module.exports = async function handler(req, res) {
             code: activationCode,
             months: 1,
           });
-          console.log('[Webhook] Extended code for renewal');
+          log.info('Extended code for renewal');
         } else {
-          console.warn('[Webhook] Renewal without activation_code attribute');
+          log.warn('Renewal without activation_code attribute');
         }
         break;
       }
 
       case 'EXPIRATION': {
-        console.log('[Webhook] Subscription expired');
+        log.info('Subscription expired');
         break;
       }
 
       case 'CANCELLATION': {
-        console.log('[Webhook] Subscription cancelled (still active until period end)');
+        log.info('Subscription cancelled (still active until period end)');
         break;
       }
 
       default: {
-        console.log(`[Webhook] Unhandled event type: ${eventType}`);
+        log.info(`Unhandled event type: ${eventType}`);
       }
     }
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('[Webhook] Error:', error.message);
+    log.error('Webhook processing failed', error);
     return res.status(500).json({ error: 'Processing failed, will retry' });
   }
 };
