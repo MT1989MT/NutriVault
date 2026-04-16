@@ -1,4 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { createLogger, exportLogs } from '../services/logger';
+
+const log = createLogger('ErrorBoundary');
 
 interface Props {
   children: ReactNode;
@@ -15,6 +18,7 @@ class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false, error: null };
     this.handleReset = this.handleReset.bind(this);
     this.handleClearAndReset = this.handleClearAndReset.bind(this);
+    this.handleCopyLogs = this.handleCopyLogs.bind(this);
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -22,7 +26,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('NutriVault Error:', error, errorInfo);
+    log.error(`Component crash: ${error.message}`, errorInfo.componentStack);
   }
 
   handleReset() {
@@ -36,9 +40,20 @@ class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   }
 
+  handleCopyLogs() {
+    try {
+      const logDump = exportLogs();
+      navigator.clipboard.writeText(logDump).then(() => {
+        const btn = document.getElementById('nv-copy-logs-btn');
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Debug Logs'; }, 2000); }
+      });
+    } catch {
+      // Fallback: select text in the error box for manual copy
+    }
+  }
+
   /** Strip potentially sensitive data from error messages shown to users */
   private sanitizeErrorMessage(message: string): string {
-    // Remove URLs, file paths, API keys, tokens, and stack traces
     return message
       .replace(/https?:\/\/\S+/g, '[url]')
       .replace(/\/[\w./]+\.\w+/g, '[path]')
@@ -74,9 +89,17 @@ class ErrorBoundary extends Component<Props, State> {
                 Try Again
               </button>
               <button
+                id="nv-copy-logs-btn"
+                onClick={this.handleCopyLogs}
+                aria-label="Copy debug logs to clipboard"
+                className="w-full bg-gray-100 text-gray-600 font-medium py-3 rounded-xl active:scale-[0.98] transition-transform text-sm"
+              >
+                Copy Debug Logs
+              </button>
+              <button
                 onClick={this.handleClearAndReset}
                 aria-label="Reload app"
-                className="w-full bg-gray-100 text-gray-600 font-medium py-3 rounded-xl active:scale-[0.98] transition-transform text-sm"
+                className="w-full text-gray-400 font-medium py-2 rounded-xl text-xs"
               >
                 Reload App
               </button>

@@ -1,5 +1,8 @@
 import { FoodItem, Recipe, WorkoutSuggestion, WorkoutLog, TrainingPlan, CoachPersonality } from "../types";
 import { generateId } from "../utils/calculations";
+import { createLogger } from "./logger";
+
+const log = createLogger('Gemini');
 
 // Gemini model mapping — gemini-2.0-flash deprecated March 2026, shutdown June 2026
 const FAST_MODEL = "gemini-2.5-flash";
@@ -160,7 +163,7 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
         }
       }
       if (attempt === MAX_RETRIES) {
-        console.error('[callGemini] all retries failed:', error?.message || 'unknown');
+        log.error('All retries failed', error);
         throw lastError || error;
       }
       lastError = error;

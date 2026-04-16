@@ -1,5 +1,8 @@
 const { applyCors } = require('./_cors');
 const { checkRateLimit } = require('./_ratelimit');
+const { createLogger } = require('./_logger');
+
+const log = createLogger('Gemini');
 
 // Per-function config — ensures Vercel allows enough time for Gemini API calls
 const config = { maxDuration: 30 };
@@ -93,7 +96,7 @@ async function handler(req, res) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[API] Gemini error:', response.status, errorText);
+        log.error(`Gemini API ${response.status}`, errorText);
         const clientError = response.status === 429
           ? 'AI rate limit reached. Please wait a moment.'
           : 'AI service temporarily unavailable.';
@@ -114,7 +117,7 @@ async function handler(req, res) {
       throw fetchError;
     }
   } catch (error) {
-    console.error('[API] Unhandled error:', error && error.message || error);
+    log.error('Unhandled error', error);
     return res.status(500).json({
       error: (error && error.message) || 'Internal server error',
       _ms: Date.now() - start

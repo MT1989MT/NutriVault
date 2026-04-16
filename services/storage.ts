@@ -1,7 +1,10 @@
 
 import { DayLog, UserProfile, WorkoutLog, MoodLog, Recipe, FoodItem, TrainingPlan, WorkoutRoutine } from '../types';
 import { generateId } from '../utils/calculations';
+import { createLogger } from './logger';
 import * as idb from './indexeddb';
+
+const log = createLogger('Storage');
 
 const PROFILE_KEY = 'nutrivault_profile';
 const LOGS_KEY = 'nutrivault_logs';
@@ -37,7 +40,7 @@ const safeSetItem = (key: string, value: string): void => {
     localStorage.setItem(key, value);
   } catch (e) {
     if (e instanceof DOMException && (e.code === 22 || e.name === 'QuotaExceededError')) {
-      console.error('[Storage] Quota exceeded for key:', key);
+      log.error(`Quota exceeded for key: ${key}`);
     }
     throw e;
   }
@@ -53,7 +56,7 @@ const cachedSet = <T>(key: string, data: T): void => {
     if (idbWriteTimer) clearTimeout(idbWriteTimer);
     idbWriteTimer = setTimeout(() => {
       idb.saveDayLogs(data as Record<string, DayLog>).catch(err =>
-        console.warn('[Storage] IDB write failed:', err)
+        log.warn('IDB write failed', err)
       );
     }, 300);
   }
@@ -86,7 +89,7 @@ export async function initializeStorage(): Promise<void> {
     }
     idbReady = true;
   } catch (err) {
-    console.warn('[Storage] IndexedDB init failed, using localStorage only:', err);
+    log.warn('IndexedDB init failed, using localStorage only', err);
   }
 }
 

@@ -4,6 +4,20 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Structured logger — JSON output for Supabase log drain
+const log = {
+  _emit(level: string, msg: string, detail?: unknown) {
+    const entry: Record<string, unknown> = { level, fn: 'extend-subscription', msg, ts: new Date().toISOString() };
+    if (detail !== undefined) {
+      entry.detail = detail instanceof Error ? detail.message : typeof detail === 'string' ? detail.slice(0, 300) : String(detail).slice(0, 300);
+    }
+    console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](JSON.stringify(entry));
+  },
+  info:  (msg: string, d?: unknown) => log._emit('info', msg, d),
+  warn:  (msg: string, d?: unknown) => log._emit('warn', msg, d),
+  error: (msg: string, d?: unknown) => log._emit('error', msg, d),
+};
+
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
   'https://nutrivault-seven.vercel.app',
@@ -73,7 +87,7 @@ Deno.serve(async (req) => {
       .limit(1)
 
     if (error) {
-      console.error('extend-subscription DB error:', error.message)
+      log.error('DB query failed', error)
       throw new Error('Extension failed')
     }
 
@@ -100,7 +114,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: unknown) {
-    console.error('extend-subscription error:', error instanceof Error ? error.message : error)
+    log.error('Extension failed', error)
     return new Response(
       JSON.stringify({ success: false, error: 'Extension failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
