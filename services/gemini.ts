@@ -80,6 +80,7 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
+import { lookupNutritionDB } from '../data/nutritionDB';
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
 const responseCache = new Map<string, { text: string; timestamp: number }>();
@@ -208,7 +209,6 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
     }
 
     // Sanity-check per-100g values: clamp to plausible ranges
-    // (protein powder ~80g/100g, pure oil/butter ~100g/100g fat, pure sugar ~100g/100g carbs)
     p100 = Math.min(p100, 90);
     c100 = Math.min(c100, 100);
     f100 = Math.min(f100, 100);
@@ -219,12 +219,19 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       f100 *= scale;
     }
 
-    // Override with stored per-100g values for consistency on repeat foods
-    const stored = lookupFoodNutrition(name);
-    if (stored) {
-      p100 = stored.p100;
-      c100 = stored.c100;
-      f100 = stored.f100;
+    // Priority: (1) static nutrition DB, (2) user's history, (3) AI values
+    const dbEntry = lookupNutritionDB(name);
+    if (dbEntry) {
+      p100 = dbEntry.p100;
+      c100 = dbEntry.c100;
+      f100 = dbEntry.f100;
+    } else {
+      const stored = lookupFoodNutrition(name);
+      if (stored) {
+        p100 = stored.p100;
+        c100 = stored.c100;
+        f100 = stored.f100;
+      }
     }
 
     // Compute absolute macros from per-100g × portion
@@ -252,6 +259,11 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
     // Preserve group name for branded/composite products
     if (typeof item.group === 'string' && item.group.trim()) {
       result.groupName = item.group.trim();
+    }
+
+    // Pass through alternatives for ambiguous items
+    if (Array.isArray(item.alt) && item.alt.length > 0) {
+      result.alternatives = item.alt.filter((a: any) => typeof a === 'string').slice(0, 3);
     }
 
     if (includeMicros) {
@@ -312,9 +324,16 @@ PARSING RULES:
    - Sauces/spreads: butter ~10g, peanut butter ~15g, mayo ~15g
 7. Include weight estimate in portion description.
 8. "grams" = estimated portion weight. We multiply per-100g macros by grams/100 to get the total.
+9. ALTERNATIVES: If the preparation method or type is ambiguous and would significantly change the macros, add an "alt" array with 1-2 alternatives.
+   Examples of when to add alternatives:
+   - "eggs" → default to boiled, alt: ["fried egg", "scrambled egg"]
+   - "bread" → default to white, alt: ["whole wheat bread"]
+   - "milk" → default to whole, alt: ["semi-skimmed milk", "skimmed milk"]
+   - "yogurt" → default to greek, alt: ["low fat yogurt"]
+   Do NOT add alternatives for items where the type is already clear (e.g. "fried egg", "whole wheat bread").
 
 RESPONSE FORMAT — strict JSON array only:
-[{"name":"str","portion":"str (~Xg)","grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
+[{"name":"str","portion":"str (~Xg)","grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit","alt":["str"] or omit}]`,
       true
     );
     if (!text) return [];
