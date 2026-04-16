@@ -81,6 +81,8 @@ async function handler(req, res) {
             generationConfig: {
               maxOutputTokens: 8192,
               temperature: jsonMode ? 0 : 0.7,
+              // Disable thinking for JSON requests — saves ~2-5s latency
+              ...(jsonMode ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
             }
           }),
           signal: controller.signal
