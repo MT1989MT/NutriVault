@@ -79,7 +79,7 @@ async function handler(req, res) {
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
-              maxOutputTokens: 2048,
+              maxOutputTokens: 8192,
               temperature: jsonMode ? 0 : 0.7,
             }
           }),
