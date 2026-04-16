@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { FoodItem } from '../types';
-import { Check, ChevronDown, ChevronRight, Minus, Plus, Trash2, X, PenLine } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Minus, Plus, Trash2, X, PenLine, RefreshCw } from 'lucide-react';
+import { lookupNutritionDB } from '../data/nutritionDB';
 
 interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   grams?: number;
@@ -10,6 +11,7 @@ interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   baseFatPer100g?: number;
   removed?: boolean;
   groupName?: string;
+  alternatives?: string[];
 }
 
 interface AnalysisModalProps {
@@ -36,6 +38,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         baseCarbsPer100g: itemAny.carbsPer100g ?? (g > 0 ? (item.carbs / g) * 100 : item.carbs),
         baseFatPer100g: itemAny.fatPer100g ?? (g > 0 ? (item.fat / g) * 100 : item.fat),
         removed: false,
+        alternatives: itemAny.alternatives,
       };
     })
   );
@@ -140,6 +143,30 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     ));
   };
 
+  const swapToAlternative = (idx: number, altName: string) => {
+    setEditableItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const entry = lookupNutritionDB(altName);
+      const g = item.grams || 100;
+      const p100 = entry?.p100 ?? item.baseProteinPer100g ?? 0;
+      const c100 = entry?.c100 ?? item.baseCarbsPer100g ?? 0;
+      const f100 = entry?.f100 ?? item.baseFatPer100g ?? 0;
+      const protein = Math.round(p100 * g / 100);
+      const carbs = Math.round(c100 * g / 100);
+      const fat = Math.round(f100 * g / 100);
+      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+      return {
+        ...item,
+        name: altName,
+        baseProteinPer100g: p100,
+        baseCarbsPer100g: c100,
+        baseFatPer100g: f100,
+        protein, carbs, fat, calories,
+        alternatives: undefined,
+      };
+    }));
+  };
+
   const handleConfirm = () => {
     const itemsToLog = activeItems
       .filter(i => i.calories > 0 || i.protein > 0 || i.carbs > 0 || i.fat > 0)
@@ -186,6 +213,21 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
             </div>
           </div>
         </button>
+
+        {item.alternatives && item.alternatives.length > 0 && !isExpanded && (
+          <div className="px-3 pb-2 flex items-center gap-1.5 flex-wrap">
+            <RefreshCw className="w-3 h-3 text-gray-400 shrink-0" />
+            {item.alternatives.map((alt, ai) => (
+              <button
+                key={ai}
+                onClick={(e) => { e.stopPropagation(); swapToAlternative(idx, alt); }}
+                className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[11px] font-semibold hover:bg-blue-100 active:scale-95 transition-all"
+              >
+                {alt}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isExpanded && (
           <div className="px-3 pb-3 pt-0">
