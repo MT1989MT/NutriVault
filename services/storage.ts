@@ -226,6 +226,7 @@ export const deleteRoutine = (id: string) => {
 // Favorite Foods - custom foods with known nutritional values
 const FAVORITE_FOODS_KEY = 'nutrivault_favorite_foods';
 const RECENT_FOODS_KEY = 'nutrivault_recent_foods';
+const RECENT_MEALS_KEY = 'nutrivault_recent_meals';
 
 export interface FavoriteFood {
   id: string;
@@ -274,6 +275,38 @@ export const addToRecentFoods = (item: FoodItem) => {
 export const clearRecentFoods = () => {
   cachedSet(RECENT_FOODS_KEY, []);
   return [];
+};
+
+// Recent meals - grouped foods automatically saved from logging (e.g. "Broodje gezond" with all its components)
+export interface RecentMeal {
+  id: string;
+  name: string;
+  items: FoodItem[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  timestamp: number;
+}
+
+export const getRecentMeals = (): RecentMeal[] => cachedGet<RecentMeal[]>(RECENT_MEALS_KEY, []);
+
+export const addToRecentMeals = (groupName: string, items: FoodItem[]): RecentMeal[] => {
+  const meals = getRecentMeals();
+  const filtered = meals.filter(m => m.name.toLowerCase() !== groupName.toLowerCase());
+  filtered.unshift({
+    id: generateId(),
+    name: groupName,
+    items: items.map(i => ({ ...i, id: generateId(), timestamp: Date.now() })),
+    totalCalories: items.reduce((s, i) => s + i.calories, 0),
+    totalProtein: items.reduce((s, i) => s + i.protein, 0),
+    totalCarbs: items.reduce((s, i) => s + i.carbs, 0),
+    totalFat: items.reduce((s, i) => s + i.fat, 0),
+    timestamp: Date.now(),
+  });
+  const limited = filtered.slice(0, 10);
+  cachedSet(RECENT_MEALS_KEY, limited);
+  return limited;
 };
 
 // Food frequency tracking - tracks how often each food is logged
@@ -370,7 +403,7 @@ export const getMostUsedFoods = (limit: number = 6): FoodFrequency[] => {
 const ALL_KEYS = [
   PROFILE_KEY, LOGS_KEY, MOODS_KEY, RECIPES_KEY, SAVED_MEALS_KEY,
   TRAINING_PLAN_KEY, SAVED_ROUTINES_KEY, FAVORITE_FOODS_KEY, RECENT_FOODS_KEY,
-  FOOD_FREQUENCY_KEY, 'nutrivault_shopping', 'nutrivault_language', 'nutrivault_chat_history'
+  RECENT_MEALS_KEY, FOOD_FREQUENCY_KEY, 'nutrivault_shopping', 'nutrivault_language', 'nutrivault_chat_history'
 ];
 
 export const exportAllData = (): string => {

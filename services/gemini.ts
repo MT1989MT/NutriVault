@@ -207,6 +207,18 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       f100 = grams > 0 ? absF / grams * 100 : absF;
     }
 
+    // Sanity-check per-100g values: clamp to plausible ranges
+    // (protein powder ~80g/100g, pure oil/butter ~100g/100g fat, pure sugar ~100g/100g carbs)
+    p100 = Math.min(p100, 90);
+    c100 = Math.min(c100, 100);
+    f100 = Math.min(f100, 100);
+    if (p100 + c100 + f100 > 120) {
+      const scale = 120 / (p100 + c100 + f100);
+      p100 *= scale;
+      c100 *= scale;
+      f100 *= scale;
+    }
+
     // Override with stored per-100g values for consistency on repeat foods
     const stored = lookupFoodNutrition(name);
     if (stored) {

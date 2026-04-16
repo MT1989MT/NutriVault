@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { DayLog, UserProfile, FoodItem, MealType } from '../types';
 import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Brain, ChevronLeft, ChevronRight, ChevronDown, Flame, PenLine, User, Settings, ArrowRight, Scale, Info, Droplets, Minus, Camera, TrendingUp, Copy } from 'lucide-react';
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
-import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods } from '../services/storage';
+import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods, getRecentMeals, addToRecentMeals, RecentMeal } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
 import { createLogger } from '../services/logger';
 import AnalysisModal from './AnalysisModal';
@@ -128,6 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const [showAbout, setShowAbout] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
+  const [recentMeals, setRecentMeals] = useState<RecentMeal[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<FavoriteFood[]>([]);
   const [saveAsFavorite, setSaveAsFavorite] = useState(false);
   const [manualForm, setManualForm] = useState({
@@ -171,6 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
   useEffect(() => {
     setRecentFoods(getRecentFoods());
+    setRecentMeals(getRecentMeals());
     setFavoriteFoods(getFavoriteFoods());
     setMostUsedFoods(getMostUsedFoods());
   }, []);
@@ -700,11 +702,42 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 </div>
               )}
 
-              {/* Recent foods */}
-              {recentFoods.length > 0 && (
+              {/* Recent meals (grouped) + individual recent foods */}
+              {(recentMeals.length > 0 || recentFoods.length > 0) && (
                 <div className="mb-4">
                   <span className="text-xs font-bold text-gray-400 uppercase">{tr('recent')}</span>
                   <div className="mt-2.5 space-y-2">
+                    {recentMeals.slice(0, 3).map((meal) => (
+                      <button
+                        key={meal.id}
+                        onClick={() => {
+                          if (!selectedMealType) return;
+                          const items = meal.items.map(i => ({
+                            ...i,
+                            id: generateId(),
+                            mealType: selectedMealType,
+                            timestamp: Date.now(),
+                          }));
+                          onItemsAdded(items, selectedDate);
+                          items.forEach(i => trackFoodFrequency(i));
+                          setMostUsedFoods(getMostUsedFoods());
+                          setSelectedMealType(null);
+                        }}
+                        className="w-full flex items-center justify-between p-3.5 bg-[#E07A5F]/5 border border-[#E07A5F]/10 rounded-xl hover:bg-[#E07A5F]/10 transition-colors active:scale-[0.98] min-h-[52px]"
+                      >
+                        <div className="text-left">
+                          <p className="font-medium text-gray-800 text-[15px]">{meal.name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{meal.items.length} items</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-[15px] font-bold text-gray-600">{meal.totalCalories}</span>
+                            <p className="text-[10px] text-gray-400">P{meal.totalProtein} C{meal.totalCarbs} F{meal.totalFat}</p>
+                          </div>
+                          <Plus className="w-4.5 h-4.5 text-[#E07A5F]" />
+                        </div>
+                      </button>
+                    ))}
                     {recentFoods.slice(0, 4).map((item) => (
                       <button
                         key={item.id}
@@ -980,8 +1013,21 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
           onConfirm={(editedItems) => {
             const itemsToAdd = editedItems.map(i => ({ ...i, id: generateId(), mealType: selectedMealType, timestamp: Date.now(), source: 'AI_LOG' as const, ...(photoPreview ? { photoUri: photoPreview } : {}) }));
             onItemsAdded(itemsToAdd, selectedDate);
-            itemsToAdd.forEach(item => { addToRecentFoods(item); trackFoodFrequency(item); });
+            // Save grouped items as recent meals, ungrouped as individual recent foods
+            const grouped = new Map<string, FoodItem[]>();
+            itemsToAdd.forEach(item => {
+              if (item.groupName) {
+                const arr = grouped.get(item.groupName) || [];
+                arr.push(item);
+                grouped.set(item.groupName, arr);
+              } else {
+                addToRecentFoods(item);
+              }
+              trackFoodFrequency(item);
+            });
+            grouped.forEach((items, groupName) => addToRecentMeals(groupName, items));
             setRecentFoods(getRecentFoods());
+            setRecentMeals(getRecentMeals());
             setMostUsedFoods(getMostUsedFoods());
             setInput('');
             setPhotoPreview(null);
