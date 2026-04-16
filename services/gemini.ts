@@ -16,6 +16,30 @@ const cleanJsonOutput = (text: string): string => {
   return text.trim();
 };
 
+/** Try to repair truncated JSON arrays (e.g. from token limit cutoff) */
+const repairJson = (text: string): any => {
+  try { return JSON.parse(text); } catch (_) { /* fall through */ }
+  // Try closing open strings/objects/arrays from the end
+  let s = text.replace(/,\s*$/, ''); // remove trailing comma
+  // Try progressively closing brackets
+  const closers = ['"', '}', ']'];
+  for (let i = 0; i < 4; i++) {
+    for (const c of closers) {
+      try { return JSON.parse(s + c); } catch (_) { /* next */ }
+    }
+    s = s + '}'; // try adding another closing brace
+  }
+  // Last resort: extract any complete objects from a partial array
+  const objects: any[] = [];
+  const objRegex = /\{[^{}]*\}/g;
+  let m;
+  while ((m = objRegex.exec(text)) !== null) {
+    try { objects.push(JSON.parse(m[0])); } catch (_) { /* skip */ }
+  }
+  if (objects.length > 0) return objects;
+  throw new Error('Could not parse food data. Please try again.');
+};
+
 const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
     switch (style) {
         case 'STOIC': return `PERSONALITY: Stoic Coach
@@ -233,7 +257,7 @@ RESPONSE FORMAT — strict JSON array only:
       true
     );
     if (!text) return [];
-    return parseFoodResponse(JSON.parse(cleanJsonOutput(text)));
+    return parseFoodResponse(repairJson(cleanJsonOutput(text)));
   } catch (error: any) {
     throw error;
   }
@@ -260,7 +284,7 @@ JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p":N,"c":N,"f":N,"fiber":N
     );
 
     if (!text) return [];
-    return parseFoodResponse(JSON.parse(cleanJsonOutput(text)));
+    return parseFoodResponse(repairJson(cleanJsonOutput(text)));
   } catch (error: any) {
     throw error;
   }
