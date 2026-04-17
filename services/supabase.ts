@@ -61,14 +61,17 @@ const callApiRoute = async (route: string, body: Record<string, unknown>) => {
 };
 
 /**
- * Create a new activation code via Vercel API proxy
- * The proxy adds a server-side secret before calling the Edge Function
+ * Create a new activation code via Vercel API proxy.
+ * The proxy verifies the RevenueCat entitlement for `appUserId` before
+ * minting a code — callers MUST supply the RevenueCat app_user_id of a
+ * subscriber who just completed a purchase.
  */
-export const createActivationCode = async (): Promise<{ code: string; name: string } | null> => {
+export const createActivationCode = async (appUserId: string): Promise<{ code: string; name: string } | null> => {
   if (!isSupabaseConfigured()) return null;
+  if (!appUserId) return null;
 
   try {
-    const result = await callApiRoute('create-code', {});
+    const result = await callApiRoute('create-code', { appUserId });
     if (result.error) throw new Error(result.error);
     return { code: result.code, name: result.name };
   } catch (error) {
@@ -100,18 +103,6 @@ export const verifyActivationCode = async (code: string): Promise<{
   }
 };
 
-/**
- * Extend subscription via Vercel API proxy
- * The proxy adds a server-side secret before calling the Edge Function
- */
-export const extendSubscription = async (code: string, months: number): Promise<boolean> => {
-  if (!isSupabaseConfigured()) return false;
-
-  try {
-    const result = await callApiRoute('extend-subscription', { code, months });
-    return result.success === true;
-  } catch (error) {
-    log.error('Failed to extend subscription', error);
-    return false;
-  }
-};
+// Subscription extension is handled exclusively server-to-server by the
+// authenticated RevenueCat webhook (`/api/revenuecat-webhook`).  There is
+// intentionally no client-reachable endpoint to extend a subscription.

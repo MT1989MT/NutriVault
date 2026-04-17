@@ -283,6 +283,28 @@ export const getCustomerInfo = async () => {
 };
 
 /**
+ * Get the RevenueCat `app_user_id` for the current device.
+ * Used by the server to verify an active entitlement before minting
+ * an activation code.
+ */
+export const getAppUserId = async (): Promise<string | null> => {
+  if (!isNativePlatform() || !_initialized) return null;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return null;
+
+  try {
+    const result = await modules.Purchases.getAppUserID();
+    if (typeof result === 'string') return result;
+    if (result && typeof result.appUserID === 'string') return result.appUserID;
+    return null;
+  } catch (error) {
+    log.error('Failed to get app user id', error);
+    return null;
+  }
+};
+
+/**
  * Get subscription management URL
  * Apple: opens App Store subscription settings
  * Google: opens Play Store subscription settings

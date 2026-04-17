@@ -2,7 +2,6 @@ import {
   isSupabaseConfigured,
   createActivationCode,
   verifyActivationCode,
-  extendSubscription
 } from "./supabase";
 import { createLogger } from "./logger";
 
@@ -71,21 +70,30 @@ const generateSessionToken = (): string => {
 };
 
 /**
- * Create a new account
- * Production: uses Supabase Edge Functions via Vercel proxy
- * Dev only: falls back to localStorage mock
+ * Create a new account.
+ * Production: requires the RevenueCat `appUserId` of a subscriber who just
+ * completed a purchase — the server verifies the entitlement before minting
+ * a code via Supabase Edge Functions (proxied through Vercel).
+ * Dev only: falls back to a local mock that does not require appUserId.
  */
-export const createAccount = async (): Promise<{ key: string; name: string } | null> => {
+export const createAccount = async (appUserId?: string | null): Promise<{ key: string; name: string } | null> => {
   // Try Supabase first (production)
   if (isSupabaseConfigured()) {
-    const result = await createActivationCode();
-    if (result) {
-      return { key: result.code, name: result.name };
-    }
-    // If Supabase fails in production, do NOT fall back to mock
-    if (!IS_DEV) {
-      log.error('Account creation failed: Supabase unavailable');
-      return null;
+    if (!appUserId) {
+      if (!IS_DEV) {
+        log.error('Account creation requires a RevenueCat appUserId');
+        return null;
+      }
+    } else {
+      const result = await createActivationCode(appUserId);
+      if (result) {
+        return { key: result.code, name: result.name };
+      }
+      // If Supabase fails in production, do NOT fall back to mock
+      if (!IS_DEV) {
+        log.error('Account creation failed: Supabase unavailable');
+        return null;
+      }
     }
   }
 
@@ -182,17 +190,17 @@ export const verifyKey = async (inputKey: string): Promise<{
 };
 
 /**
- * Add subscription time to an account
- * Production: via Supabase Edge Function
- * Dev only: localStorage mock
+ * Add subscription time to an account.
+ *
+ * SECURITY: in production, subscription extension happens strictly
+ * server-to-server via the authenticated RevenueCat webhook. There is no
+ * client-reachable endpoint to extend a subscription — a client call here
+ * in production always returns false.
+ *
+ * Dev only: updates the local mock database so developers can test the UI
+ * without standing up Supabase / RevenueCat.
  */
 export const addTime = async (inputKey: string, months: number): Promise<boolean> => {
-  if (isSupabaseConfigured()) {
-    const result = await extendSubscription(inputKey, months);
-    if (result) return true;
-    if (!IS_DEV) return false;
-  }
-
   if (!IS_DEV) return false;
 
   const hashedInput = await hashKey(inputKey.replace(/\s/g, ''));

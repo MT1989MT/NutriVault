@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Shield, Copy, X, LogOut, Check, Info, Heart, Target, Utensils, Lock, Database, Eye, Trash2, Download, Upload, ExternalLink } from 'lucide-react';
-import { getSession, logout, addTime } from '../services/auth';
+import { getSession, logout, verifyKey, saveSession } from '../services/auth';
 import { getProfile, exportAllData, importAllData } from '../services/storage';
 import { getManagementURL, purchaseMonthly } from '../services/payments';
 import { UserProfile } from '../types';
@@ -31,21 +31,32 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const handlePayment = async () => {
     if (!session) return;
 
-    // On native: use RevenueCat/App Store payment flow
     const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
-    if (isNative) {
-      const result = await purchaseMonthly();
-      if (result.success) {
-        await addTime(session.accountNumber, 1);
-        setDaysLeft(p => p + 30);
-      }
+    if (!isNative) {
+      // Subscription extensions require a verified in-app purchase. The web
+      // build cannot process payments, so direct users to the native app.
+      alert("Subscription management is only available in the NutriVault iOS or Android app.");
       return;
     }
 
-    // On web (dev): direct extend
-    if (confirm("Extend subscription by 30 days?")) {
-      await addTime(session.accountNumber, 1);
-      setDaysLeft(p => p + 30);
+    const result = await purchaseMonthly();
+    if (!result.success) return;
+
+    // Payment succeeded. The RevenueCat webhook extends the subscription
+    // server-side; poll verifyKey to pick up the new expiry once the webhook
+    // has been processed.
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const verify = await verifyKey(session.accountNumber);
+      if (verify.success && verify.token && verify.expiry && verify.expiry > session.subscriptionEnds) {
+        saveSession(session.accountNumber, verify.token, verify.expiry, verify.name);
+        const refreshed = getSession();
+        if (refreshed) {
+          setSession(refreshed);
+          setDaysLeft(Math.max(0, Math.ceil((refreshed.subscriptionEnds - Date.now()) / (1000 * 60 * 60 * 24))));
+        }
+        return;
+      }
     }
   };
 

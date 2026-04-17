@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, KeyRound, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { createAccount, verifyKey, saveSession } from '../services/auth';
-import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute } from '../services/payments';
+import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute, getAppUserId } from '../services/payments';
 import { createLogger } from '../services/logger';
 import { t, getCurrentLanguage } from '../utils/i18n';
 
@@ -82,7 +82,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     setError('');
 
     try {
-      const acc = await createAccount();
+      const appUserId = await getAppUserId();
+      const acc = appUserId ? await createAccount(appUserId) : null;
       if (acc && acc.key) {
         localStorage.removeItem(PENDING_PURCHASE_KEY);
         // Link code to RevenueCat customer
@@ -123,12 +124,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       // This ensures recovery if code creation fails
       localStorage.setItem(PENDING_PURCHASE_KEY, Date.now().toString());
 
-      // Step 3: Generate unique activation code
+      // Step 3: Fetch the RevenueCat app_user_id — the server requires it
+      // to verify the purchase before minting a code.
+      const appUserId = await getAppUserId();
+      if (!appUserId) {
+        setError(t('codeGenFailed'));
+        setLoading(false);
+        return;
+      }
+
+      // Step 4: Generate unique activation code
       let acc: { key: string; name: string } | null = null;
       let retries = 3;
 
       while (retries > 0 && !acc) {
-        acc = await createAccount();
+        acc = await createAccount(appUserId);
         if (!acc) {
           retries--;
           if (retries > 0) {
