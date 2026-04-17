@@ -45,7 +45,9 @@ const loadRevenueCatModules = async () => {
     // These imports resolve at build time when Capacitor packages are installed
     // They will fail gracefully if packages aren't yet installed
     const [purchasesMod, uiMod] = await Promise.all([
+      // @ts-expect-error — optional native-only package; absent in web builds
       import('@revenuecat/purchases-capacitor').catch(() => null),
+      // @ts-expect-error — optional native-only package; absent in web builds
       import('@revenuecat/purchases-capacitor-ui').catch(() => null),
     ]);
 
