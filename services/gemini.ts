@@ -81,6 +81,29 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
 import { lookupNutritionDB } from '../data/nutritionDB';
+import { getSession } from './auth';
+
+// Test-mode secret: only embedded in builds that set VITE_TEST_MODE_SECRET.
+// When present (and the server has a matching TEST_MODE_SECRET) it lets the
+// built-in test-mode session call /api/gemini without a real activation code.
+const TEST_MODE_SECRET = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE_SECRET) || '';
+
+const buildAuthHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {};
+  const session = getSession();
+  const accountNumber = session?.accountNumber || '';
+
+  // Built-in placeholder accounts (TEST-/DEV-) are not real paid codes —
+  // fall back to the test-mode secret for server-side auth if one is configured.
+  const isPlaceholder = /^(TEST|DEV)-/.test(accountNumber);
+  if (accountNumber && !isPlaceholder) {
+    headers['x-activation-code'] = accountNumber;
+  }
+  if (TEST_MODE_SECRET && (isPlaceholder || !accountNumber)) {
+    headers['x-test-mode-secret'] = TEST_MODE_SECRET;
+  }
+  return headers;
+};
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
 const responseCache = new Map<string, { text: string; timestamp: number }>();
@@ -115,7 +138,7 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 
       const response = await fetch(`${API_BASE_URL}/api/gemini`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...buildAuthHeaders() },
         body: JSON.stringify(body),
         signal: controller.signal
       });

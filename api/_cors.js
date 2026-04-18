@@ -25,7 +25,7 @@ function applyCors(req, res) {
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Activation-Code, X-Test-Mode-Secret');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();

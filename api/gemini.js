@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { applyCors } = require('./_cors');
 const { checkRateLimit } = require('./_ratelimit');
 const { createLogger } = require('./_logger');
@@ -6,6 +7,101 @@ const log = createLogger('Gemini');
 
 // Per-function config — ensures Vercel allows enough time for Gemini API calls
 const config = { maxDuration: 30 };
+
+// Short-lived positive cache of verified activation codes to avoid a round-trip
+// to Supabase on every Gemini request. Keyed by SHA-256 of the cleaned code.
+const VERIFY_CACHE_TTL = 5 * 60 * 1000;
+const VERIFY_CACHE_MAX = 2000;
+const verifyCache = new Map();
+
+function sha256Hex(input) {
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
+
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch (_) {
+    return false;
+  }
+}
+
+function cacheGet(hash) {
+  const entry = verifyCache.get(hash);
+  if (!entry) return null;
+  if (entry.validUntil <= Date.now() || entry.expiresAt <= Date.now()) {
+    verifyCache.delete(hash);
+    return null;
+  }
+  return entry;
+}
+
+function cacheSet(hash, expiresAt) {
+  if (verifyCache.size >= VERIFY_CACHE_MAX) {
+    const firstKey = verifyCache.keys().next().value;
+    if (firstKey) verifyCache.delete(firstKey);
+  }
+  verifyCache.set(hash, {
+    expiresAt,
+    validUntil: Math.min(Date.now() + VERIFY_CACHE_TTL, expiresAt),
+  });
+}
+
+/**
+ * Verify the caller has a paid subscription.
+ *
+ * Accepts either:
+ *   - `x-activation-code` header matching a non-expired row in
+ *     `activation_codes` (checked via the existing verify-code Edge Function);
+ *   - `x-test-mode-secret` header equal to the `TEST_MODE_SECRET` env var,
+ *     which is an opt-in local-testing escape hatch that is only active when
+ *     the env var is explicitly set (unset in production).
+ */
+async function authorizeCaller(req) {
+  const testSecret = process.env.TEST_MODE_SECRET;
+  const providedTestSecret = req.headers['x-test-mode-secret'];
+  if (testSecret && providedTestSecret && safeEqual(String(providedTestSecret), testSecret)) {
+    return { ok: true, testMode: true };
+  }
+
+  const rawCode = req.headers['x-activation-code'];
+  if (!rawCode || typeof rawCode !== 'string') return { ok: false };
+  const code = rawCode.replace(/\s/g, '');
+  if (!code || code.length > 128) return { ok: false };
+
+  const hash = sha256Hex(code);
+  if (cacheGet(hash)) return { ok: true };
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    log.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY for auth');
+    return { ok: false };
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/verify-code`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    });
+    if (!response.ok) return { ok: false };
+    const data = await response.json();
+    if (!data || data.success !== true) return { ok: false };
+    const expiry = Number(data.expiry);
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) return { ok: false };
+    cacheSet(hash, expiry);
+    return { ok: true };
+  } catch (error) {
+    log.error('verify-code request failed', error);
+    return { ok: false };
+  }
+}
 
 async function handler(req, res) {
   const start = Date.now();
@@ -27,6 +123,13 @@ async function handler(req, res) {
       }
     } catch (_) {
       // Rate limiting failure should not block the request
+    }
+
+    // Require a valid activation code (or test-mode secret). Without this the
+    // Gemini API key is effectively public and anyone can consume the quota.
+    const auth = await authorizeCaller(req);
+    if (!auth.ok) {
+      return res.status(401).json({ error: 'Unauthorized. Valid activation code required.' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
