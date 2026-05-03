@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(() => {
     return {
+      base: process.env.BASE_PATH || '/',
       server: {
         port: 3000,
         host: '0.0.0.0',
