@@ -36,6 +36,9 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<Record<string, import('./types').DayLog>>({});
   const [currentView, setCurrentView] = useState<View>('DASHBOARD');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [forceWizard, setForceWizard] = useState(
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('wizard')
+  );
 
   useEffect(() => {
     const log = createLogger('App');
@@ -94,6 +97,11 @@ const App: React.FC = () => {
   const goToDashboard = useCallback(() => setCurrentView('DASHBOARD'), []);
 
   if (isLoading) return <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
+  if (forceWizard) return (
+    <Suspense fallback={<ViewFallback />}>
+      <PersonalSetup existingProfile={profile} onComplete={(p) => { handleSaveProfile(p); setForceWizard(false); }} onCancel={() => setForceWizard(false)} />
+    </Suspense>
+  );
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   if (!isAuthenticated) return <AuthScreen onAuthenticated={() => { setIsAuthenticated(true); setProfile(getProfile()); }} />;
   if (!profile) return (
