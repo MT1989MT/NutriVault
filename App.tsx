@@ -19,6 +19,7 @@ const Motivation = lazy(() => import('./components/Motivation'));
 const Workouts = lazy(() => import('./components/Workouts'));
 const History = lazy(() => import('./components/History'));
 const Settings = lazy(() => import('./components/Settings'));
+const PersonalSetup = lazy(() => import('./components/PersonalSetup'));
 
 const ViewFallback = () => (
   <div className="h-full w-full flex items-center justify-center bg-[#FAFAF8]">
@@ -95,7 +96,11 @@ const App: React.FC = () => {
   if (isLoading) return <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
   if (showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   if (!isAuthenticated) return <AuthScreen onAuthenticated={() => { setIsAuthenticated(true); setProfile(getProfile()); }} />;
-  if (!profile) return <div className="h-full w-full bg-[#FAFAF8]"><Profile existingProfile={null} onSave={handleSaveProfile} /></div>;
+  if (!profile) return (
+    <Suspense fallback={<ViewFallback />}>
+      <PersonalSetup existingProfile={null} onComplete={handleSaveProfile} />
+    </Suspense>
+  );
 
   return (
     <ErrorBoundary>

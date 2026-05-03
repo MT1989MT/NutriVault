@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { ActivityLevel, Gender, UserProfile } from '../types';
-import { calculateBMR, calculateTDEE } from '../utils/calculations';
-import { User, Flame, X, Check, HelpCircle } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { ActivityLevel, Gender, MacroPreset, MacroTargets, UserProfile } from '../types';
+import { calculateBMR, calculateTDEE, MACRO_PRESETS, macroGramsFromTargets } from '../utils/calculations';
+import { User, Flame, X, Check, HelpCircle, Sliders } from 'lucide-react';
 import { t } from '../utils/i18n';
+
+const PersonalSetup = lazy(() => import('./PersonalSetup'));
 
 interface ProfileProps {
   existingProfile: UserProfile | null;
@@ -14,7 +16,8 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
   const [formData, setFormData] = useState<Partial<UserProfile>>(existingProfile || {
     name: '', age: undefined, heightCm: undefined, weightKg: undefined, gender: Gender.MALE,
     activityLevel: ActivityLevel.SEDENTARY, goal: 'MAINTAIN', customCalories: undefined,
-    quickLog: false, ignoreWorkoutCalories: true, mentalConditions: [], habits: [], dietaryPreferences: []
+    quickLog: false, ignoreWorkoutCalories: true, mentalConditions: [], habits: [], dietaryPreferences: [],
+    weeklyWeightChangeKg: 0.5, macroPreset: 'BALANCED',
   });
 
   // Use string state for numeric fields to avoid lag from Number() conversion on every keystroke
@@ -26,6 +29,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
 
   const formRef = useRef<HTMLFormElement>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   // Sync numeric values to formData on blur (not on every keystroke)
   const syncNumericField = useCallback((field: string, value: string) => {
@@ -46,10 +50,28 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
     const a = Number(ageStr) || 0;
     if (w && h && a) {
       const bmr = calculateBMR(w, h, a, formData.gender || Gender.MALE);
-      return calculateTDEE(bmr, formData.activityLevel || ActivityLevel.SEDENTARY, formData.goal || 'MAINTAIN');
+      return calculateTDEE(
+        bmr,
+        formData.activityLevel || ActivityLevel.SEDENTARY,
+        formData.goal || 'MAINTAIN',
+        formData.weeklyWeightChangeKg,
+        formData.gender,
+      );
     }
     return 0;
-  }, [weightStr, heightStr, ageStr, formData.gender, formData.activityLevel, formData.goal]);
+  }, [weightStr, heightStr, ageStr, formData.gender, formData.activityLevel, formData.goal, formData.weeklyWeightChangeKg]);
+
+  const targetMacros = useMemo<MacroTargets>(() => {
+    if (formData.macroPreset === 'CUSTOM' && formData.macroTargets) return formData.macroTargets;
+    if (formData.macroPreset && formData.macroPreset !== 'CUSTOM') return MACRO_PRESETS[formData.macroPreset];
+    return MACRO_PRESETS.BALANCED;
+  }, [formData.macroPreset, formData.macroTargets]);
+
+  const macroGrams = useMemo(() => {
+    const total = Number(customCalStr) || dynamicTDEE;
+    if (!total) return null;
+    return macroGramsFromTargets(total, targetMacros);
+  }, [customCalStr, dynamicTDEE, targetMacros]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,11 +87,29 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
         weightKg: w,
         targetWeightKg: Number(targetWeightStr) || undefined,
         customCalories: Number(customCalStr) || undefined,
-        tdee: calculateTDEE(bmr, formData.activityLevel!, formData.goal!),
+        tdee: calculateTDEE(
+          bmr,
+          formData.activityLevel!,
+          formData.goal!,
+          formData.weeklyWeightChangeKg,
+          formData.gender,
+        ),
       };
       onSave(finalData as UserProfile);
     }
   };
+
+  if (showWizard) {
+    return (
+      <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E07A5F]" /></div>}>
+        <PersonalSetup
+          existingProfile={existingProfile}
+          onComplete={(p) => { setShowWizard(false); onSave(p); }}
+          onCancel={() => setShowWizard(false)}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAF8]">
@@ -219,6 +259,74 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
             <span className="text-lg font-black text-[#E07A5F]">{dynamicTDEE} kcal</span>
           </div>
         )}
+
+        {/* Pace - only for LOSE / GAIN */}
+        {(formData.goal === 'LOSE' || formData.goal === 'GAIN') && (
+          <div className="bg-white p-2.5 rounded-xl shadow-sm">
+            <label className="text-[9px] font-bold text-gray-400 uppercase block mb-2">
+              Weekly pace · kg/week
+            </label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[0.25, 0.5, 0.75, 1].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, weeklyWeightChangeKg: rate })}
+                  className={`py-2 rounded-lg text-center text-xs font-bold transition-all ${
+                    Math.abs((formData.weeklyWeightChangeKg ?? 0.5) - rate) < 0.001
+                      ? 'bg-[#E07A5F] text-white shadow-md'
+                      : 'bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  {rate.toString().replace('.', ',')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Macro split */}
+        <div className="bg-white p-2.5 rounded-xl shadow-sm">
+          <label className="text-[9px] font-bold text-gray-400 uppercase block mb-2">Macro split</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { val: 'BALANCED' as MacroPreset,     label: 'Balanced',  pct: '30/40/30' },
+              { val: 'HIGH_PROTEIN' as MacroPreset, label: 'High Protein', pct: '40/35/25' },
+              { val: 'LOW_CARB' as MacroPreset,     label: 'Low carb',  pct: '35/25/40' },
+              { val: 'KETO' as MacroPreset,         label: 'Keto',      pct: '25/5/70' },
+            ].map((opt) => (
+              <button
+                key={opt.val}
+                type="button"
+                onClick={() => setFormData({ ...formData, macroPreset: opt.val })}
+                className={`py-2 px-2 rounded-lg text-center transition-all ${
+                  formData.macroPreset === opt.val
+                    ? 'bg-[#E07A5F] text-white shadow-md'
+                    : 'bg-gray-50 text-gray-700'
+                }`}
+              >
+                <span className="font-bold text-xs block">{opt.label}</span>
+                <span className={`text-[9px] ${formData.macroPreset === opt.val ? 'text-white/70' : 'text-gray-400'}`}>{opt.pct}</span>
+              </button>
+            ))}
+          </div>
+          {macroGrams && (
+            <div className="grid grid-cols-3 gap-2 mt-2.5 text-center">
+              <div><span className="text-[14px] font-black text-emerald-600 tabular-nums">{macroGrams.protein}g</span><br/><span className="text-[8px] font-bold text-gray-400 uppercase">Protein</span></div>
+              <div><span className="text-[14px] font-black text-amber-600 tabular-nums">{macroGrams.carbs}g</span><br/><span className="text-[8px] font-bold text-gray-400 uppercase">Carbs</span></div>
+              <div><span className="text-[14px] font-black text-rose-600 tabular-nums">{macroGrams.fat}g</span><br/><span className="text-[8px] font-bold text-gray-400 uppercase">Fat</span></div>
+            </div>
+          )}
+        </div>
+
+        {/* Re-run wizard */}
+        <button
+          type="button"
+          onClick={() => setShowWizard(true)}
+          className="w-full bg-white p-3 rounded-xl shadow-sm flex items-center justify-center gap-2 text-sm font-bold text-[#E07A5F] active:scale-[0.98] transition-smooth"
+        >
+          <Sliders className="w-4 h-4" /> Re-run setup wizard
+        </button>
 
         {/* Spacer */}
         <div className="flex-1" />

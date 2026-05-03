@@ -32,6 +32,14 @@ export interface MicroNutrient {
   vibe?: string;
 }
 
+export type MacroPreset = 'BALANCED' | 'HIGH_PROTEIN' | 'LOW_CARB' | 'KETO' | 'CUSTOM';
+
+export interface MacroTargets {
+  proteinPct: number;
+  carbsPct: number;
+  fatPct: number;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -45,9 +53,13 @@ export interface UserProfile {
   tdee: number;
   customCalories?: number;
   targetWeightKg?: number;
+  weeklyWeightChangeKg?: number;
+  reasons?: string[];
+  macroPreset?: MacroPreset;
+  macroTargets?: MacroTargets;
   quickLog: boolean;
   ignoreWorkoutCalories?: boolean;
-  mentalConditions?: string[]; 
+  mentalConditions?: string[];
   habits?: string[];
   dietaryPreferences?: string[];
   coachPersonality: CoachPersonality;
