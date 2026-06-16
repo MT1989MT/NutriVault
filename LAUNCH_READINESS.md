@@ -169,8 +169,8 @@ supabase functions deploy extend-subscription
 2. **Metadata invullen**:
    - Category: Health & Fitness
    - Age Rating: 4+ (geen medisch advies, geen user-generated content)
-   - Support URL: `https://mt1989mt.github.io/NutriVault/support.html`
-   - Privacy URL: `https://mt1989mt.github.io/NutriVault/privacy-policy.html`
+   - Support URL: `https://nutrivault-seven.vercel.app/docs/support.html`
+   - Privacy URL: `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
 
 3. **Screenshots maken** (via Xcode Simulator):
 
@@ -180,9 +180,8 @@ supabase functions deploy extend-subscription
    | iPhone 6.5" (11 Pro Max) | 1242 x 2688 |
    | iPhone 5.5" (8 Plus) | 1242 x 2208 |
 
-4. **GitHub Pages activeren**:
-   - GitHub repo > Settings > Pages
-   - Source: Deploy from branch `main`, folder `/docs`
+4. **Legal pages**: worden meegebouwd vanuit `public/docs/` en automatisch door
+   Vercel geserveerd op `/docs/...` — geen aparte hosting nodig.
 
 ### Fase 5: Submit
 

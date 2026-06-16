@@ -114,7 +114,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
       if (log.weightLog) weights.push({ date, weight: log.weightLog });
     });
     weights.sort((a, b) => a.date.localeCompare(b.date));
-    if (weights.length === 0) return { current: profile?.weightKg || 0, change: 0, avg10: 0, entries: [] as { date: string; weight: number }[], bmi: 0, bmiCategory: '', goalProgress: 0, targetWeight: 0, weeklyRate: 0, weeksToGoal: 0 };
+    if (weights.length === 0) return { current: profile?.weightKg || 0, change: 0, avg10: 0, entries: [] as { date: string; weight: number }[], bmi: 0, bmiCategory: '', goalProgress: 0, targetWeight: 0, weeklyRate: 0, weeksToGoal: 0, minWeight: 0, maxWeight: 0 };
     const current = weights[weights.length - 1]?.weight || profile?.weightKg || 0;
     const first = weights[0]?.weight || current;
     const change = Math.round((current - first) * 10) / 10;

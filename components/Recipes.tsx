@@ -74,7 +74,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   }, []);
 
   // Debounce shopping list writes — avoids a localStorage write on every single item toggle/add/remove
-  const shoppingWriteTimer = useRef<ReturnType<typeof setTimeout>>();
+  const shoppingWriteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     clearTimeout(shoppingWriteTimer.current);
     shoppingWriteTimer.current = setTimeout(() => {

@@ -194,8 +194,8 @@ voeding,calorieën,fitness,dieet,tracker,macro,eten,gezond,afvallen,coach
 
 ### Stap 5 — URLs invullen
 
-- **Support URL:** `https://mt1989mt.github.io/NutriVault/support.html`
-- **Privacy Policy URL:** `https://mt1989mt.github.io/NutriVault/privacy-policy.html`
+- **Support URL:** `https://nutrivault-seven.vercel.app/docs/support.html`
+- **Privacy Policy URL:** `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
 
 ---
 
@@ -282,18 +282,14 @@ Review duurt meestal 1-3 dagen (eerste keer soms langer).
 
 ## Fase 7: Na Launch
 
-### GitHub Pages activeren (voor support/privacy URLs)
+### Support/privacy URLs
 
-```bash
-cd ~/NutriVault
-git push origin main
-```
+De legal pages worden meegebouwd vanuit `public/docs/` en geserveerd door Vercel:
 
-Op GitHub:
-1. Settings → Pages
-2. Source: Deploy from a branch
-3. Branch: `main`, folder: `/docs`
-4. Save
+- `https://nutrivault-seven.vercel.app/docs/support.html`
+- `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
+
+Geen aparte hosting nodig — bij elke Vercel-deploy staan ze automatisch live.
 
 ### Marketing (optioneel)
 

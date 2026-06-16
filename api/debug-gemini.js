@@ -1,6 +1,12 @@
 const { checkRateLimit } = require('./_ratelimit');
 
 module.exports = async function handler(req, res) {
+  // Debug diagnostics expose environment/config details — gate behind an explicit
+  // opt-in so this never runs on production deployments by default.
+  if (process.env.ENABLE_DEBUG_ENDPOINTS !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
   const checks = {};
 
   checks.nodeVersion = process.version;

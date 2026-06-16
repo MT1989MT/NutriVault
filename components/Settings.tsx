@@ -5,6 +5,7 @@ import { getSession, logout, addTime } from '../services/auth';
 import { getProfile, exportAllData, importAllData } from '../services/storage';
 import { getManagementURL, purchaseMonthly } from '../services/payments';
 import { UserProfile } from '../types';
+import { PRIVACY_POLICY_URL } from '../services/config';
 
 interface SettingsProps { onBack: () => void; }
 
@@ -317,7 +318,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         {/* Legal links (Apple requirement) */}
         <div className="flex justify-center gap-4 pb-4">
           <a
-            href="https://nutrivault-seven.vercel.app/docs/privacy-policy.html"
+            href={PRIVACY_POLICY_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[10px] text-gray-400 flex items-center gap-1"

@@ -16,3 +16,10 @@ export const API_BASE_URL = (() => {
   }
   return '';
 })();
+
+// Public site URL for static pages (privacy policy, support) and legal links.
+// - Web (Vercel): same-origin via API_BASE_URL ('') → relative path, works on every
+//   preview/production deploy without hardcoding the domain.
+// - Native (Capacitor): falls back to the absolute production URL via API_BASE_URL.
+export const PRIVACY_POLICY_URL = `${API_BASE_URL}/docs/privacy-policy.html`;
+export const SUPPORT_URL = `${API_BASE_URL}/docs/support.html`;

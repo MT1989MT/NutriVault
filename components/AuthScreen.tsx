@@ -4,6 +4,7 @@ import { createAccount, verifyKey, saveSession } from '../services/auth';
 import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute } from '../services/payments';
 import { createLogger } from '../services/logger';
 import { t, getCurrentLanguage } from '../utils/i18n';
+import { PRIVACY_POLICY_URL } from '../services/config';
 
 const log = createLogger('AuthScreen');
 
@@ -423,7 +424,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           {/* Legal links (Apple requirement) */}
           <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-gray-50">
             <a
-              href="https://nutrivault-seven.vercel.app/docs/privacy-policy.html"
+              href={PRIVACY_POLICY_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-gray-400 flex items-center gap-1"
