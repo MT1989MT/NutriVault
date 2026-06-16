@@ -194,8 +194,8 @@ voeding,calorieën,fitness,dieet,tracker,macro,eten,gezond,afvallen,coach
 
 ### Stap 5 — URLs invullen
 
-- **Support URL:** `https://nutrivault-seven.vercel.app/docs/support.html`
-- **Privacy Policy URL:** `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
+- **Support URL:** `https://nutri-vault-two.vercel.app/docs/support.html`
+- **Privacy Policy URL:** `https://nutri-vault-two.vercel.app/docs/privacy-policy.html`
 
 ---
 
@@ -286,8 +286,8 @@ Review duurt meestal 1-3 dagen (eerste keer soms langer).
 
 De legal pages worden meegebouwd vanuit `public/docs/` en geserveerd door Vercel:
 
-- `https://nutrivault-seven.vercel.app/docs/support.html`
-- `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
+- `https://nutri-vault-two.vercel.app/docs/support.html`
+- `https://nutri-vault-two.vercel.app/docs/privacy-policy.html`
 
 Geen aparte hosting nodig — bij elke Vercel-deploy staan ze automatisch live.
 

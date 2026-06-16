@@ -1,5 +1,5 @@
 const ALLOWED_ORIGINS = [
-  'https://nutrivault-seven.vercel.app',
+  'https://nutri-vault-two.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'capacitor://localhost',
@@ -16,7 +16,7 @@ function applyCors(req, res) {
   const origin = req.headers.origin || '';
 
   const isAllowed = allAllowed.includes(origin)
-    || /^https:\/\/nutrivault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
+    || /^https:\/\/nutri-vault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
 
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);

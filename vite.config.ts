@@ -11,7 +11,7 @@ export default defineConfig(() => {
         host: '0.0.0.0',
         proxy: {
           '/api': {
-            target: 'https://nutrivault-seven.vercel.app',
+            target: 'https://nutri-vault-two.vercel.app',
             changeOrigin: true,
           },
         },

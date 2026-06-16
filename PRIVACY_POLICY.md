@@ -103,7 +103,7 @@ Bij wijzigingen in dit privacybeleid wordt de "Laatst bijgewerkt" datum aangepas
 Vragen over privacy? Neem contact op:
 
 **Email:** support@nutrivault.app
-**Website:** https://nutrivault-seven.vercel.app/
+**Website:** https://nutri-vault-two.vercel.app/
 
 ---
 

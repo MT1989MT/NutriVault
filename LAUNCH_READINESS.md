@@ -169,8 +169,8 @@ supabase functions deploy extend-subscription
 2. **Metadata invullen**:
    - Category: Health & Fitness
    - Age Rating: 4+ (geen medisch advies, geen user-generated content)
-   - Support URL: `https://nutrivault-seven.vercel.app/docs/support.html`
-   - Privacy URL: `https://nutrivault-seven.vercel.app/docs/privacy-policy.html`
+   - Support URL: `https://nutri-vault-two.vercel.app/docs/support.html`
+   - Privacy URL: `https://nutri-vault-two.vercel.app/docs/privacy-policy.html`
 
 3. **Screenshots maken** (via Xcode Simulator):
 
