@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { FoodItem } from '../types';
 import { Check, ChevronDown, ChevronRight, Minus, Plus, Trash2, X, PenLine, RefreshCw } from 'lucide-react';
-import { lookupNutritionDB } from '../data/nutritionDB';
+import { parseFoodInput } from '../services/gemini';
 
 interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   grams?: number;
@@ -46,6 +46,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [editingNameIdx, setEditingNameIdx] = useState<number | null>(null);
+  const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
 
   const activeItems = editableItems.filter(i => !i.removed);
 
@@ -143,28 +144,41 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     ));
   };
 
-  const swapToAlternative = (idx: number, altName: string) => {
-    setEditableItems(prev => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const entry = lookupNutritionDB(altName);
-      const g = item.grams || 100;
-      const p100 = entry?.p100 ?? item.baseProteinPer100g ?? 0;
-      const c100 = entry?.c100 ?? item.baseCarbsPer100g ?? 0;
-      const f100 = entry?.f100 ?? item.baseFatPer100g ?? 0;
-      const protein = Math.round(p100 * g / 100);
-      const carbs = Math.round(c100 * g / 100);
-      const fat = Math.round(f100 * g / 100);
-      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
-      return {
-        ...item,
-        name: altName,
-        baseProteinPer100g: p100,
-        baseCarbsPer100g: c100,
-        baseFatPer100g: f100,
-        protein, carbs, fat, calories,
-        alternatives: undefined,
-      };
-    }));
+  // Ask Gemini for the alternative's per-100g macros (it's the source of truth),
+  // then re-apply them to the user's current portion. Keeps the chosen grams.
+  const swapToAlternative = async (idx: number, altName: string) => {
+    setSwappingIdx(idx);
+    try {
+      const parsed = await parseFoodInput(altName);
+      const first = parsed[0] as any;
+      setEditableItems(prev => prev.map((item, i) => {
+        if (i !== idx) return item;
+        const g = item.grams || 100;
+        const p100 = first?.proteinPer100g ?? item.baseProteinPer100g ?? 0;
+        const c100 = first?.carbsPer100g ?? item.baseCarbsPer100g ?? 0;
+        const f100 = first?.fatPer100g ?? item.baseFatPer100g ?? 0;
+        const protein = Math.round(p100 * g / 100);
+        const carbs = Math.round(c100 * g / 100);
+        const fat = Math.round(f100 * g / 100);
+        const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+        return {
+          ...item,
+          name: altName,
+          baseProteinPer100g: p100,
+          baseCarbsPer100g: c100,
+          baseFatPer100g: f100,
+          protein, carbs, fat, calories,
+          alternatives: undefined,
+        };
+      }));
+    } catch {
+      // On failure, just rename — keep the existing macros rather than blocking the user
+      setEditableItems(prev => prev.map((item, i) =>
+        i === idx ? { ...item, name: altName, alternatives: undefined } : item
+      ));
+    } finally {
+      setSwappingIdx(null);
+    }
   };
 
   const handleConfirm = () => {
@@ -216,12 +230,13 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
 
         {item.alternatives && item.alternatives.length > 0 && !isExpanded && (
           <div className="px-3 pb-2 flex items-center gap-1.5 flex-wrap">
-            <RefreshCw className="w-3 h-3 text-gray-400 shrink-0" />
+            <RefreshCw className={`w-3 h-3 text-gray-400 shrink-0 ${swappingIdx === idx ? 'animate-spin' : ''}`} />
             {item.alternatives.map((alt, ai) => (
               <button
                 key={ai}
+                disabled={swappingIdx === idx}
                 onClick={(e) => { e.stopPropagation(); swapToAlternative(idx, alt); }}
-                className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[11px] font-semibold hover:bg-blue-100 active:scale-95 transition-all"
+                className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[11px] font-semibold hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-50"
               >
                 {alt}
               </button>

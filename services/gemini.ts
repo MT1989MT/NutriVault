@@ -80,7 +80,6 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
-import { lookupNutritionDB } from '../data/nutritionDB';
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
 const responseCache = new Map<string, { text: string; timestamp: number }>();
@@ -219,37 +218,19 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       f100 *= scale;
     }
 
-    // Priority: (1) static nutrition DB, (2) user's history, (3) AI values
-    const dbEntry = lookupNutritionDB(name);
-    if (dbEntry) {
-      p100 = dbEntry.p100;
-      c100 = dbEntry.c100;
-      f100 = dbEntry.f100;
-    } else {
-      const stored = lookupFoodNutrition(name);
-      if (stored) {
-        p100 = stored.p100;
-        c100 = stored.c100;
-        f100 = stored.f100;
-      }
+    // Gemini is the source of truth. For consistency, reuse the per-100g values the
+    // user already logged for this exact food before — so a food stays stable for them
+    // across sessions without maintaining any static database.
+    const stored = lookupFoodNutrition(name);
+    if (stored) {
+      p100 = stored.p100;
+      c100 = stored.c100;
+      f100 = stored.f100;
     }
 
-    // Resolve the portion weight deterministically where possible:
-    //  - countable foods with a known unit weight: count × unitGrams
-    //    ("twee boterhammen" → 2 × 35g = 70g, every single time)
-    //  - otherwise the AI's gram estimate, snapped to the nearest 5g for stability
-    //  - fall back to the unit weight, then 100g
-    const count = Number(item.count ?? item.qty ?? item.units);
-    let grams: number;
-    if (dbEntry?.unitGrams && Number.isFinite(count) && count > 0 && count <= 50) {
-      grams = Math.round(count * dbEntry.unitGrams);
-    } else if (rawGrams > 0) {
-      grams = Math.round(rawGrams / 5) * 5;
-    } else if (dbEntry?.unitGrams) {
-      grams = dbEntry.unitGrams;
-    } else {
-      grams = 100;
-    }
+    // Portion weight: trust Gemini's estimate (it computes count × unit weight per the
+    // prompt's reference table), snapped to the nearest 5g for stability.
+    let grams = rawGrams > 0 ? Math.round(rawGrams / 5) * 5 : 100;
     if (grams <= 0) grams = 100;
 
     // Compute absolute macros from per-100g × portion
