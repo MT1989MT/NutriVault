@@ -6,21 +6,22 @@ export interface NutritionEntry {
   c100: number; // carbs per 100g
   f100: number; // fat per 100g
   fiber?: number;
+  unitGrams?: number; // typical weight of ONE natural/countable unit (e.g. 1 slice, 1 egg, 1 banana)
   aliases?: string[]; // alternative names / translations
 }
 
 // All values are per 100g edible portion
 const DB: Record<string, NutritionEntry> = {
   // ── Eggs ────────────────────────────────────────────────────────────
-  'egg':              { p100: 13, c100: 1.1, f100: 11, aliases: ['ei', 'eieren', 'oeuf', 'huevo', 'uovo'] },
-  'boiled egg':       { p100: 13, c100: 1.1, f100: 11, aliases: ['gekookt ei', 'hard boiled egg', 'soft boiled egg', 'hardgekookt ei', 'zachtgekookt ei'] },
-  'fried egg':        { p100: 13.6, c100: 0.8, f100: 14.8, aliases: ['gebakken ei', 'spiegelei'] },
-  'scrambled egg':    { p100: 10.1, c100: 1.6, f100: 11.2, aliases: ['roerei'] },
+  'egg':              { p100: 13, c100: 1.1, f100: 11, unitGrams: 50, aliases: ['ei', 'eieren', 'oeuf', 'huevo', 'uovo'] },
+  'boiled egg':       { p100: 13, c100: 1.1, f100: 11, unitGrams: 50, aliases: ['gekookt ei', 'hard boiled egg', 'soft boiled egg', 'hardgekookt ei', 'zachtgekookt ei'] },
+  'fried egg':        { p100: 13.6, c100: 0.8, f100: 14.8, unitGrams: 50, aliases: ['gebakken ei', 'spiegelei'] },
+  'scrambled egg':    { p100: 10.1, c100: 1.6, f100: 11.2, unitGrams: 50, aliases: ['roerei'] },
 
   // ── Bread & grains ──────────────────────────────────────────────────
-  'white bread':      { p100: 9, c100: 49, f100: 3.2, fiber: 2.7, aliases: ['wit brood', 'witbrood', 'boterham', 'bread', 'brood', 'pain blanc', 'pan blanco'] },
-  'whole wheat bread': { p100: 13, c100: 41, f100: 3.4, fiber: 7, aliases: ['volkoren brood', 'volkorenbrood', 'bruinbrood', 'brown bread', 'whole grain bread', 'pain complet'] },
-  'bread roll':       { p100: 9.4, c100: 51, f100: 3.5, aliases: ['broodje', 'pistolet', 'bol', 'kaiserbroodje', 'petit pain'] },
+  'white bread':      { p100: 9, c100: 49, f100: 3.2, fiber: 2.7, unitGrams: 35, aliases: ['wit brood', 'witbrood', 'boterham', 'snee brood', 'sneetje brood', 'bread', 'brood', 'pain blanc', 'pan blanco'] },
+  'whole wheat bread': { p100: 13, c100: 41, f100: 3.4, fiber: 7, unitGrams: 35, aliases: ['volkoren brood', 'volkorenbrood', 'volkoren boterham', 'bruinbrood', 'bruin brood', 'brown bread', 'whole grain bread', 'pain complet'] },
+  'bread roll':       { p100: 9.4, c100: 51, f100: 3.5, unitGrams: 50, aliases: ['broodje', 'pistolet', 'bol', 'kaiserbroodje', 'petit pain'] },
   'tortilla':         { p100: 8.3, c100: 47, f100: 6.4, aliases: ['wrap', 'flour tortilla'] },
   'oats':             { p100: 13.2, c100: 68, f100: 6.5, fiber: 10, aliases: ['havermout', 'oatmeal', 'porridge', 'flocons davoine'] },
   'white rice cooked': { p100: 2.7, c100: 28, f100: 0.3, aliases: ['rijst', 'witte rijst', 'rice', 'riz', 'arroz'] },
@@ -36,7 +37,7 @@ const DB: Record<string, NutritionEntry> = {
   'low fat yogurt':   { p100: 5.3, c100: 7.0, f100: 1.6, aliases: ['magere yoghurt', 'light yogurt'] },
   'cottage cheese':   { p100: 11, c100: 3.4, f100: 4.3, aliases: ['huttenkase', 'kwark'] },
   'cheddar cheese':   { p100: 25, c100: 1.3, f100: 33, aliases: ['cheddar'] },
-  'gouda cheese':     { p100: 25, c100: 2.2, f100: 27, aliases: ['gouda', 'goudse kaas', 'belegen kaas', 'jong belegen', 'oude kaas'] },
+  'gouda cheese':     { p100: 25, c100: 2.2, f100: 27, unitGrams: 20, aliases: ['gouda', 'goudse kaas', 'kaas', 'cheese', 'belegen kaas', 'jong belegen', 'oude kaas', 'plak kaas'] },
   'mozzarella':       { p100: 22, c100: 2.2, f100: 22, aliases: ['mozzarella cheese'] },
   'parmesan':         { p100: 36, c100: 3.2, f100: 26, aliases: ['parmezaanse kaas', 'parmigiano'] },
   'cream cheese':     { p100: 6, c100: 4, f100: 34, aliases: ['roomkaas', 'philadelphia', 'zuivelspread'] },
@@ -50,7 +51,7 @@ const DB: Record<string, NutritionEntry> = {
   'ground beef':      { p100: 17.2, c100: 0, f100: 20, aliases: ['gehakt', 'rundergehakt', 'minced beef', 'mince'] },
   'pork chop':        { p100: 27, c100: 0, f100: 14, aliases: ['varkenslapje', 'karbonade', 'varkensvlees'] },
   'bacon':            { p100: 37, c100: 1.4, f100: 42, aliases: ['spek', 'ontbijtspek'] },
-  'ham':              { p100: 21, c100: 1.5, f100: 5, aliases: ['ham', 'achterham', 'jambon'] },
+  'ham':              { p100: 21, c100: 1.5, f100: 5, unitGrams: 15, aliases: ['ham', 'achterham', 'jambon'] },
   'salami':           { p100: 22, c100: 1.2, f100: 34, aliases: ['cervelaat'] },
 
   // ── Fish & seafood ──────────────────────────────────────────────────
@@ -61,9 +62,9 @@ const DB: Record<string, NutritionEntry> = {
   'cod':              { p100: 18, c100: 0, f100: 0.7, aliases: ['kabeljauw', 'cabillaud'] },
 
   // ── Fruits ──────────────────────────────────────────────────────────
-  'banana':           { p100: 1.1, c100: 23, f100: 0.3, fiber: 2.6, aliases: ['banaan', 'banane', 'platano'] },
-  'apple':            { p100: 0.3, c100: 14, f100: 0.2, fiber: 2.4, aliases: ['appel', 'pomme', 'manzana'] },
-  'orange':           { p100: 0.9, c100: 12, f100: 0.1, fiber: 2.4, aliases: ['sinaasappel', 'naranja'] },
+  'banana':           { p100: 1.1, c100: 23, f100: 0.3, fiber: 2.6, unitGrams: 120, aliases: ['banaan', 'banane', 'platano'] },
+  'apple':            { p100: 0.3, c100: 14, f100: 0.2, fiber: 2.4, unitGrams: 150, aliases: ['appel', 'pomme', 'manzana'] },
+  'orange':           { p100: 0.9, c100: 12, f100: 0.1, fiber: 2.4, unitGrams: 130, aliases: ['sinaasappel', 'naranja'] },
   'strawberry':       { p100: 0.7, c100: 7.7, f100: 0.3, fiber: 2, aliases: ['aardbei', 'aardbeien', 'fraise', 'fresa'] },
   'blueberry':        { p100: 0.7, c100: 14, f100: 0.3, fiber: 2.4, aliases: ['blauwe bes', 'bosbes', 'myrtille'] },
   'grape':            { p100: 0.6, c100: 17, f100: 0.4, aliases: ['druif', 'druiven', 'raisin', 'uva'] },
@@ -71,8 +72,8 @@ const DB: Record<string, NutritionEntry> = {
   'avocado':          { p100: 2, c100: 8.5, f100: 15, fiber: 6.7, aliases: ['avocado'] },
   'watermelon':       { p100: 0.6, c100: 7.6, f100: 0.2, aliases: ['watermeloen'] },
   'pineapple':        { p100: 0.5, c100: 13, f100: 0.1, aliases: ['ananas'] },
-  'pear':             { p100: 0.4, c100: 15, f100: 0.1, fiber: 3.1, aliases: ['peer', 'poire'] },
-  'kiwi':             { p100: 1.1, c100: 15, f100: 0.5, aliases: ['kiwi'] },
+  'pear':             { p100: 0.4, c100: 15, f100: 0.1, fiber: 3.1, unitGrams: 170, aliases: ['peer', 'poire'] },
+  'kiwi':             { p100: 1.1, c100: 15, f100: 0.5, unitGrams: 75, aliases: ['kiwi'] },
 
   // ── Vegetables ──────────────────────────────────────────────────────
   'broccoli':         { p100: 2.8, c100: 7, f100: 0.4, fiber: 2.6, aliases: ['broccoli'] },
@@ -159,28 +160,101 @@ for (const [key, entry] of Object.entries(DB)) {
   }
 }
 
-/**
- * Look up per-100g nutritional values from the static database.
- * Returns null if the food isn't in the DB.
- */
-export function lookupNutritionDB(name: string): NutritionEntry | null {
-  if (!name) return null;
-  const key = name.toLowerCase().trim();
+// Modifier words that describe a food but don't change its identity in the DB.
+// Stripped only as a fallback — exact matches (e.g. "fried egg", "gebakken ei")
+// are resolved first, so the special-cased variants still win.
+const MODIFIERS = new Set([
+  // preparation (EN/NL/FR)
+  'fresh', 'vers', 'verse', 'organic', 'bio', 'homemade', 'zelfgemaakt', 'warm', 'warme',
+  'koud', 'koude', 'cold', 'hot', 'gebakken', 'gekookt', 'gegrild', 'geroosterd', 'gestoomd',
+  'fried', 'boiled', 'cooked', 'grilled', 'roasted', 'baked', 'steamed', 'raw', 'rauw',
+  // size
+  'small', 'medium', 'large', 'big', 'klein', 'kleine', 'groot', 'grote', 'half', 'halve',
+  // units / containers
+  'plak', 'plakje', 'plakjes', 'plakken', 'snee', 'sneetje', 'sneetjes', 'slice', 'slices',
+  'glas', 'glass', 'kop', 'kopje', 'cup', 'bowl', 'kom', 'bord', 'schaal', 'piece', 'pieces',
+  'stuk', 'stukje', 'stukjes', 'portie', 'portion', 'serving',
+  // connectors
+  'met', 'with', 'en', 'and', 'van', 'of', 'wat', 'some', 'a', 'an', 'the', 'een', 'de', 'het',
+  // number words (EN/NL) — a leading count like "twee boterhammen"
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien',
+]);
 
-  // Direct match
+// Strip a leading quantity like "2 ", "200g ", "2x ", "1.5 l "
+const QUANTITY_PREFIX = /^\s*\d+([.,]\d+)?\s*(g|gr|gram|grams|kg|ml|cl|l|x)?\b\s*/i;
+
+function normalize(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ') // drop parentheticals
+    .replace(/[._/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stripModifiers(key: string): string {
+  let words = key.split(' ').filter(Boolean);
+  let changed = true;
+  while (changed && words.length > 1) {
+    changed = false;
+    if (MODIFIERS.has(words[0])) { words.shift(); changed = true; }
+    if (words.length > 1 && MODIFIERS.has(words[words.length - 1])) { words.pop(); changed = true; }
+  }
+  return words.join(' ');
+}
+
+// Resolve a normalized key against the index, including simple plural handling.
+function matchKey(key: string): NutritionEntry | null {
+  if (!key) return null;
   const direct = index.get(key);
   if (direct) return direct;
-
-  // Try without trailing 's' (simple plural handling)
+  // Trailing 's' plural (English): apples → apple
   if (key.endsWith('s') && key.length > 3) {
     const singular = index.get(key.slice(0, -1));
     if (singular) return singular;
   }
-
-  // Try without 'en' suffix (Dutch plurals: bananen → banaan needs alias, but eieren → ei)
+  // Trailing 'en' plural (Dutch): eieren → ei (via alias)
   if (key.endsWith('en') && key.length > 4) {
-    const stem = index.get(key.slice(0, -2));
-    if (stem) return stem;
+    const stem = key.slice(0, -2);
+    const hit = index.get(stem);
+    if (hit) return hit;
+    // Doubled-consonant plural: boterhammen → boterham, pannen → pan
+    if (/(.)\1$/.test(stem)) {
+      const single = index.get(stem.slice(0, -1));
+      if (single) return single;
+    }
+  }
+  return null;
+}
+
+/**
+ * Look up per-100g nutritional values from the static database.
+ * Returns null if the food isn't in the DB.
+ *
+ * Resolution order (most specific first):
+ *   1. exact normalized name / alias  ("fried egg", "gebakken ei")
+ *   2. plural-normalized
+ *   3. with a leading quantity stripped ("2 boterhammen" → "boterhammen")
+ *   4. with descriptive modifiers stripped ("verse volle melk" → "volle melk")
+ */
+export function lookupNutritionDB(name: string): NutritionEntry | null {
+  if (!name) return null;
+
+  const base = normalize(name);
+  let hit = matchKey(base);
+  if (hit) return hit;
+
+  const noQty = base.replace(QUANTITY_PREFIX, '').trim();
+  if (noQty !== base) {
+    hit = matchKey(noQty);
+    if (hit) return hit;
+  }
+
+  const stripped = stripModifiers(noQty);
+  if (stripped && stripped !== noQty) {
+    hit = matchKey(stripped);
+    if (hit) return hit;
   }
 
   return null;

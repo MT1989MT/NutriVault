@@ -187,7 +187,7 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
   return rawData.map((item: any) => {
     const name = typeof item.name === 'string' ? item.name : 'Unknown food';
     const rawGrams = Math.round(Number(item.grams ?? item.weight ?? item.g) || 0);
-    const grams = rawGrams > 0 ? rawGrams : 100;
+    const prelimGrams = rawGrams > 0 ? rawGrams : 100; // used only to derive per-100g from legacy absolute values
 
     // Determine per-100g macros — prefer explicit per-100g fields from AI
     const hasPer100g = item.p100 !== undefined || item.c100 !== undefined || item.f100 !== undefined;
@@ -203,9 +203,9 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
       const absP = Math.max(0, Number(item.p ?? item.protein) || 0);
       const absC = Math.max(0, Number(item.c ?? item.carbs ?? item.carbohydrates) || 0);
       const absF = Math.max(0, Number(item.f ?? item.fat ?? item.fats) || 0);
-      p100 = grams > 0 ? absP / grams * 100 : absP;
-      c100 = grams > 0 ? absC / grams * 100 : absC;
-      f100 = grams > 0 ? absF / grams * 100 : absF;
+      p100 = prelimGrams > 0 ? absP / prelimGrams * 100 : absP;
+      c100 = prelimGrams > 0 ? absC / prelimGrams * 100 : absC;
+      f100 = prelimGrams > 0 ? absF / prelimGrams * 100 : absF;
     }
 
     // Sanity-check per-100g values: clamp to plausible ranges
@@ -233,6 +233,24 @@ const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
         f100 = stored.f100;
       }
     }
+
+    // Resolve the portion weight deterministically where possible:
+    //  - countable foods with a known unit weight: count × unitGrams
+    //    ("twee boterhammen" → 2 × 35g = 70g, every single time)
+    //  - otherwise the AI's gram estimate, snapped to the nearest 5g for stability
+    //  - fall back to the unit weight, then 100g
+    const count = Number(item.count ?? item.qty ?? item.units);
+    let grams: number;
+    if (dbEntry?.unitGrams && Number.isFinite(count) && count > 0 && count <= 50) {
+      grams = Math.round(count * dbEntry.unitGrams);
+    } else if (rawGrams > 0) {
+      grams = Math.round(rawGrams / 5) * 5;
+    } else if (dbEntry?.unitGrams) {
+      grams = dbEntry.unitGrams;
+    } else {
+      grams = 100;
+    }
+    if (grams <= 0) grams = 100;
 
     // Compute absolute macros from per-100g × portion
     const protein = Math.max(0, Math.round(p100 * grams / 100));
@@ -316,15 +334,22 @@ PARSING RULES:
    - White rice (cooked): p100=2.7, c100=28, f100=0.3
    - Butter: p100=0.9, c100=0.1, f100=81
    Look up the actual standard per-100g values. Do NOT guess.
-6. Estimate realistic portions using common sense:
-   - "koffie" = 150ml black coffee (~2 kcal) unless specified otherwise
-   - "broodje" = 1 bread roll (~50g)
-   - "kaas" on bread = ~20g slice, as snack = ~30g cube
-   - "boterham" = 1 slice bread (~35g)
-   - Sauces/spreads: butter ~10g, peanut butter ~15g, mayo ~15g
-7. Include weight estimate in portion description.
-8. "grams" = estimated portion weight. We multiply per-100g macros by grams/100 to get the total.
-9. ALTERNATIVES: If the preparation method or type is ambiguous and would significantly change the macros, add an "alt" array with 1-2 alternatives.
+6. PORTIONS — be DETERMINISTIC. The same input must ALWAYS produce the same grams.
+   When the user states a number of countable units, set "count" to that number and
+   use these EXACT reference weights per unit (do not improvise):
+   - boterham / slice of bread = 35g     | broodje / bread roll = 50g
+   - egg = 50g                            | banana = 120g | apple = 150g
+   - orange = 130g | pear = 170g | kiwi = 75g
+   - slice of cheese = 20g                | slice of ham/cold cut = 15g
+   For non-countable amounts use these fixed defaults (count = 0 or omit):
+   - coffee/tea = 150ml | milk/juice/soda = 250ml | glass of water = 0 kcal
+   - butter on bread = 10g | peanut butter = 15g | mayo/ketchup = 15g | jam = 15g
+   - cheese as a snack cube = 30g | rice/pasta cooked side = 150g | main protein = 150g
+   - "wat"/"a bit of"/"some" of a spread = the fixed default above (do NOT vary it)
+   "count" = number of whole units (integer). "grams" = total portion weight =
+   count × unit weight (or the fixed default). Round grams to a multiple of 5.
+7. Always put the weight estimate in the "portion" description (e.g. "2 slices (~70g)").
+8. ALTERNATIVES: If the preparation method or type is ambiguous and would significantly change the macros, add an "alt" array with 1-2 alternatives.
    Examples of when to add alternatives:
    - "eggs" → default to boiled, alt: ["fried egg", "scrambled egg"]
    - "bread" → default to white, alt: ["whole wheat bread"]
@@ -332,8 +357,17 @@ PARSING RULES:
    - "yogurt" → default to greek, alt: ["low fat yogurt"]
    Do NOT add alternatives for items where the type is already clear (e.g. "fried egg", "whole wheat bread").
 
+WORKED EXAMPLE — "twee boterhammen met wat boter en kipfilet":
+  Split into separate ingredients AND group them as one meal:
+  [
+    {"name":"boterham","portion":"2 sneetjes (~70g)","count":2,"grams":70,"p100":9,"c100":49,"f100":3.2,"group":"Boterhammen met kipfilet"},
+    {"name":"boter","portion":"~20g","count":0,"grams":20,"p100":0.9,"c100":0.1,"f100":81,"group":"Boterhammen met kipfilet"},
+    {"name":"kipfilet","portion":"beleg (~30g)","count":0,"grams":30,"p100":31,"c100":0,"f100":3.6,"group":"Boterhammen met kipfilet"}
+  ]
+  (2 slices → butter applied per slice ~10g each = 20g; chicken as cold cut ~30g.)
+
 RESPONSE FORMAT — strict JSON array only:
-[{"name":"str","portion":"str (~Xg)","grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit","alt":["str"] or omit}]`,
+[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit","alt":["str"] or omit}]`,
       true
     );
     if (!text) return [];
@@ -356,11 +390,13 @@ RULES:
 1. Identify each food item visible. Split composites into components (bread, topping, sauce, etc.).
 2. When 2+ items: add "group" with a short meal name. 1 item: omit "group".
 3. Estimate portion weight in grams using plate/packaging for scale.
+   For countable items (slices, eggs, fruit) set "count" to the number visible and use
+   standard unit weights (bread slice 35g, egg 50g, banana 120g, apple 150g, cheese slice 20g).
 4. p100/c100/f100 = macros PER 100g (standard reference values, not for the portion).
    "grams" = estimated portion weight. We compute total macros from per-100g × grams/100.
 5. Food names in ${langName}. Empty [] if no food visible.
 
-JSON: [{"name":"str","portion":"str (~Xg)","grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
+JSON: [{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true,
       imageBase64
     );
@@ -392,11 +428,12 @@ MACROS PER 100g:
 - "grams" = estimated portion weight. We compute totals from per-100g × grams/100.
 - Use context: "kipfilet" on bread = ~30g cold cut; as main dish = ~150g.
 - Sauces/condiments unless specified: mayo = 15g, ketchup = 15g, butter on bread = 10g, peanut butter = 15g.
-- Drinks: coffee/tea = 150ml, juice/soda = 250ml. Bread slice = ~35g.
-- When ambiguous, pick the most common everyday interpretation.
+- Drinks: coffee/tea = 150ml, juice/soda = 250ml. Bread slice = ~35g, egg = 50g, banana = 120g.
+- For countable units set "count" (e.g. "2 boterhammen" → count 2); grams = count × unit weight, rounded to 5g.
+- Be deterministic: identical descriptions must yield identical grams. When ambiguous, pick the most common everyday interpretation.
 - Include weight estimate in portion description.
 
-JSON: {"foods":[{"name":"str","portion":"str (~Xg)","grams":N,"p100":N,"c100":N,"f100":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
+JSON: {"foods":[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
             true
         );
         if (!text) return { items: [], workout: null };
