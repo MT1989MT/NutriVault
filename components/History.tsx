@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Flame, Dumbbell, TrendingDown, TrendingUp, A
 import { getLogs, getProfile, saveLogs } from '../services/storage';
 import { t, getCurrentLanguage } from '../utils/i18n';
 import { calculateStreak } from '../utils/calculations';
+import { todayStr, toDateStr, parseDateStr } from '../utils/date';
 import { DayLog, UserProfile } from '../types';
 
 interface HistoryProps {
@@ -29,11 +30,11 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
   const handleLogWeight = () => {
     const weight = parseFloat(weightInput);
     if (isNaN(weight) || weight <= 0) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     const currentLogs = getLogs();
-    if (!currentLogs[today]) currentLogs[today] = { date: today, items: [] };
-    currentLogs[today].weightLog = weight;
-    saveLogs(currentLogs);
+    const day = currentLogs[today] || { date: today, items: [] };
+    const updated = { ...currentLogs, [today]: { ...day, weightLog: weight } };
+    saveLogs(updated);
     setLogsVersion(v => v + 1);
     setWeightInput('');
     setShowWeightInput(false);
@@ -49,13 +50,13 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
+      dates.push(toDateStr(d));
     }
     return dates;
   }, [weekOffset]);
 
   const dailyData = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     const weightFactor = (profile?.weightKg || 75) / 75;
     return weekDates.map(date => {
       const log = logs[date];
@@ -73,8 +74,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
       for (let i = 0; i < dayWorkouts.length; i++) {
         burned += Math.round(dayWorkouts[i].durationMinutes * (dayWorkouts[i].elevatedHeartRate ? 8 : 5) * weightFactor);
       }
-      const d = new Date(date);
-      return { date, eaten, burned, protein, carbs, fat, isToday: date === todayStr, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };
+      const d = parseDateStr(date);
+      return { date, eaten, burned, protein, carbs, fat, isToday: date === today, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };
     });
   }, [weekDates, logs]);
 
@@ -179,7 +180,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
     weekDates.forEach(date => {
       const log = logs[date];
       const dayWorkouts = log?.workouts || [];
-      const d = new Date(date);
+      const d = parseDateStr(date);
       const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
 
       dayWorkouts.forEach(w => {
@@ -202,8 +203,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
   const getWeekLabel = (): string => {
     if (weekOffset === 0) return t('thisWeek');
     if (weekOffset === -1) return t('lastWeek');
-    const start = new Date(weekDates[0]);
-    const end = new Date(weekDates[6]);
+    const start = parseDateStr(weekDates[0]);
+    const end = parseDateStr(weekDates[6]);
     return `${start.getDate()} - ${end.getDate()} ${end.toLocaleDateString(lang, { month: 'short' })}`;
   };
 
@@ -546,8 +547,8 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
               </div>
               {/* Date labels */}
               <div className="flex justify-between mt-1 px-1">
-                <span className="text-[9px] text-gray-400">{new Date(weightData.entries[0].date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
-                <span className="text-[9px] text-gray-400">{new Date(weightData.entries[weightData.entries.length - 1].date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
+                <span className="text-[9px] text-gray-400">{parseDateStr(weightData.entries[0].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
+                <span className="text-[9px] text-gray-400">{parseDateStr(weightData.entries[weightData.entries.length - 1].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
               </div>
               {/* Weight range */}
               <div className="flex justify-between mt-0.5 px-1">

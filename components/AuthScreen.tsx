@@ -235,7 +235,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       saveSession(inputKey, result.token, result.expiry, result.name);
       onAuthenticated();
     } else {
-      setError(t('invalidCode'));
+      setError(result.error === 'network' ? t('networkError') : t('invalidCode'));
       setLoading(false);
     }
   };

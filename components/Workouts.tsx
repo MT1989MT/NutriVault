@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, BookOpen, Info, Brain } from 'lucide-react';
+import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, BookOpen, Info, Brain } from 'lucide-react';
 import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine } from '../services/storage';
 import { getWorkoutSuggestion, generateTrainingPlan } from '../services/gemini';
-import { WorkoutLog, WorkoutSuggestion, TrainingPlan, DayLog, WorkoutRoutine } from '../types';
+import { WorkoutLog, WorkoutSuggestion, TrainingPlan, DayLog, WorkoutRoutine, ScheduledWorkout } from '../types';
 import { generateId } from '../utils/calculations';
+import { todayStr } from '../utils/date';
+import { t as tr } from '../utils/i18n';
 
 interface WorkoutsProps { logs: Record<string, DayLog>; onAddWorkout: (date: string, workout: WorkoutLog) => void; onCoachClick?: () => void; }
 
@@ -167,7 +169,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
   const saveSession = () => {
     if (!suggestion) return;
-    onAddWorkout(new Date().toISOString().split('T')[0], { id: generateId(), date: new Date().toISOString().split('T')[0], type: suggestion.title, durationMinutes: Math.ceil(elapsed / 60), elevatedHeartRate: true, timestamp: Date.now() });
+    { const d = todayStr(); onAddWorkout(d, { id: generateId(), date: d, type: suggestion.title, durationMinutes: Math.ceil(elapsed / 60), elevatedHeartRate: true, timestamp: Date.now() }); }
     setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); showFeedback("Workout Logged!");
   };
 
@@ -176,7 +178,8 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
     try {
       const plan = await generateTrainingPlan(userVibe, planWeeks, daysPerWeek);
       if (plan) { saveTrainingPlan(plan); setTrainingPlan(plan); setCurrentPlanWeek(1); }
-    } catch { showFeedback("Error"); }
+      else showFeedback(tr('workoutGenFailed'));
+    } catch { showFeedback(tr('workoutGenFailed')); }
     setIsGenerating(false);
   };
 
@@ -184,13 +187,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
     setSuggestion(null); setUserVibe(focus); setGenDuration(duration.toString()); setShowGenerator(true); setIsGenerating(true);
     const res = await getWorkoutSuggestion(duration.toString(), focus, [], difficulty);
     if (res) setSuggestion(res);
-    else { setShowGenerator(false); showFeedback("Failed"); }
+    else { setShowGenerator(false); showFeedback(tr('workoutGenFailed')); }
     setIsGenerating(false);
   };
 
   const handleManualLog = () => {
     if (!manualType || !manualDuration) return;
-    onAddWorkout(new Date().toISOString().split('T')[0], { id: generateId(), date: new Date().toISOString().split('T')[0], type: manualType, durationMinutes: parseInt(manualDuration), elevatedHeartRate: true, timestamp: Date.now() });
+    { const d = todayStr(); onAddWorkout(d, { id: generateId(), date: d, type: manualType, durationMinutes: parseInt(manualDuration), elevatedHeartRate: true, timestamp: Date.now() }); }
     setManualType(''); setManualDuration(''); showFeedback("Logged!");
   };
 
@@ -210,26 +213,59 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
     setSession(prev => ({ ...prev, active: true, phase: 'PREP', timer: 5, elapsed: 0, exerciseIdx: 0, setNum: 1 }));
   };
 
+  // The schedule for the week currently being viewed (falls back to the flat
+  // schedule for older plans that predate per-week storage).
+  const getWeekSchedule = (plan: TrainingPlan, week: number): ScheduledWorkout[] =>
+    plan.weeklySchedules?.[week - 1] || plan.schedule || [];
+
+  // Persist a new schedule for the currently-viewed week and keep the flat
+  // `schedule` (week 1) in sync for backward compatibility.
+  const persistWeekSchedule = (newSchedule: ScheduledWorkout[]) => {
+    if (!trainingPlan) return;
+    const weeks = trainingPlan.weeklySchedules
+      ? [...trainingPlan.weeklySchedules]
+      : Array.from({ length: trainingPlan.durationWeeks || 1 }, () => trainingPlan.schedule || []);
+    weeks[currentPlanWeek - 1] = newSchedule;
+    const updated = { ...trainingPlan, weeklySchedules: weeks, schedule: weeks[0] || newSchedule };
+    saveTrainingPlan(updated);
+    setTrainingPlan(updated);
+  };
+
   const saveEditDay = () => {
     if (!trainingPlan || !editingDay) return;
-    const newSchedule = [...(trainingPlan.schedule || [])].filter(s => s.dayOfWeek !== editingDay);
+    const newSchedule = getWeekSchedule(trainingPlan, currentPlanWeek).filter(s => s.dayOfWeek !== editingDay);
     if (editFocus.trim()) newSchedule.push({ dayOfWeek: editingDay, focus: editFocus, durationMinutes: parseInt(editDuration) || 45 });
-    saveTrainingPlan({ ...trainingPlan, schedule: newSchedule });
-    setTrainingPlan({ ...trainingPlan, schedule: newSchedule });
+    persistWeekSchedule(newSchedule);
     setEditingDay(null); showFeedback("Saved");
   };
 
+  // Swap two days' workouts within the current week.
+  const swapDays = (dayA: string, dayB: string) => {
+    if (!trainingPlan || dayA === dayB) return;
+    const schedule = [...getWeekSchedule(trainingPlan, currentPlanWeek)];
+    const a = schedule.find(s => s.dayOfWeek === dayA);
+    const b = schedule.find(s => s.dayOfWeek === dayB);
+    const filtered = schedule.filter(s => s.dayOfWeek !== dayA && s.dayOfWeek !== dayB);
+    if (a) filtered.push({ ...a, dayOfWeek: dayB });
+    if (b) filtered.push({ ...b, dayOfWeek: dayA });
+    persistWeekSchedule(filtered);
+    showFeedback("Swapped!");
+  };
+
   const handleDrop = (targetDay: string) => {
-    if (!trainingPlan || !draggedDay || draggedDay === targetDay) { setDraggedDay(null); setDragOverDay(null); return; }
-    const newSchedule = [...(trainingPlan.schedule || [])];
-    const sourceItem = newSchedule.find(s => s.dayOfWeek === draggedDay);
-    const targetItem = newSchedule.find(s => s.dayOfWeek === targetDay);
-    const filtered = newSchedule.filter(s => s.dayOfWeek !== draggedDay && s.dayOfWeek !== targetDay);
-    if (sourceItem) filtered.push({ ...sourceItem, dayOfWeek: targetDay });
-    if (targetItem) filtered.push({ ...targetItem, dayOfWeek: draggedDay });
-    saveTrainingPlan({ ...trainingPlan, schedule: filtered });
-    setTrainingPlan({ ...trainingPlan, schedule: filtered });
-    setDraggedDay(null); setDragOverDay(null); showFeedback("Swapped!");
+    if (!draggedDay) return;
+    const source = draggedDay;
+    setDraggedDay(null); setDragOverDay(null);
+    swapDays(source, targetDay);
+  };
+
+  // Touch-friendly reorder (HTML5 drag events don't fire on iOS): move a day's
+  // workout up/down to the adjacent calendar day, swapping if occupied.
+  const moveDay = (day: string, direction: -1 | 1) => {
+    const idx = DAYS.indexOf(day);
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= DAYS.length) return;
+    swapDays(day, DAYS[targetIdx]);
   };
 
   const isFavorite = (title: string) => favorites.some(f => f.name === title);
@@ -397,7 +433,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                       ))}
                     </div>
                   </div>
-                  <button onClick={async () => { setIsGenerating(true); setSuggestion(await getWorkoutSuggestion(genDuration, userVibe, [], difficulty)); setIsGenerating(false); }} disabled={isGenerating} className="w-full bg-[#E07A5F] py-3 rounded-xl font-bold">
+                  <button onClick={async () => { setIsGenerating(true); const res = await getWorkoutSuggestion(genDuration, userVibe, [], difficulty); if (res) setSuggestion(res); else showFeedback(tr('workoutGenFailed')); setIsGenerating(false); }} disabled={isGenerating} className="w-full bg-[#E07A5F] py-3 rounded-xl font-bold">
                     {isGenerating ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : "Generate"}
                   </button>
                   <button onClick={() => { setShowGenerator(false); setShowLibrary(true); }} className="w-full bg-white/10 py-3 rounded-xl font-semibold text-sm flex justify-center gap-2"><BookOpen className="w-4 h-4" /> Build from Library</button>
@@ -489,7 +525,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
             {/* Today's Workouts */}
             {(() => {
-              const today = new Date().toISOString().split('T')[0];
+              const today = todayStr();
               const todayWorkouts = logs[today]?.workouts || [];
               if (todayWorkouts.length === 0) return null;
               const totalMinutes = todayWorkouts.reduce((sum, w) => sum + w.durationMinutes, 0);
@@ -539,7 +575,8 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                 </div>
                 <div className="space-y-1.5">
                   {DAYS.map((day, idx) => {
-                    const sched = trainingPlan.schedule?.find(x => x.dayOfWeek === day);
+                    const weekSchedule = getWeekSchedule(trainingPlan, currentPlanWeek);
+                    const sched = weekSchedule.find(x => x.dayOfWeek === day);
                     return (
                       <div key={day} draggable={!!sched} onDragStart={() => setDraggedDay(day)} onDragOver={(e) => { e.preventDefault(); if (day !== draggedDay) setDragOverDay(day); }} onDragLeave={() => setDragOverDay(null)} onDrop={() => handleDrop(day)} onDragEnd={() => { setDraggedDay(null); setDragOverDay(null); }}
                         className={`p-3 rounded-xl flex justify-between items-center ${sched ? 'bg-gray-50' : 'bg-gray-50/50'} ${draggedDay === day ? 'opacity-50' : ''} ${dragOverDay === day ? 'ring-2 ring-[#E07A5F]' : ''}`}>
@@ -550,8 +587,14 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          {sched && (
+                            <div className="flex flex-col">
+                              <button onClick={() => moveDay(day, -1)} disabled={idx === 0} aria-label="Move up" className="p-0.5 text-gray-300 disabled:opacity-30 active:text-[#E07A5F]"><ChevronUp className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => moveDay(day, 1)} disabled={idx === DAYS.length - 1} aria-label="Move down" className="p-0.5 text-gray-300 disabled:opacity-30 active:text-[#E07A5F]"><ChevronDown className="w-3.5 h-3.5" /></button>
+                            </div>
+                          )}
                           {sched && <button onClick={() => handleStartPlanSession(sched.focus, sched.durationMinutes)} className="bg-gray-900 text-white px-2 py-1 rounded-lg text-[10px] font-bold">Go</button>}
-                          <button onClick={() => { setEditingDay(day); setEditFocus(sched?.focus || ''); setEditDuration((sched?.durationMinutes || 45).toString()); }} className="p-1.5 bg-gray-100 rounded-lg"><Edit2 className="w-3 h-3 text-gray-400" /></button>
+                          <button onClick={() => { setEditingDay(day); setEditFocus(sched?.focus || ''); setEditDuration((sched?.durationMinutes || 45).toString()); }} aria-label="Edit day" className="p-1.5 bg-gray-100 rounded-lg"><Edit2 className="w-3 h-3 text-gray-400" /></button>
                         </div>
                       </div>
                     );

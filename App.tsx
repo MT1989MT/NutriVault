@@ -4,6 +4,7 @@ import { getProfile, saveProfile, getLogs, addFoodsToLog, removeFoodFromLog, add
 import { getSession } from './services/auth';
 import { initializePurchases } from './services/payments';
 import { installGlobalHandlers, createLogger } from './services/logger';
+import { todayStr } from './utils/date';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import AuthScreen from './components/AuthScreen';
@@ -75,12 +76,12 @@ const App: React.FC = () => {
     saveProfile(newProfile); setProfile(newProfile); setCurrentView('DASHBOARD');
   }, []);
   const handleAddItems = useCallback((items: FoodItem[], date?: string) => {
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr();
     const updated = addFoodsToLog(targetDate, items);
     setLogs(updated);
   }, []);
   const handleRemoveItem = useCallback((item: FoodItem, date?: string) => {
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr();
     const updated = removeFoodFromLog(targetDate, item.id);
     setLogs(updated);
   }, []);

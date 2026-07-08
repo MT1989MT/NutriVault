@@ -4,6 +4,7 @@ import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Bra
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
 import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods, getRecentMeals, addToRecentMeals, RecentMeal } from '../services/storage';
 import { generateId, calculateStreak } from '../utils/calculations';
+import { todayStr, toDateStr, parseDateStr, dateStrOffset } from '../utils/date';
 import { createLogger } from '../services/logger';
 import AnalysisModal from './AnalysisModal';
 import { t as tr, getCurrentLanguage } from '../utils/i18n';
@@ -113,8 +114,8 @@ const MealItemList: React.FC<{ items: FoodItem[], onItemClick: (item: FoodItem) 
 });
 
 const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, isActive = true }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const todayDate = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr());
+  const todayDate = todayStr();
   const dayLog = logs[selectedDate] || { date: selectedDate, items: [] };
 
   const [input, setInput] = useState('');
@@ -150,18 +151,16 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   const streak = useMemo(() => calculateStreak(logs), [logs]);
 
   const navigateDate = useCallback((direction: number) => {
-    const date = new Date(selectedDate);
+    const date = parseDateStr(selectedDate);
     date.setDate(date.getDate() + direction);
-    const newDate = date.toISOString().split('T')[0];
+    const newDate = toDateStr(date);
     if (newDate <= todayDate) setSelectedDate(newDate);
   }, [selectedDate, todayDate]);
 
   const formatDateHeader = (dateStr: string) => {
     if (dateStr === todayDate) return tr('today');
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (dateStr === yesterday.toISOString().split('T')[0]) return 'Yesterday';
-    return new Date(dateStr).toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
+    if (dateStr === dateStrOffset(-1)) return tr('yesterday');
+    return parseDateStr(dateStr).toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
   // Compute active calories directly from the day's workouts — no need to scan all logs
@@ -241,8 +240,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
     try {
       let result;
       if (photoPreview) {
-        // Photo-based analysis — send full data URL (API extracts mime type + base64)
-        result = await parseFoodFromPhoto(photoPreview);
+        // Photo-based analysis — send full data URL (API extracts mime type + base64).
+        // Pass any typed text as a hint so it isn't silently discarded.
+        result = await parseFoodFromPhoto(photoPreview, input.trim() || undefined);
       } else {
         result = await parseFoodInput(input);
       }
@@ -629,9 +629,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
               {/* Copy from previous day */}
               {(() => {
-                const prevDate = new Date(selectedDate);
+                const prevDate = parseDateStr(selectedDate);
                 prevDate.setDate(prevDate.getDate() - 1);
-                const prevDateStr = prevDate.toISOString().split('T')[0];
+                const prevDateStr = toDateStr(prevDate);
                 const prevItems = logs[prevDateStr]?.items?.filter(i => i.mealType === selectedMealType) || [];
                 if (prevItems.length === 0) return null;
                 const prevCals = prevItems.reduce((sum, i) => sum + i.calories, 0);
@@ -881,27 +881,47 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
       {/* Edit Item Modal (Centered) */}
       {itemToEdit && (() => {
-        // Calculate per-unit base values for accurate scaling
-        const itemGrams = (itemToEdit as any).grams || 0;
-        const calcEditPreview = () => {
+        // The gram weight the item's CURRENT macros correspond to. Prefer the
+        // stored basis; otherwise parse a value out of the amount description
+        // (e.g. "150g", "~200 g"). 0 = unknown → grams-scaling is not possible.
+        const parsedGrams = (() => {
+          const m = itemToEdit.amountDescription?.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+          return m ? parseFloat(m[1]) : 0;
+        })();
+        const baseGrams = itemToEdit.grams && itemToEdit.grams > 0 ? itemToEdit.grams : parsedGrams;
+        const gramsScalable = baseGrams > 0;
+
+        // Returns both the scale factor and the resulting gram basis, so we can
+        // persist the new basis and keep repeat edits consistent.
+        const computeEdit = () => {
           let mult = 1;
+          let newGrams = baseGrams || undefined;
           if (editUnit === 'multiplier' && editGrams) {
             mult = parseFloat(editGrams) || 1;
-          } else if (editUnit === 'grams' && editGrams && itemGrams > 0) {
-            mult = parseFloat(editGrams) / itemGrams;
-          } else if (editUnit === 'grams' && editGrams) {
-            mult = parseFloat(editGrams) / 100;
+            if (baseGrams > 0) newGrams = baseGrams * mult;
+          } else if (editUnit === 'grams' && editGrams && gramsScalable) {
+            const g = parseFloat(editGrams) || baseGrams;
+            mult = g / baseGrams;
+            newGrams = g;
           } else if (editUnit === 'pieces' && editGrams) {
-            mult = parseFloat(editGrams);
+            mult = parseFloat(editGrams) || 1;
+            if (baseGrams > 0) newGrams = baseGrams * mult;
           }
+          // grams mode with no known basis: mult stays 1 (don't silently produce
+          // wrong macros); only the label changes.
           return {
-            calories: Math.round(itemToEdit.calories * mult),
-            protein: Math.round(itemToEdit.protein * mult),
-            carbs: Math.round(itemToEdit.carbs * mult),
-            fat: Math.round(itemToEdit.fat * mult),
+            mult,
+            newGrams,
+            macros: {
+              calories: Math.round(itemToEdit.calories * mult),
+              protein: Math.round(itemToEdit.protein * mult),
+              carbs: Math.round(itemToEdit.carbs * mult),
+              fat: Math.round(itemToEdit.fat * mult),
+            },
           };
         };
-        const preview = calcEditPreview();
+        const edit = computeEdit();
+        const preview = edit.macros;
 
         return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setItemToEdit(null)} role="dialog" aria-modal="true" aria-label="Edit portion">
@@ -924,6 +944,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                   ...itemToEdit,
                   id: generateId(),
                   amountDescription: newDesc,
+                  grams: edit.newGrams, // persist the new basis so repeat edits scale correctly
                   ...preview,
                 }], selectedDate);
                 setItemToEdit(null);
@@ -937,7 +958,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
 
               <div className="flex bg-gray-100 rounded-xl p-1.5 mb-4">
                 {(['multiplier', 'grams', 'pieces'] as const).map(unit => (
-                  <button key={unit} onClick={() => { setEditUnit(unit); setEditGrams(unit === 'multiplier' ? '1' : unit === 'grams' && itemGrams > 0 ? String(itemGrams) : ''); }}
+                  <button key={unit} onClick={() => { setEditUnit(unit); setEditGrams(unit === 'multiplier' ? '1' : unit === 'grams' && baseGrams > 0 ? String(baseGrams) : ''); }}
                     className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all active:scale-95 ${editUnit === unit ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
                     {unit === 'multiplier' ? tr('portion') : unit === 'grams' ? tr('grams') : tr('pieces')}
                   </button>
@@ -971,7 +992,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
               <div className="flex gap-2.5 mb-4">
                 <input
                   type="number"
-                  placeholder={editUnit === 'multiplier' ? '1' : editUnit === 'grams' ? String(itemGrams || 100) : '1'}
+                  placeholder={editUnit === 'multiplier' ? '1' : editUnit === 'grams' ? String(baseGrams || 100) : '1'}
                   className="flex-1 bg-gray-100 rounded-xl px-4 py-4 outline-none text-base font-bold text-center focus:ring-2 focus:ring-[#E07A5F]/30"
                   value={editGrams}
                   onChange={(e) => setEditGrams(e.target.value)}

@@ -30,6 +30,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
   const formRef = useRef<HTMLFormElement>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Sync numeric values to formData on blur (not on every keystroke)
   const syncNumericField = useCallback((field: string, value: string) => {
@@ -78,25 +79,28 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
     const w = Number(weightStr) || 0;
     const h = Number(heightStr) || 0;
     const a = Number(ageStr) || 0;
-    if (w && h && a) {
-      const bmr = calculateBMR(w, h, a, formData.gender || Gender.MALE);
-      const finalData = {
-        ...formData,
-        age: a,
-        heightCm: h,
-        weightKg: w,
-        targetWeightKg: Number(targetWeightStr) || undefined,
-        customCalories: Number(customCalStr) || undefined,
-        tdee: calculateTDEE(
-          bmr,
-          formData.activityLevel!,
-          formData.goal!,
-          formData.weeklyWeightChangeKg,
-          formData.gender,
-        ),
-      };
-      onSave(finalData as UserProfile);
-    }
+    // Validate instead of silently doing nothing when a field is empty/invalid.
+    if (!a || a < 13 || a > 120) { setError(t('invalidAge')); return; }
+    if (!h || h < 100 || h > 250) { setError(t('invalidHeight')); return; }
+    if (!w || w < 30 || w > 400) { setError(t('invalidWeight')); return; }
+    setError(null);
+    const bmr = calculateBMR(w, h, a, formData.gender || Gender.MALE);
+    const finalData = {
+      ...formData,
+      age: a,
+      heightCm: h,
+      weightKg: w,
+      targetWeightKg: Number(targetWeightStr) || undefined,
+      customCalories: Number(customCalStr) || undefined,
+      tdee: calculateTDEE(
+        bmr,
+        formData.activityLevel!,
+        formData.goal!,
+        formData.weeklyWeightChangeKg,
+        formData.gender,
+      ),
+    };
+    onSave(finalData as UserProfile);
   };
 
   if (showWizard) {
@@ -206,6 +210,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
               { val: ActivityLevel.LIGHTLY_ACTIVE, label: 'Light', desc: '1-3x/week' },
               { val: ActivityLevel.MODERATELY_ACTIVE, label: 'Moderate', desc: '3-5x/week' },
               { val: ActivityLevel.VERY_ACTIVE, label: 'Active', desc: '6-7x/week' },
+              { val: ActivityLevel.EXTRA_ACTIVE, label: 'Athlete', desc: '2x/day' },
             ].map((opt) => (
               <button
                 key={opt.val}
@@ -330,6 +335,13 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Validation error */}
+        {error && (
+          <div className="bg-red-50 border border-red-100 text-red-600 text-sm font-medium px-4 py-3 rounded-xl flex items-center gap-2">
+            <X className="w-4 h-4 shrink-0" /> {error}
+          </div>
+        )}
 
         {/* Save */}
         <button type="submit" className="w-full bg-[#E07A5F] text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">

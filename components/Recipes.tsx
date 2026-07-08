@@ -60,11 +60,13 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   const [viewMode, setViewMode] = useState<'CREATE' | 'SAVED' | 'QUICK' | 'SHOPPING'>('QUICK');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [shoppingInput, setShoppingInput] = useState('');
   const [expandedQuickMeal, setExpandedQuickMeal] = useState<string | null>(null);
   const [mealTypeModal, setMealTypeModal] = useState<{ recipe?: Recipe; quickMeal?: typeof QUICK_MEALS[0]['meals'][0] } | null>(null);
+  const [logServings, setLogServings] = useState(1);
   const profile = useMemo(() => getProfile(), []);
 
   useEffect(() => {
@@ -126,9 +128,30 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
 
   const handleGenerate = async (prompt?: string) => {
     setLoading(true);
-    const recipe = await getRecipeSuggestion(prompt || input, undefined, profile?.dietaryPreferences || []);
-    setGeneratedRecipe(recipe);
-    setLoading(false);
+    setError(null);
+    try {
+      const recipe = await getRecipeSuggestion(prompt || input, undefined, profile?.dietaryPreferences || []);
+      // Validate the AI response shape before trusting it — a malformed recipe
+      // (e.g. missing macros) would otherwise crash the render.
+      if (recipe && recipe.title && recipe.macros && typeof recipe.calories === 'number') {
+        setGeneratedRecipe({
+          ...recipe,
+          macros: {
+            protein: Number(recipe.macros.protein) || 0,
+            carbs: Number(recipe.macros.carbs) || 0,
+            fat: Number(recipe.macros.fat) || 0,
+          },
+          ingredients: recipe.ingredients || [],
+          instructions: recipe.instructions || [],
+        });
+      } else {
+        setError(tr('recipeGenFailed'));
+      }
+    } catch {
+      setError(tr('recipeGenFailed'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = () => {
@@ -157,21 +180,24 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   const confirmLogWithMealType = (mealType: MealType) => {
     if (!onLogRecipe || !mealTypeModal) return;
 
+    const s = logServings > 0 ? logServings : 1;
+    const label = s === 1 ? '1 serving' : `${s} servings`;
+
     if (mealTypeModal.recipe) {
       const recipe = mealTypeModal.recipe;
-      const cal = Number(recipe.calories) || 0;
-      const prot = Number(recipe.macros?.protein) || 0;
-      const carb = Number(recipe.macros?.carbs) || 0;
-      const fats = Number(recipe.macros?.fat) || 0;
+      const cal = (Number(recipe.calories) || 0) * s;
+      const prot = (Number(recipe.macros?.protein) || 0) * s;
+      const carb = (Number(recipe.macros?.carbs) || 0) * s;
+      const fats = (Number(recipe.macros?.fat) || 0) * s;
 
       const foodItem: FoodItem = {
         id: generateId(),
         name: recipe.title || 'Recipe',
-        calories: isNaN(cal) ? 0 : cal,
-        protein: isNaN(prot) ? 0 : prot,
-        carbs: isNaN(carb) ? 0 : carb,
-        fat: isNaN(fats) ? 0 : fats,
-        amountDescription: '1 serving',
+        calories: Math.round(isNaN(cal) ? 0 : cal),
+        protein: Math.round(isNaN(prot) ? 0 : prot),
+        carbs: Math.round(isNaN(carb) ? 0 : carb),
+        fat: Math.round(isNaN(fats) ? 0 : fats),
+        amountDescription: label,
         mealType,
         timestamp: Date.now(),
         source: 'RECIPE'
@@ -182,11 +208,11 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
       const foodItem: FoodItem = {
         id: generateId(),
         name: meal.name,
-        calories: meal.calories,
-        protein: meal.protein,
-        carbs: meal.carbs,
-        fat: meal.fat,
-        amountDescription: '1 serving',
+        calories: Math.round(meal.calories * s),
+        protein: Math.round(meal.protein * s),
+        carbs: Math.round(meal.carbs * s),
+        fat: Math.round(meal.fat * s),
+        amountDescription: label,
         mealType,
         timestamp: Date.now(),
         source: 'RECIPE'
@@ -195,6 +221,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
     }
 
     setMealTypeModal(null);
+    setLogServings(1);
     showFeedback("Logged!");
   };
 
@@ -368,6 +395,13 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
               </div>
             </div>
 
+            {/* Error */}
+            {error && (
+              <div className="bg-red-50 border border-red-100 text-red-600 text-sm font-medium px-4 py-3 rounded-2xl flex items-center gap-2">
+                <X className="w-4 h-4 shrink-0" /> {error}
+              </div>
+            )}
+
             {/* Generated Recipe */}
             {generatedRecipe && (
               <div className="bg-white rounded-2xl card-shadow overflow-hidden">
@@ -512,6 +546,18 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
               <p className="text-xs text-gray-400 mt-1">
                 {mealTypeModal.recipe?.title || mealTypeModal.quickMeal?.name}
               </p>
+            </div>
+            {/* Servings selector — a recipe's totals are for the whole dish, so
+                let the user log the fraction/multiple they actually ate. */}
+            <div className="px-4 pt-3 pb-1">
+              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2">
+                <span className="text-xs font-semibold text-gray-500 pl-1">{tr('numberOfServings')}</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setLogServings(s => Math.max(0.25, Math.round((s - 0.25) * 100) / 100))} aria-label="Fewer servings" className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center"><span className="text-lg font-bold text-gray-500 leading-none">−</span></button>
+                  <span className="font-bold text-sm w-10 text-center tabular-nums">{logServings}</span>
+                  <button onClick={() => setLogServings(s => Math.round((s + 0.25) * 100) / 100)} aria-label="More servings" className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center"><span className="text-lg font-bold text-gray-500 leading-none">+</span></button>
+                </div>
+              </div>
             </div>
             <div className="p-3 space-y-2">
               {[
