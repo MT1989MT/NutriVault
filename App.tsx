@@ -23,7 +23,7 @@ const Settings = lazy(() => import('./components/Settings'));
 const PersonalSetup = lazy(() => import('./components/PersonalSetup'));
 
 const ViewFallback = () => (
-  <div className="h-full w-full flex items-center justify-center bg-[#FAFAF8]">
+  <div className="h-full w-full flex items-center justify-center bg-[#FAF6F1]">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E07A5F]" />
   </div>
 );
@@ -96,8 +96,18 @@ const App: React.FC = () => {
   const goToSettings = useCallback(() => setCurrentView('SETTINGS'), []);
   const goToCoach = useCallback(() => setCurrentView('COACH'), []);
   const goToDashboard = useCallback(() => setCurrentView('DASHBOARD'), []);
+  const goToRecipes = useCallback(() => setCurrentView('RECIPES'), []);
 
-  if (isLoading) return <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
+  // FAB (center of tab bar) → jump to the dashboard and open the Add Food
+  // flow. Dashboard watches this counter and opens the add sheet with a meal
+  // suggested by the time of day.
+  const [fabSignal, setFabSignal] = useState(0);
+  const handleFab = useCallback(() => {
+    setCurrentView('DASHBOARD');
+    setFabSignal(n => n + 1);
+  }, []);
+
+  if (isLoading) return <div className="h-full w-full bg-[#FAF6F1] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
   if (forceWizard) return (
     <Suspense fallback={<ViewFallback />}>
       <PersonalSetup existingProfile={profile} onComplete={(p) => { handleSaveProfile(p); setForceWizard(false); }} onCancel={() => setForceWizard(false)} />
@@ -113,12 +123,12 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="h-full w-full bg-[#FAFAF8] text-slate-900 font-sans overflow-hidden">
-        <div className="mx-auto max-w-lg h-full relative bg-[#FAFAF8] flex flex-col">
+      <div className="h-full w-full bg-[#FAF6F1] text-slate-900 font-sans overflow-hidden">
+        <div className="mx-auto max-w-lg h-full relative bg-[#FAF6F1] flex flex-col">
           <div className="flex-1 overflow-hidden relative">
             {currentView === 'DASHBOARD' && (
               <div className="absolute inset-0 z-10">
-                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} isActive />
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} onRecipesClick={goToRecipes} fabSignal={fabSignal} isActive />
               </div>
             )}
             {currentView === 'PROFILE' && (
@@ -154,7 +164,7 @@ const App: React.FC = () => {
               )}
             </Suspense>
           </div>
-          {currentView !== 'SETTINGS' && currentView !== 'COACH' && <Navigation currentView={currentView} onChange={setCurrentView} />}
+          {currentView !== 'SETTINGS' && currentView !== 'COACH' && <Navigation currentView={currentView} onChange={setCurrentView} onFab={handleFab} />}
         </div>
       </div>
     </ErrorBoundary>

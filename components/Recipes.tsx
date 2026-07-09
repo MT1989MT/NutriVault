@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChefHat, Loader2, Save, X, Zap, Check, Flame, HelpCircle, Plus, Utensils, ShoppingCart, Trash2, BookOpen, Coffee, Sun, Moon, Cookie, Brain } from 'lucide-react';
+import { ChefHat, Loader2, Save, X, Check, Flame, Plus, Utensils, ShoppingCart, Trash2, Coffee, Sun, Moon, Cookie, Bookmark, ArrowRight } from 'lucide-react';
 import { getRecipeSuggestion } from '../services/gemini';
 import { getSavedRecipes, saveRecipe, deleteRecipe, getProfile } from '../services/storage';
 import { Recipe, FoodItem, MealType } from '../types';
@@ -47,6 +47,14 @@ const QUICK_MEALS = [
   }
 ];
 
+// Placeholder thumb icon per category (meal-ish lucide icons)
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  Breakfast: Coffee,
+  Lunch: Sun,
+  Dinner: Moon,
+  Snacks: Cookie,
+};
+
 interface RecipesProps {
   onLogRecipe?: (items: FoodItem[]) => void;
   onCoachClick?: () => void;
@@ -61,7 +69,6 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [shoppingInput, setShoppingInput] = useState('');
   const [expandedQuickMeal, setExpandedQuickMeal] = useState<string | null>(null);
@@ -85,7 +92,7 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
     return () => clearTimeout(shoppingWriteTimer.current);
   }, [shoppingList]);
 
-  const quickIdeas = ['🥗 Healthy salad', '🍗 Chicken dish', '🥣 Quick breakfast', '🍝 Pasta'];
+  const quickIdeas = ['Healthy salad', 'Chicken dish', 'Quick breakfast', 'Pasta'];
 
   const addShoppingItem = () => {
     if (!shoppingInput.trim()) return;
@@ -225,135 +232,238 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
     showFeedback("Logged!");
   };
 
-  return (
-    <div className="h-full flex flex-col bg-[#FAFAF8]">
-      {feedback && <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded-full text-xs font-bold z-[70] flex items-center gap-2"><Check className="w-3 h-3 text-green-400"/>{feedback}</div>}
+  const isMainView = viewMode !== 'SHOPPING' && viewMode !== 'SAVED';
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
+  return (
+    <div className="h-full flex flex-col bg-[#FAF6F1]">
+      {feedback && <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-[#2B2523] text-white px-4 py-2 rounded-full text-xs font-bold z-[70] flex items-center gap-2"><Check className="w-3 h-3 text-[#E07A5F]"/>{feedback}</div>}
+
+      {/* Header — transparent on app bg */}
+      <div className="px-5 pb-3" style={{paddingTop: 'max(env(safe-area-inset-top, 14px), 14px)'}}>
         <div className="flex items-center justify-between">
-          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-            <Brain className="w-[18px] h-[18px] text-white" />
-          </button>
-          <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{tr('recipes')}</span>
-          <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-            <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
-          </button>
+          <h1 className="text-[24px] font-bold text-[#2B2523] font-display tracking-tight">{tr('recipes')}</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode(viewMode === 'SHOPPING' ? 'QUICK' : 'SHOPPING')}
+              aria-label={viewMode === 'SHOPPING' ? 'Back to recipes' : 'Shopping list'}
+              className={`w-[42px] h-[42px] rounded-full flex items-center justify-center card-shadow active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 ${viewMode === 'SHOPPING' ? 'bg-[#E07A5F] terra-shadow' : 'bg-white'}`}
+            >
+              <ShoppingCart className={`w-[18px] h-[18px] ${viewMode === 'SHOPPING' ? 'text-white' : 'text-[#9A8B80]'}`} />
+            </button>
+            <button
+              onClick={() => setViewMode(viewMode === 'SAVED' ? 'QUICK' : 'SAVED')}
+              aria-label={viewMode === 'SAVED' ? 'Back to recipes' : 'Saved recipes'}
+              className={`w-[42px] h-[42px] rounded-full flex items-center justify-center card-shadow active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 ${viewMode === 'SAVED' ? 'bg-[#E07A5F] terra-shadow' : 'bg-white'}`}
+            >
+              <Bookmark className={`w-[18px] h-[18px] ${viewMode === 'SAVED' ? 'text-white' : 'text-[#9A8B80]'}`} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
-        {/* Tabs */}
-        <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-        <button onClick={() => setViewMode('QUICK')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'QUICK' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-          <Zap className="w-3.5 h-3.5" /> Quick
-        </button>
-        <button onClick={() => setViewMode('CREATE')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'CREATE' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-          <ChefHat className="w-3.5 h-3.5" /> Create
-        </button>
-        <button onClick={() => setViewMode('SAVED')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'SAVED' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-          <Save className="w-3.5 h-3.5" /> Saved
-        </button>
-        <button onClick={() => setViewMode('SHOPPING')} className={`flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 min-h-[44px] ${viewMode === 'SHOPPING' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-          <ShoppingCart className="w-3.5 h-3.5" /> List
-        </button>
-      </div>
+      <div className="flex-1 overflow-y-auto px-5 pt-1" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+        {isMainView && (
+          <div>
+            {/* Create bar */}
+            <div className="bg-white rounded-[18px] p-2.5 card-shadow flex items-center gap-2 mb-3">
+              <ChefHat className="w-5 h-5 text-[#E07A5F] shrink-0 ml-1.5" />
+              <input
+                type="text"
+                placeholder="What do you want to cook?"
+                aria-label="Recipe idea"
+                className="flex-1 min-w-0 bg-transparent outline-none text-[14px] text-[#2B2523] placeholder-[#B4A79C]"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+              />
+              <button
+                onClick={() => handleGenerate()}
+                disabled={loading || !input.trim()}
+                aria-label="Generate recipe"
+                className="w-11 h-11 shrink-0 flex items-center justify-center active:scale-90 transition-smooth disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 rounded-[12px]"
+              >
+                <span className="w-[34px] h-[34px] bg-[#E07A5F] rounded-[12px] terra-shadow flex items-center justify-center">
+                  {loading ? <Loader2 className="w-4 h-4 text-white animate-spin"/> : <ArrowRight className="w-4 h-4 text-white"/>}
+                </span>
+              </button>
+            </div>
 
-      {/* Content */}
-      <div className="space-y-4">
-        {viewMode === 'QUICK' && (
-          <div className="space-y-4">
-            {QUICK_MEALS.map((category, catIdx) => (
-              <div key={catIdx}>
-                <h3 className="text-[10px] font-bold text-[#E07A5F] uppercase mb-2">{category.category}</h3>
-                <div className="space-y-2">
-                  {category.meals.map((meal, mealIdx) => {
-                    const mealKey = `${catIdx}-${mealIdx}`;
-                    const isExpanded = expandedQuickMeal === mealKey;
-                    return (
-                      <div key={mealKey} onClick={() => setExpandedQuickMeal(isExpanded ? null : mealKey)} className="bg-white rounded-xl p-3 card-shadow cursor-pointer">
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1 min-w-0 mr-2">
-                            <h4 className="font-semibold text-gray-900 text-sm truncate">{meal.name}</h4>
-                            <div className="flex gap-2 text-[10px] text-gray-400">
-                              <span className="flex items-center gap-0.5"><Flame className="w-3 h-3 text-[#E07A5F]" />{meal.calories}</span>
-                              <span>P:{meal.protein}g</span>
-                              <span>⏱️{meal.time}</span>
-                            </div>
-                          </div>
-                          <button onClick={(e) => handleLogQuickMeal(meal, e)} className="p-2 bg-green-50 rounded-xl shrink-0">
-                            <Plus className="w-4 h-4 text-green-600" />
-                          </button>
-                        </div>
+            {/* Suggestion chips */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 mb-4">
+              {quickIdeas.map((idea, k) => (
+                <button
+                  key={k}
+                  onClick={() => { setInput(idea); handleGenerate(idea); }}
+                  className="whitespace-nowrap bg-white rounded-full px-3.5 py-2 card-shadow text-[12px] font-semibold text-[#6B6257] active:scale-95 transition-smooth"
+                >
+                  {idea}
+                </button>
+              ))}
+            </div>
 
-                        {isExpanded && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <div className="flex gap-3 text-xs font-bold mb-2">
-                              <span className="text-[#E07A5F]">P: {meal.protein}g</span>
-                              <span className="text-[#81B29A]">C: {meal.carbs}g</span>
-                              <span className="text-[#F2CC8F]">F: {meal.fat}g</span>
-                            </div>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Ingredients</p>
-                            <ul className="text-xs text-gray-600 space-y-0.5 mb-3">
-                              {meal.ingredients.map((ing, i) => (
-                                <li key={i} className="flex items-center gap-1.5">
-                                  <span className="w-1 h-1 bg-[#E07A5F] rounded-full" />{ing}
-                                </li>
-                              ))}
-                            </ul>
-                            <div className="flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); addIngredientsToShopping(meal.ingredients); }} className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1">
-                                <ShoppingCart className="w-3.5 h-3.5" /> List
-                              </button>
-                              <button onClick={(e) => handleLogQuickMeal(meal, e)} className="flex-1 bg-[#E07A5F] text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1">
-                                <Plus className="w-3.5 h-3.5" /> Log
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+            {/* Error */}
+            {error && (
+              <div className="bg-[#FBEBE4] text-[#C85A40] text-sm font-medium px-4 py-3 rounded-[16px] flex items-center gap-2 mb-3">
+                <X className="w-4 h-4 shrink-0" /> {error}
+              </div>
+            )}
+
+            {/* Generated Recipe */}
+            {generatedRecipe && (
+              <div className="bg-white rounded-[20px] card-shadow overflow-hidden mb-4">
+                <div className="bg-[#FBEBE4] p-4">
+                  <div className="flex justify-between items-start gap-2">
+                    <h2 className="text-[17px] font-bold font-display tracking-tight text-[#2B2523] flex-1">{generatedRecipe.title}</h2>
+                    <button onClick={handleSave} aria-label="Save recipe" className="w-9 h-9 bg-white rounded-full card-shadow flex items-center justify-center shrink-0 active:scale-90 transition-smooth">
+                      <Save className="w-4 h-4 text-[#E07A5F]"/>
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    <span className="flex items-center gap-1 bg-white rounded-full px-2.5 py-1 text-[11px] font-semibold text-[#C4763B]"><Flame className="w-3 h-3"/>{generatedRecipe.calories} kcal</span>
+                    <span className="bg-white rounded-full px-2.5 py-1 text-[11px] font-semibold text-[#3D5A48]">P: {generatedRecipe.macros.protein}g</span>
+                    <span className="bg-white rounded-full px-2.5 py-1 text-[11px] font-semibold text-[#C4763B]">C: {generatedRecipe.macros.carbs}g</span>
+                    <span className="bg-white rounded-full px-2.5 py-1 text-[11px] font-semibold text-[#6B6257]">F: {generatedRecipe.macros.fat}g</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <h4 className="text-[11px] font-display font-bold text-[#9A8B80] uppercase tracking-wider mb-2">Ingredients</h4>
+                    <ul className="space-y-1.5">
+                      {generatedRecipe.ingredients.map((ing, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-[#6B6257]">
+                          <span className="w-1.5 h-1.5 bg-[#E07A5F] rounded-full mt-1.5 shrink-0"/>
+                          {ing}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-display font-bold text-[#9A8B80] uppercase tracking-wider mb-2">Instructions</h4>
+                    <ol className="space-y-2">
+                      {generatedRecipe.instructions.map((step, i) => (
+                        <li key={i} className="flex gap-3 text-sm text-[#6B6257]">
+                          <span className="text-[#E07A5F]/50 font-display font-bold">{i + 1}</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={handleSave} className="flex-1 bg-[#FAF6F1] text-[#6B6257] font-bold py-2.5 rounded-[14px] flex items-center justify-center gap-2 min-h-[44px] active:scale-95 transition-smooth">
+                      <Save className="w-4 h-4"/> Save dish
+                    </button>
+                    <button onClick={(e) => handleLogRecipe(generatedRecipe, e)} className="flex-1 bg-[#E07A5F] terra-shadow text-white font-bold py-2.5 rounded-[14px] flex items-center justify-center gap-2 min-h-[44px] active:scale-95 transition-smooth">
+                      <Plus className="w-4 h-4"/> Log now
+                    </button>
+                  </div>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Quick meals */}
+            <div className="space-y-4">
+              {QUICK_MEALS.map((category, catIdx) => {
+                const ThumbIcon = CATEGORY_ICONS[category.category] || Utensils;
+                return (
+                  <div key={catIdx}>
+                    <h3 className="text-[12px] font-display font-bold text-[#3D5A48] uppercase tracking-wider mb-2">{category.category}</h3>
+                    <div className="space-y-2">
+                      {category.meals.map((meal, mealIdx) => {
+                        const mealKey = `${catIdx}-${mealIdx}`;
+                        const isExpanded = expandedQuickMeal === mealKey;
+                        return (
+                          <div key={mealKey} onClick={() => setExpandedQuickMeal(isExpanded ? null : mealKey)} className="bg-white rounded-[20px] p-3 card-shadow cursor-pointer">
+                            <div className="flex items-center gap-3">
+                              <div className="w-[52px] h-[52px] rounded-[16px] bg-[#F6ECE2] flex items-center justify-center shrink-0">
+                                <ThumbIcon className="w-5 h-5 text-[#C4763B]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-display font-bold text-[14px] text-[#2B2523] tracking-tight truncate">{meal.name}</h4>
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium mt-0.5">
+                                  <span className="text-[#C4763B]">{meal.calories} kcal</span>
+                                  <span className="text-[#B4A79C]">·</span>
+                                  <span className="text-[#9A8B80]">{meal.protein}g protein</span>
+                                  <span className="text-[#B4A79C]">·</span>
+                                  <span className="text-[#9A8B80]">{meal.time}</span>
+                                </div>
+                              </div>
+                              <button onClick={(e) => handleLogQuickMeal(meal, e)} aria-label={`Log ${meal.name}`} className="w-11 h-11 -mr-1 shrink-0 flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] rounded-full">
+                                <span className="w-[34px] h-[34px] bg-[#FBEBE4] rounded-full flex items-center justify-center">
+                                  <Plus className="w-4 h-4 text-[#E07A5F]" />
+                                </span>
+                              </button>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="mt-3 pt-3 border-t border-[#F3EAE2]">
+                                <div className="flex gap-3 text-xs font-bold mb-2">
+                                  <span className="text-[#3D5A48]">P: {meal.protein}g</span>
+                                  <span className="text-[#C4763B]">C: {meal.carbs}g</span>
+                                  <span className="text-[#9A8B80]">F: {meal.fat}g</span>
+                                </div>
+                                <p className="text-[10px] text-[#9A8B80] uppercase tracking-wider font-display font-bold mb-1">Ingredients</p>
+                                <ul className="text-xs text-[#6B6257] space-y-0.5 mb-3">
+                                  {meal.ingredients.map((ing, i) => (
+                                    <li key={i} className="flex items-center gap-1.5">
+                                      <span className="w-1 h-1 bg-[#E07A5F] rounded-full" />{ing}
+                                    </li>
+                                  ))}
+                                </ul>
+                                <div className="flex gap-2">
+                                  <button onClick={(e) => { e.stopPropagation(); addIngredientsToShopping(meal.ingredients); }} className="flex-1 bg-[#FAF6F1] text-[#6B6257] font-bold py-2.5 rounded-[14px] text-xs flex items-center justify-center gap-1 min-h-[44px] active:scale-95 transition-smooth">
+                                    <ShoppingCart className="w-3.5 h-3.5" /> List
+                                  </button>
+                                  <button onClick={(e) => handleLogQuickMeal(meal, e)} className="flex-1 bg-[#E07A5F] terra-shadow text-white font-bold py-2.5 rounded-[14px] text-xs flex items-center justify-center gap-1 min-h-[44px] active:scale-95 transition-smooth">
+                                    <Plus className="w-3.5 h-3.5" /> Log
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {viewMode === 'SAVED' && (
           <div className="space-y-3">
             {savedRecipes.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl">
-                <ChefHat className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm font-medium">No saved dishes yet</p>
-                <p className="text-gray-300 text-xs">Create a recipe and save it here</p>
+              <div className="text-center py-12 bg-white rounded-[20px] card-shadow">
+                <ChefHat className="w-10 h-10 text-[#E8DFD5] mx-auto mb-3" />
+                <p className="text-[#9A8B80] text-sm font-medium">No saved dishes yet</p>
+                <p className="text-[#B4A79C] text-xs">Create a recipe and save it here</p>
               </div>
             ) : savedRecipes.map(recipe => (
-              <div key={recipe.id} onClick={() => setExpandedId(expandedId === recipe.id ? null : recipe.id)} className="bg-white rounded-2xl p-4 card-shadow cursor-pointer">
+              <div key={recipe.id} onClick={() => setExpandedId(expandedId === recipe.id ? null : recipe.id)} className="bg-white rounded-[20px] p-4 card-shadow cursor-pointer">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate">{recipe.title}</h3>
-                    <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-[#E07A5F]"/>{recipe.calories} kcal</span>
-                      <span>P: {recipe.macros.protein}g</span>
+                    <h3 className="font-display font-bold tracking-tight text-[#2B2523] truncate">{recipe.title}</h3>
+                    <div className="flex gap-3 mt-1 text-xs font-medium">
+                      <span className="flex items-center gap-1 text-[#C4763B]"><Flame className="w-3 h-3"/>{recipe.calories} kcal</span>
+                      <span className="text-[#9A8B80]">P: {recipe.macros.protein}g</span>
                     </div>
                   </div>
                   <div className="flex gap-1.5 ml-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={(e) => handleLogRecipe(recipe, e)} className="p-2 bg-green-50 rounded-xl" title="Log as food">
-                      <Plus className="w-4 h-4 text-green-600"/>
+                    <button onClick={(e) => handleLogRecipe(recipe, e)} aria-label={`Log ${recipe.title}`} className="w-[34px] h-[34px] bg-[#FBEBE4] rounded-full flex items-center justify-center active:scale-90 transition-smooth" title="Log as food">
+                      <Plus className="w-4 h-4 text-[#E07A5F]"/>
                     </button>
-                    <button onClick={(e) => handleDelete(recipe.id, e)} className="p-2 bg-red-50 rounded-xl">
-                      <X className="w-4 h-4 text-red-400"/>
+                    <button onClick={(e) => handleDelete(recipe.id, e)} aria-label={`Delete ${recipe.title}`} className="w-[34px] h-[34px] bg-[#FAF6F1] rounded-full flex items-center justify-center active:scale-90 transition-smooth">
+                      <X className="w-4 h-4 text-red-500"/>
                     </button>
                   </div>
                 </div>
 
                 {expandedId === recipe.id && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 text-sm">
+                  <div className="mt-3 pt-3 border-t border-[#F3EAE2] space-y-3 text-sm">
                     <div>
-                      <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-1">Ingredients</h4>
-                      <ul className="text-gray-600 space-y-1">
+                      <h4 className="text-[10px] font-display font-bold text-[#9A8B80] uppercase tracking-wider mb-1">Ingredients</h4>
+                      <ul className="text-[#6B6257] space-y-1">
                         {recipe.ingredients.map((i, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <span className="w-1 h-1 bg-[#E07A5F] rounded-full mt-2 shrink-0"/>{i}
@@ -362,10 +472,10 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
                       </ul>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); addIngredientsToShopping(recipe.ingredients); }} className="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); addIngredientsToShopping(recipe.ingredients); }} className="flex-1 bg-[#FAF6F1] text-[#6B6257] font-bold py-2.5 rounded-[14px] flex items-center justify-center gap-2 min-h-[44px] active:scale-95 transition-smooth">
                         <ShoppingCart className="w-4 h-4"/> Add to list
                       </button>
-                      <button onClick={(e) => handleLogRecipe(recipe, e)} className="flex-1 bg-[#E07A5F] text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2">
+                      <button onClick={(e) => handleLogRecipe(recipe, e)} className="flex-1 bg-[#E07A5F] terra-shadow text-white font-bold py-2.5 rounded-[14px] flex items-center justify-center gap-2 min-h-[44px] active:scale-95 transition-smooth">
                         <Utensils className="w-4 h-4"/> Log meal
                       </button>
                     </div>
@@ -376,93 +486,13 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
           </div>
         )}
 
-        {viewMode === 'CREATE' && (
-          <div className="space-y-4">
-            {/* Input */}
-            <div className="bg-white rounded-2xl p-4 card-shadow">
-              <div className="relative">
-                <input type="text" placeholder="What do you want to cook?" className="w-full bg-gray-50 rounded-xl py-3 px-4 pr-12 outline-none text-gray-900 placeholder-gray-400 text-sm" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleGenerate()} />
-                <button onClick={() => handleGenerate()} disabled={loading || !input.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#E07A5F] text-white p-2 rounded-lg disabled:opacity-50">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : <ChefHat className="w-4 h-4"/>}
-                </button>
-              </div>
-              <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
-                {quickIdeas.map((idea, k) => (
-                  <button key={k} onClick={() => { setInput(idea.slice(2).trim()); handleGenerate(idea.slice(2).trim()); }} className="whitespace-nowrap bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-[#E07A5F]"/>{idea}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-sm font-medium px-4 py-3 rounded-2xl flex items-center gap-2">
-                <X className="w-4 h-4 shrink-0" /> {error}
-              </div>
-            )}
-
-            {/* Generated Recipe */}
-            {generatedRecipe && (
-              <div className="bg-white rounded-2xl card-shadow overflow-hidden">
-                <div className="bg-gradient-to-r from-[#E07A5F]/10 to-[#E07A5F]/5 p-4">
-                  <div className="flex justify-between items-start">
-                    <h2 className="text-lg font-bold text-gray-900 flex-1">{generatedRecipe.title}</h2>
-                    <button onClick={handleSave} className="p-2 bg-white rounded-lg shadow-sm ml-2">
-                      <Save className="w-4 h-4 text-[#E07A5F]"/>
-                    </button>
-                  </div>
-                  <div className="flex gap-4 mt-2 text-xs font-semibold">
-                    <span className="flex items-center gap-1 text-[#E07A5F]"><Flame className="w-3.5 h-3.5"/>{generatedRecipe.calories} kcal</span>
-                    <span className="text-gray-500">P: {generatedRecipe.macros.protein}g</span>
-                    <span className="text-gray-500">C: {generatedRecipe.macros.carbs}g</span>
-                    <span className="text-gray-500">F: {generatedRecipe.macros.fat}g</span>
-                  </div>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div>
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Ingredients</h4>
-                    <ul className="space-y-1.5">
-                      {generatedRecipe.ingredients.map((ing, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                          <span className="w-1.5 h-1.5 bg-[#E07A5F] rounded-full mt-1.5 shrink-0"/>
-                          {ing}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Instructions</h4>
-                    <ol className="space-y-2">
-                      {generatedRecipe.instructions.map((step, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-gray-700">
-                          <span className="text-[#E07A5F]/50 font-bold">{i + 1}</span>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <button onClick={handleSave} className="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2">
-                      <Save className="w-4 h-4"/> Save dish
-                    </button>
-                    <button onClick={(e) => handleLogRecipe(generatedRecipe, e)} className="flex-1 bg-[#E07A5F] text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2">
-                      <Plus className="w-4 h-4"/> Log now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {viewMode === 'SHOPPING' && (
           <div className="space-y-3">
             {/* Add Item */}
-            <div className="bg-white rounded-2xl p-4 card-shadow">
+            <div className="bg-white rounded-[20px] p-3 card-shadow">
               <div className="flex gap-2">
-                <input type="text" placeholder="Add item..." aria-label="Shopping list item" className="flex-1 bg-gray-50 rounded-xl py-2.5 px-4 outline-none text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#E07A5F]/30" value={shoppingInput} onChange={(e) => setShoppingInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addShoppingItem()} />
-                <button onClick={addShoppingItem} disabled={!shoppingInput.trim()} aria-label="Add to shopping list" className="bg-[#E07A5F] text-white p-3 rounded-xl disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <input type="text" placeholder="Add item..." aria-label="Shopping list item" className="flex-1 min-w-0 bg-[#FAF6F1] rounded-[14px] py-2.5 px-4 outline-none text-[#2B2523] placeholder-[#B4A79C] text-sm focus:ring-2 focus:ring-[#E07A5F]/30" value={shoppingInput} onChange={(e) => setShoppingInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addShoppingItem()} />
+                <button onClick={addShoppingItem} disabled={!shoppingInput.trim()} aria-label="Add to shopping list" className="bg-[#E07A5F] terra-shadow text-white rounded-[14px] disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-90 transition-smooth">
                   <Plus className="w-4 h-4"/>
                 </button>
               </div>
@@ -470,27 +500,27 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
 
             {/* Shopping List */}
             {shoppingList.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl">
-                <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm font-medium">Your shopping list is empty</p>
-                <p className="text-gray-300 text-xs">Add items or ingredients from recipes</p>
+              <div className="text-center py-12 bg-white rounded-[20px] card-shadow">
+                <ShoppingCart className="w-10 h-10 text-[#E8DFD5] mx-auto mb-3" />
+                <p className="text-[#9A8B80] text-sm font-medium">Your shopping list is empty</p>
+                <p className="text-[#B4A79C] text-xs">Add items or ingredients from recipes</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-4 card-shadow">
+              <div className="bg-white rounded-[20px] p-4 card-shadow">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold text-gray-400 uppercase">{shoppingList.filter(i => !i.checked).length} items</span>
+                  <span className="text-[11px] font-display font-bold text-[#9A8B80] uppercase tracking-wider">{shoppingList.filter(i => !i.checked).length} items</span>
                   {shoppingList.some(i => i.checked) && (
                     <button onClick={clearCheckedItems} className="text-xs text-red-500 font-semibold">Clear checked</button>
                   )}
                 </div>
                 <div className="space-y-2">
                   {shoppingList.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <button onClick={() => toggleShoppingItem(item.id)} aria-label={item.checked ? `Uncheck ${item.name}` : `Check ${item.name}`} className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
+                    <div key={item.id} className="flex items-center gap-3 py-2 border-b border-[#F3EAE2] last:border-0">
+                      <button onClick={() => toggleShoppingItem(item.id)} aria-label={item.checked ? `Uncheck ${item.name}` : `Check ${item.name}`} className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${item.checked ? 'bg-[#E07A5F] border-[#E07A5F]' : 'border-[#E8DFD5]'}`}>
                         {item.checked && <Check className="w-3.5 h-3.5 text-white" />}
                       </button>
-                      <span className={`flex-1 text-sm ${item.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>{item.name}</span>
-                      <button onClick={() => removeShoppingItem(item.id)} aria-label={`Remove ${item.name}`} className="p-2 text-gray-300 hover:text-red-400">
+                      <span className={`flex-1 text-sm ${item.checked ? 'line-through text-[#9A8B80]' : 'text-[#6B6257]'}`}>{item.name}</span>
+                      <button onClick={() => removeShoppingItem(item.id)} aria-label={`Remove ${item.name}`} className="p-2 text-[#B4A79C] hover:text-red-400">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -501,83 +531,48 @@ const Recipes: React.FC<RecipesProps> = ({ onLogRecipe, onCoachClick }) => {
           </div>
         )}
       </div>
-      </div>
-
-      {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Recipes help">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ChefHat className="w-5 h-5 text-white" />
-                <h3 className="font-bold text-white">Recipes</h3>
-              </div>
-              <button onClick={() => setShowHelp(false)} aria-label="Close help" className="p-2 hover:bg-white/20 rounded-lg">
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
-            <div className="p-4 space-y-3 text-sm text-gray-600">
-              <div className="flex items-start gap-3">
-                <span className="w-6 h-6 bg-[#E07A5F]/10 rounded-full flex items-center justify-center shrink-0 text-[#E07A5F] font-bold text-xs">1</span>
-                <p><strong>Create recipes</strong> - type what you want and get a full recipe with nutrition info</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="w-6 h-6 bg-[#E07A5F]/10 rounded-full flex items-center justify-center shrink-0 text-[#E07A5F] font-bold text-xs">2</span>
-                <p><strong>Save dishes</strong> - save your favorite recipes to My Dishes</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="w-6 h-6 bg-[#E07A5F]/10 rounded-full flex items-center justify-center shrink-0 text-[#E07A5F] font-bold text-xs">3</span>
-                <p><strong>Log meals</strong> - tap + to instantly log a dish to your food diary</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3 mt-3">
-                <p className="text-xs text-gray-500">💡 Saved dishes can be logged with one tap!</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Meal Type Selection Modal */}
       {mealTypeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setMealTypeModal(null)} role="dialog" aria-modal="true" aria-label="Select meal type">
-          <div className="bg-white w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-100 text-center">
-              <h3 className="font-bold text-gray-900">{tr('addFood')}</h3>
-              <p className="text-xs text-gray-400 mt-1">
+          <div className="bg-white w-full max-w-xs rounded-[24px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[#F3EAE2] text-center">
+              <h3 className="font-display font-bold tracking-tight text-[#2B2523]">{tr('addFood')}</h3>
+              <p className="text-xs text-[#9A8B80] mt-1">
                 {mealTypeModal.recipe?.title || mealTypeModal.quickMeal?.name}
               </p>
             </div>
             {/* Servings selector — a recipe's totals are for the whole dish, so
                 let the user log the fraction/multiple they actually ate. */}
             <div className="px-4 pt-3 pb-1">
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2">
-                <span className="text-xs font-semibold text-gray-500 pl-1">{tr('numberOfServings')}</span>
+              <div className="flex items-center justify-between bg-[#FAF6F1] rounded-[14px] p-2">
+                <span className="text-xs font-semibold text-[#9A8B80] pl-1">{tr('numberOfServings')}</span>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setLogServings(s => Math.max(0.25, Math.round((s - 0.25) * 100) / 100))} aria-label="Fewer servings" className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center"><span className="text-lg font-bold text-gray-500 leading-none">−</span></button>
-                  <span className="font-bold text-sm w-10 text-center tabular-nums">{logServings}</span>
-                  <button onClick={() => setLogServings(s => Math.round((s + 0.25) * 100) / 100)} aria-label="More servings" className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center"><span className="text-lg font-bold text-gray-500 leading-none">+</span></button>
+                  <button onClick={() => setLogServings(s => Math.max(0.25, Math.round((s - 0.25) * 100) / 100))} aria-label="Fewer servings" className="w-7 h-7 rounded-full bg-white card-shadow flex items-center justify-center active:scale-90 transition-smooth"><span className="text-lg font-bold text-[#E07A5F] leading-none">−</span></button>
+                  <span className="font-display font-bold text-sm w-10 text-center tabular-nums text-[#2B2523]">{logServings}</span>
+                  <button onClick={() => setLogServings(s => Math.round((s + 0.25) * 100) / 100)} aria-label="More servings" className="w-7 h-7 rounded-full bg-white card-shadow flex items-center justify-center active:scale-90 transition-smooth"><span className="text-lg font-bold text-[#E07A5F] leading-none">+</span></button>
                 </div>
               </div>
             </div>
             <div className="p-3 space-y-2">
               {[
-                { type: MealType.BREAKFAST, icon: Coffee, label: tr('breakfast'), color: 'text-orange-500' },
-                { type: MealType.LUNCH, icon: Sun, label: tr('lunch'), color: 'text-amber-500' },
-                { type: MealType.DINNER, icon: Moon, label: tr('dinner'), color: 'text-indigo-500' },
-                { type: MealType.SNACK, icon: Cookie, label: tr('snack'), color: 'text-pink-500' },
+                { type: MealType.BREAKFAST, icon: Coffee, label: tr('breakfast'), color: 'text-[#C4763B]' },
+                { type: MealType.LUNCH, icon: Sun, label: tr('lunch'), color: 'text-[#D9964F]' },
+                { type: MealType.DINNER, icon: Moon, label: tr('dinner'), color: 'text-[#3D5A48]' },
+                { type: MealType.SNACK, icon: Cookie, label: tr('snack'), color: 'text-[#E07A5F]' },
               ].map(({ type, icon: Icon, label, color }) => (
                 <button
                   key={type}
                   onClick={() => confirmLogWithMealType(type)}
-                  className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="w-full flex items-center gap-3 p-3 bg-[#FAF6F1] rounded-[14px] hover:bg-[#FBEBE4] transition-colors min-h-[44px]"
                 >
                   <Icon className={`w-5 h-5 ${color}`} />
-                  <span className="font-medium text-gray-800">{label}</span>
+                  <span className="font-semibold text-[#2B2523]">{label}</span>
                 </button>
               ))}
             </div>
             <div className="p-3 pt-0">
-              <button onClick={() => setMealTypeModal(null)} className="w-full py-2 text-gray-400 text-sm font-medium">
+              <button onClick={() => setMealTypeModal(null)} className="w-full py-2 text-[#9A8B80] text-sm font-medium min-h-[44px]">
                 {tr('cancel')}
               </button>
             </div>

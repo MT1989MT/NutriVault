@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Flame, Dumbbell, TrendingDown, TrendingUp, Activity, Scale, Plus, X, Check, Droplets, Target, Utensils, Heart, Trophy, Brain } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Flame, Scale, Plus, X, Check, Droplets, Target, Utensils, Dumbbell } from 'lucide-react';
 import { getLogs, getProfile, saveLogs } from '../services/storage';
 import { t, getCurrentLanguage } from '../utils/i18n';
-import { calculateStreak } from '../utils/calculations';
+import { getMacroTargets, macroGramsFromTargets } from '../utils/calculations';
 import { todayStr, toDateStr, parseDateStr } from '../utils/date';
 import { DayLog, UserProfile } from '../types';
 
@@ -12,7 +12,7 @@ interface HistoryProps {
   onCoachClick?: () => void;
 }
 
-const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile, onCoachClick }) => {
+const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile }) => {
   const [weekOffset, setWeekOffset] = useState(0);
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [weightInput, setWeightInput] = useState('');
@@ -107,7 +107,11 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
     return { totalEaten, totalBurned, avgEaten, avgProtein, avgCarbs, avgFat, proteinPct, carbsPct, fatPct, daysTracked, onTarget, avgWater };
   }, [dailyData, logs, targetCalories]);
 
-  const streak = useMemo(() => calculateStreak(logs), [logs]);
+  // Macro target grams from profile split (null when no profile is set up)
+  const macroTargets = useMemo(
+    () => (profile ? macroGramsFromTargets(targetCalories, getMacroTargets(profile)) : null),
+    [profile, targetCalories]
+  );
 
   const weightData = useMemo(() => {
     const weights: { date: string; weight: number }[] = [];
@@ -210,312 +214,202 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
 
   const maxCal = Math.max(...dailyData.map(d => d.eaten), targetCalories, 1);
 
-  return (
-    <div className="h-full flex flex-col bg-[#FAFAF8]">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100/80 px-4 pb-2" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={onCoachClick} aria-label="AI Coach" className="w-11 h-11 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-xl flex items-center justify-center active:scale-90 transition-smooth shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-            <Brain className="w-[18px] h-[18px] text-white" />
-          </button>
-          <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('overview')}</span>
-          <div className="w-10" />
+  // Labelled 6px progress bar (same pattern as the dashboard hero macros)
+  const MacroBar: React.FC<{ label: string; value: number; target: number | null; fallbackPct: number; fill: string; track: string }> = ({ label, value, target, fallbackPct, fill, track }) => {
+    const pct = target && target > 0 ? Math.min(100, (value / target) * 100) : fallbackPct;
+    const over = !!target && target > 0 && value > target;
+    return (
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-1.5 mb-1.5">
+          <span className="text-[11px] font-semibold text-[#6B6257] truncate">{label}</span>
+          <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${over ? 'text-[#C85A40]' : 'text-[#9A8B80]'}`}>{target && target > 0 ? `${value}/${target}g` : `${value}g`}</span>
         </div>
-        <div className="flex items-center justify-center gap-0">
-          <button onClick={() => setWeekOffset(o => o - 1)} aria-label="Previous week" className="p-2.5 text-gray-300 hover:text-gray-500 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <span className="text-gray-600 font-semibold text-[13px] min-w-[100px] text-center font-display tracking-tight">
-            {getWeekLabel()}
-          </span>
-          <button
-            onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
-            disabled={weekOffset >= 0}
-            aria-label="Next week"
-            className={`p-2.5 active:scale-90 transition-smooth min-w-[44px] min-h-[44px] flex items-center justify-center ${weekOffset >= 0 ? 'text-gray-200' : 'text-gray-300 hover:text-gray-500'}`}
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+        <div className="h-[6px] rounded-full overflow-hidden" style={{ background: track }}>
+          <div className="h-full rounded-full anim-bar" style={{ width: `${pct}%`, background: fill }} />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[#FAF6F1]">
+      {/* Header: transparent, title left, week switcher pill right */}
+      <div className="px-5 pb-3" style={{ paddingTop: 'max(env(safe-area-inset-top, 14px), 14px)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[24px] font-bold text-[#2B2523] font-display tracking-tight">{t('overview')}</h1>
+          <div className="flex items-center bg-white rounded-full card-shadow">
+            <button
+              onClick={() => setWeekOffset(o => o - 1)}
+              aria-label="Previous week"
+              className="w-11 h-11 flex items-center justify-center rounded-full active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]"
+            >
+              <ChevronLeft className="w-[18px] h-[18px] text-[#9A8B80]" />
+            </button>
+            <span className="text-[12px] font-bold text-[#2B2523] font-display tracking-tight min-w-[78px] text-center tabular-nums">
+              {getWeekLabel()}
+            </span>
+            <button
+              onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
+              disabled={weekOffset >= 0}
+              aria-label="Next week"
+              className="w-11 h-11 flex items-center justify-center rounded-full active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]"
+            >
+              <ChevronRight className={`w-[18px] h-[18px] ${weekOffset >= 0 ? 'text-[#E8DFD5]' : 'text-[#9A8B80]'}`} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
-        {/* Weekly Summary */}
-        <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div className="text-center">
-              <div className="w-8 h-8 bg-[#E07A5F]/10 rounded-xl flex items-center justify-center mx-auto mb-1.5">
-                <Utensils className="w-4 h-4 text-[#E07A5F]" />
-              </div>
-              <span className="text-lg font-black text-gray-900 font-display tabular-nums">{weekStats.totalEaten.toLocaleString()}</span>
-              <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider">{t('eaten')}</p>
+      <div className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
+        {/* Stat tiles row */}
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="bg-white rounded-[20px] p-3.5 card-shadow">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Utensils className="w-3.5 h-3.5 text-[#E07A5F]" />
+              <span className="text-[10px] font-semibold text-[#9A8B80] capitalize truncate">{t('eaten')}</span>
             </div>
-            <div className="text-center">
-              <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-1.5">
-                <Flame className="w-4 h-4 text-orange-500" />
-              </div>
-              <span className="text-lg font-black text-gray-900 font-display tabular-nums">{weekStats.totalBurned}</span>
-              <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider">{t('burned')}</p>
+            <span className="text-[20px] font-extrabold text-[#2B2523] font-display tracking-tight tabular-nums">{weekStats.totalEaten.toLocaleString()}</span>
+          </div>
+          <div className="bg-white rounded-[20px] p-3.5 card-shadow">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Flame className="w-3.5 h-3.5 text-[#D9964F]" />
+              <span className="text-[10px] font-semibold text-[#9A8B80] capitalize truncate">{t('burned')}</span>
             </div>
-            <div className="text-center">
-              <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center mx-auto mb-1.5">
-                <Target className="w-4 h-4 text-emerald-500" />
-              </div>
-              <span className="text-lg font-black text-gray-900 font-display tabular-nums">{weekStats.avgEaten}</span>
-              <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider">{t('avgPerDay')}</p>
+            <span className="text-[20px] font-extrabold text-[#2B2523] font-display tracking-tight tabular-nums">{weekStats.totalBurned.toLocaleString()}</span>
+          </div>
+          <div className="bg-white rounded-[20px] p-3.5 card-shadow">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Target className="w-3.5 h-3.5 text-[#3D5A48]" />
+              <span className="text-[10px] font-semibold text-[#9A8B80] truncate">Avg/day</span>
+            </div>
+            <span className="text-[20px] font-extrabold text-[#2B2523] font-display tracking-tight tabular-nums">{weekStats.avgEaten.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* On-target days + water chips */}
+        <div className="flex gap-3 mb-3">
+          <div className="flex-1 flex items-center gap-2 bg-white rounded-[16px] px-3.5 py-2.5 card-shadow">
+            <div className="w-7 h-7 bg-[#EFF2EE] rounded-full flex items-center justify-center shrink-0">
+              <Target className="w-3.5 h-3.5 text-[#3D5A48]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[13px] font-bold text-[#2B2523] font-display tabular-nums">{weekStats.onTarget}/{weekStats.daysTracked}</span>
+              <p className="text-[10px] text-[#9A8B80] font-medium truncate">days on target</p>
             </div>
           </div>
-          <div className="flex gap-2 pt-3 border-t border-gray-50">
-            <div className="flex-1 flex items-center gap-2 bg-emerald-50 px-3 py-2 rounded-xl">
-              <Target className="w-3.5 h-3.5 text-emerald-600" />
-              <div>
-                <span className="text-xs font-bold text-emerald-700 tabular-nums">{weekStats.onTarget}/{weekStats.daysTracked}</span>
-                <span className="text-[9px] text-emerald-600 ml-1">{t('goal')}</span>
-              </div>
+          <div className="flex-1 flex items-center gap-2 bg-white rounded-[16px] px-3.5 py-2.5 card-shadow">
+            <div className="w-7 h-7 bg-[#EFF2EE] rounded-full flex items-center justify-center shrink-0">
+              <Droplets className="w-3.5 h-3.5 text-[#3D5A48]" />
             </div>
-            <div className="flex-1 flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-xl">
-              <Droplets className="w-3.5 h-3.5 text-blue-500" />
-              <div>
-                <span className="text-xs font-bold text-blue-700 tabular-nums">{(weekStats.avgWater / 1000).toFixed(1)}L</span>
-                <span className="text-[9px] text-blue-600 ml-1">{t('avgPerDay')}</span>
-              </div>
+            <div className="min-w-0">
+              <span className="text-[13px] font-bold text-[#2B2523] font-display tabular-nums">{(weekStats.avgWater / 1000).toFixed(1)}L</span>
+              <p className="text-[10px] text-[#9A8B80] font-medium truncate">water / day</p>
             </div>
           </div>
         </div>
 
-        {/* WEEKLY KCAL OVERVIEW - Enhanced bar chart */}
-        <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">WEEKLY KCAL OVERVIEW</span>
-          <div className="mt-3">
-            <div className="flex gap-2">
-              {dailyData.map((d, i) => {
-                const barHeight = maxCal > 0 ? Math.max(6, (d.eaten / maxCal) * 100) : 6;
-                const targetLine = maxCal > 0 ? (targetCalories / maxCal) * 100 : 50;
-                const isOnTarget = d.eaten > 0 && Math.abs(d.eaten - targetCalories) <= 200;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center">
-                    <span className={`text-[8px] font-bold mb-1.5 tabular-nums ${d.isToday ? 'text-[#E07A5F]' : d.eaten > 0 ? 'text-gray-600' : 'text-gray-300'}`}>
-                      {d.eaten > 0 ? d.eaten : '-'}
-                    </span>
-                    <div className="w-full h-[72px] bg-gray-50 rounded-lg relative overflow-hidden">
-                      {/* Target line */}
-                      <div className="absolute left-0 right-0 border-t border-dashed border-gray-200" style={{ bottom: `${targetLine}%` }} />
-                      {/* Bar */}
-                      <div
-                        className={`absolute bottom-0 left-0.5 right-0.5 rounded-md transition-all duration-500 ${
-                          d.isToday ? 'bg-gradient-to-t from-[#E07A5F] to-[#E07A5F]/70' :
-                          isOnTarget ? 'bg-gradient-to-t from-emerald-400 to-emerald-300' :
-                          d.eaten > 0 ? 'bg-gradient-to-t from-gray-300 to-gray-200' : 'bg-gray-100'
-                        }`}
-                        style={{ height: `${barHeight}%` }}
-                      />
-                    </div>
-                    <span className={`text-[9px] mt-1.5 font-medium ${d.isToday ? 'font-bold text-[#E07A5F]' : 'text-gray-400'}`}>
-                      {d.dayName}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-0.5 bg-[#E07A5F] rounded-full" />
-                <span className="text-[9px] text-gray-400">{t('today')}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-0.5 bg-emerald-400 rounded-full" />
-                <span className="text-[9px] text-gray-400">{t('goal')}</span>
-              </div>
-              <span className="text-[9px] text-gray-300 ml-auto tabular-nums">{targetCalories} kcal/day</span>
-            </div>
+        {/* Calories per day */}
+        <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
+          <div className="flex items-baseline justify-between mb-3">
+            <span className="text-[13px] font-bold text-[#2B2523] font-display">{t('caloriesPerDay')}</span>
+            <span className="text-[11px] font-medium text-[#B4A79C] tabular-nums">goal {targetCalories.toLocaleString()}</span>
           </div>
-        </div>
-
-        {/* Macros */}
-        <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('macros')} ({t('avgPerDay')})</span>
-          {(weekStats.proteinPct + weekStats.carbsPct + weekStats.fatPct) > 0 && (
-            <div className="flex h-1.5 rounded-full overflow-hidden mt-3 mb-3 gap-0.5">
-              <div className="bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${weekStats.proteinPct}%` }} />
-              <div className="bg-cyan-500 rounded-full transition-all duration-500" style={{ width: `${weekStats.carbsPct}%` }} />
-              <div className="bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${weekStats.fatPct}%` }} />
-            </div>
-          )}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2.5 bg-violet-50/80 rounded-xl">
-              <span className="text-base font-black text-gray-900 font-display tabular-nums">{weekStats.avgProtein}g</span>
-              <div className="flex items-center justify-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-                <span className="text-[9px] text-gray-500">{t('protein')} {weekStats.proteinPct}%</span>
-              </div>
-            </div>
-            <div className="text-center p-2.5 bg-cyan-50/80 rounded-xl">
-              <span className="text-base font-black text-gray-900 font-display tabular-nums">{weekStats.avgCarbs}g</span>
-              <div className="flex items-center justify-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-                <span className="text-[9px] text-gray-500">{t('carbs')} {weekStats.carbsPct}%</span>
-              </div>
-            </div>
-            <div className="text-center p-2.5 bg-amber-50/80 rounded-xl">
-              <span className="text-base font-black text-gray-900 font-display tabular-nums">{weekStats.avgFat}g</span>
-              <div className="flex items-center justify-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-[9px] text-gray-500">{t('fat')} {weekStats.fatPct}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Streak - Mini ring indicators per day */}
-        <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-1.5">
-              <Heart className="w-3.5 h-3.5 text-[#E07A5F]" />
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">STREAK</span>
-            </div>
-            {streak > 0 && (
-              <div className="flex items-center gap-1 bg-[#E07A5F]/10 px-2.5 py-1 rounded-full">
-                <Flame className="w-3 h-3 text-[#E07A5F]" />
-                <span className="text-[10px] font-bold text-[#E07A5F]">{streak} days</span>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-between">
-            {dailyData.map((d, i) => {
-              const progress = d.eaten > 0 ? Math.min(1, d.eaten / targetCalories) : 0;
-              const r = 14;
-              const circ = 2 * Math.PI * r;
+          <div className="flex items-end gap-1.5 h-[110px]">
+            {dailyData.map((d) => {
+              const barHeight = d.hasData ? Math.max(8, (d.eaten / maxCal) * 100) : 5;
+              const barColor = d.isToday ? '#E07A5F' : !d.hasData ? '#F3EAE2' : d.eaten <= targetCalories ? '#3D5A48' : '#E8DFD5';
               return (
-                <div key={i} className="flex flex-col items-center gap-1.5">
-                  <div className="relative w-9 h-9">
-                    <svg width={36} height={36} className="transform -rotate-90">
-                      <circle cx={18} cy={18} r={r} fill="none" stroke={d.hasData ? '#E07A5F15' : '#F3F4F6'} strokeWidth={3} />
-                      {d.hasData && (
-                        <circle cx={18} cy={18} r={r} fill="none"
-                          stroke={d.isToday ? '#E07A5F' : '#10B981'}
-                          strokeWidth={3}
-                          strokeDasharray={circ}
-                          strokeDashoffset={circ * (1 - progress)}
-                          strokeLinecap="round"
-                          className="transition-all duration-500"
-                        />
-                      )}
-                    </svg>
-                    {d.hasData && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Check className={`w-3 h-3 ${d.isToday ? 'text-[#E07A5F]' : 'text-emerald-500'}`} strokeWidth={3} />
-                      </div>
-                    )}
-                  </div>
-                  <span className={`text-[9px] font-medium ${d.isToday ? 'font-bold text-[#E07A5F]' : 'text-gray-400'}`}>{d.dayName}</span>
-                </div>
+                <div
+                  key={d.date}
+                  className="flex-1 rounded-[8px] transition-all duration-500"
+                  style={{ height: `${barHeight}%`, background: barColor }}
+                />
               );
             })}
           </div>
+          <div className="flex gap-1.5 mt-1.5">
+            {dailyData.map((d) => (
+              <span key={d.date} className={`flex-1 text-center text-[10px] ${d.isToday ? 'font-bold text-[#E07A5F]' : 'font-medium text-[#9A8B80]'}`}>
+                {d.dayName}
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#F3EAE2]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-[3px] bg-[#3D5A48]" />
+              <span className="text-[10px] text-[#9A8B80] font-medium">On target</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-[3px] bg-[#E07A5F]" />
+              <span className="text-[10px] text-[#9A8B80] font-medium">Today</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-[3px] bg-[#E8DFD5]" />
+              <span className="text-[10px] text-[#9A8B80] font-medium">Off target</span>
+            </div>
+          </div>
         </div>
 
-        {/* Weight Timeline */}
-        <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
+        {/* Macros - daily average */}
+        <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
+          <span className="text-[13px] font-bold text-[#2B2523] font-display">{t('macros')} — daily average</span>
+          <div className="flex gap-3 mt-3">
+            <MacroBar label={t('protein')} value={weekStats.avgProtein} target={macroTargets?.protein ?? null} fallbackPct={weekStats.proteinPct} fill="#3D5A48" track="#EDF0EC" />
+            <MacroBar label={t('carbs')} value={weekStats.avgCarbs} target={macroTargets?.carbs ?? null} fallbackPct={weekStats.carbsPct} fill="#D9964F" track="#F6ECE2" />
+            <MacroBar label={t('fat')} value={weekStats.avgFat} target={macroTargets?.fat ?? null} fallbackPct={weekStats.fatPct} fill="#E07A5F" track="#F6E4DB" />
+          </div>
+        </div>
+
+        {/* Weight */}
+        <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-1.5">
-              <Scale className="w-3.5 h-3.5 text-blue-500" />
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">WEIGHT TIMELINE</span>
-            </div>
-            <button onClick={() => setShowWeightInput(true)} aria-label="Log weight" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth">
-              <Plus className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-
-          {/* Stats row */}
-          <div className="flex gap-2 mb-3">
-            <div className="flex items-center gap-2 flex-1 bg-blue-50 px-3 py-2.5 rounded-xl">
-              <Scale className="w-4 h-4 text-blue-500" />
-              <div>
-                <span className="text-sm font-black text-gray-900 font-display tabular-nums">{weightData.current || '—'} kg</span>
-                <p className="text-[9px] text-gray-400">current</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-1 bg-gray-50 px-3 py-2.5 rounded-xl">
-              {weightData.change <= 0 ? <TrendingDown className="w-4 h-4 text-emerald-500" /> : <TrendingUp className="w-4 h-4 text-red-500" />}
-              <div>
-                <span className={`text-sm font-black font-display tabular-nums ${weightData.change <= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{weightData.change > 0 ? '+' : ''}{weightData.change} kg</span>
-                <p className="text-[9px] text-gray-400">change</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-1 bg-gray-50 px-3 py-2.5 rounded-xl">
-              <Activity className="w-4 h-4 text-blue-500" />
-              <div>
-                <span className="text-sm font-black text-gray-900 font-display tabular-nums">{weightData.avg10} kg</span>
-                <p className="text-[9px] text-gray-400">10d avg</p>
-              </div>
-            </div>
-          </div>
-
-          {/* BMI + Goal row */}
-          <div className="flex gap-2 mb-4">
-            {weightData.bmi > 0 && (
-              <div className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl ${
-                weightData.bmiCategory === 'Normal' ? 'bg-emerald-50' :
-                weightData.bmiCategory === 'Underweight' ? 'bg-amber-50' : 'bg-orange-50'
-              }`}>
-                <Target className={`w-4 h-4 ${
-                  weightData.bmiCategory === 'Normal' ? 'text-emerald-500' :
-                  weightData.bmiCategory === 'Underweight' ? 'text-amber-500' : 'text-orange-500'
-                }`} />
-                <div>
-                  <span className="text-sm font-black text-gray-900 font-display tabular-nums">{weightData.bmi}</span>
-                  <p className="text-[9px] text-gray-400">BMI · {weightData.bmiCategory}</p>
-                </div>
-              </div>
-            )}
-            {weightData.targetWeight > 0 && (
-              <div className="flex items-center gap-2 flex-1 bg-purple-50 px-3 py-2.5 rounded-xl">
-                <Trophy className="w-4 h-4 text-purple-500" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-black text-gray-900 font-display tabular-nums">{weightData.targetWeight} kg</span>
-                    <span className="text-[9px] font-bold text-purple-600">{weightData.goalProgress}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-purple-100 rounded-full mt-1 overflow-hidden">
-                    <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${weightData.goalProgress}%` }} />
-                  </div>
-                </div>
+            <span className="text-[13px] font-bold text-[#2B2523] font-display">{t('weight')}</span>
+            {weightData.entries.length > 0 && (
+              <div className="flex items-center gap-1 bg-[#EFF2EE] px-2.5 py-1 rounded-full">
+                {weightData.change <= 0 ? <TrendingDown className="w-3 h-3 text-[#3D5A48]" /> : <TrendingUp className="w-3 h-3 text-[#3D5A48]" />}
+                <span className="text-[10px] font-bold text-[#3D5A48] tabular-nums">{weightData.change > 0 ? '+' : ''}{weightData.change} kg</span>
               </div>
             )}
           </div>
 
-          {/* Weekly rate + ETA */}
-          {weightData.targetWeight > 0 && weightData.weeklyRate !== 0 && (
-            <div className="flex gap-2 mb-4">
-              <div className="flex-1 bg-gray-50 px-3 py-2 rounded-xl text-center">
-                <span className={`text-xs font-black font-display tabular-nums ${weightData.weeklyRate > 0 ? 'text-emerald-600' : 'text-blue-600'}`}>
-                  {weightData.weeklyRate > 0 ? '-' : '+'}{Math.abs(weightData.weeklyRate)} kg/wk
-                </span>
-                <p className="text-[9px] text-gray-400">rate</p>
+          <div className="flex items-baseline gap-1.5 mb-3">
+            <span className="text-[28px] font-extrabold text-[#2B2523] font-display tracking-tight tabular-nums leading-none">{weightData.current || '—'}</span>
+            <span className="text-[13px] text-[#9A8B80] font-medium">
+              kg{weightData.targetWeight > 0 ? ` · target ${weightData.targetWeight.toFixed(1)}` : ''}
+            </span>
+          </div>
+
+          {/* BMI / 10d avg / rate mini stats */}
+          {weightData.entries.length > 0 && (
+            <div className="flex gap-2 mb-3">
+              {weightData.bmi > 0 && (
+                <div className="flex-1 bg-[#FAF6F1] rounded-[14px] px-3 py-2">
+                  <span className="text-[13px] font-bold text-[#2B2523] font-display tabular-nums">{weightData.bmi}</span>
+                  <p className="text-[10px] text-[#9A8B80] font-medium truncate">BMI · {weightData.bmiCategory}</p>
+                </div>
+              )}
+              <div className="flex-1 bg-[#FAF6F1] rounded-[14px] px-3 py-2">
+                <span className="text-[13px] font-bold text-[#2B2523] font-display tabular-nums">{weightData.avg10} kg</span>
+                <p className="text-[10px] text-[#9A8B80] font-medium truncate">10-day avg</p>
               </div>
-              {weightData.weeksToGoal > 0 && (
-                <div className="flex-1 bg-gray-50 px-3 py-2 rounded-xl text-center">
-                  <span className="text-xs font-black text-gray-900 font-display tabular-nums">
-                    ~{weightData.weeksToGoal} {weightData.weeksToGoal === 1 ? 'week' : 'weeks'}
+              {weightData.weeklyRate !== 0 && (
+                <div className="flex-1 bg-[#FAF6F1] rounded-[14px] px-3 py-2">
+                  <span className="text-[13px] font-bold text-[#2B2523] font-display tabular-nums">
+                    {weightData.weeklyRate > 0 ? '-' : '+'}{Math.abs(weightData.weeklyRate)} kg
                   </span>
-                  <p className="text-[9px] text-gray-400">to goal</p>
+                  <p className="text-[10px] text-[#9A8B80] font-medium truncate">per week</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Visual timeline chart */}
+          {/* Sparkline */}
           {weightData.entries.length >= 2 ? (
             <div>
-              <div className="relative h-[120px] mt-2">
+              <div className="relative h-[120px]">
                 <svg width="100%" height="120" viewBox="0 0 300 120" preserveAspectRatio="none" className="overflow-visible">
-                  {/* Grid lines */}
-                  {[0, 1, 2, 3].map(i => (
-                    <line key={i} x1="0" y1={i * 40} x2="300" y2={i * 40} stroke="#F3F4F6" strokeWidth="1" />
-                  ))}
-                  {/* Weight line */}
-                  {weightData.entries.length >= 2 && (() => {
+                  {(() => {
                     const entries = weightData.entries;
                     const minW = weightData.minWeight - 0.5;
                     const maxW = weightData.maxWeight + 0.5;
@@ -523,23 +417,14 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
                     const points = entries.map((e, i) => {
                       const x = entries.length === 1 ? 150 : (i / (entries.length - 1)) * 280 + 10;
                       const y = 110 - ((e.weight - minW) / range) * 100;
-                      return { x, y, weight: e.weight, date: e.date };
+                      return { x, y };
                     });
                     const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                    const areaPath = linePath + ` L ${points[points.length - 1].x} 120 L ${points[0].x} 120 Z`;
+                    const last = points[points.length - 1];
                     return (
                       <>
-                        <defs>
-                          <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
-                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <path d={areaPath} fill="url(#weightGrad)" />
-                        <path d={linePath} fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        {points.map((p, i) => (
-                          <circle key={i} cx={p.x} cy={p.y} r={i === points.length - 1 ? 5 : 3} fill={i === points.length - 1 ? '#3B82F6' : 'white'} stroke="#3B82F6" strokeWidth="2" />
-                        ))}
+                        <path d={linePath} fill="none" stroke="#E07A5F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx={last.x} cy={last.y} r={4.5} fill="#E07A5F" stroke="white" strokeWidth="2" />
                       </>
                     );
                   })()}
@@ -547,72 +432,93 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
               </div>
               {/* Date labels */}
               <div className="flex justify-between mt-1 px-1">
-                <span className="text-[9px] text-gray-400">{parseDateStr(weightData.entries[0].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
-                <span className="text-[9px] text-gray-400">{parseDateStr(weightData.entries[weightData.entries.length - 1].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
+                <span className="text-[10px] text-[#B4A79C] font-medium">{parseDateStr(weightData.entries[0].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
+                <span className="text-[10px] text-[#B4A79C] font-medium">{parseDateStr(weightData.entries[weightData.entries.length - 1].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
               </div>
               {/* Weight range */}
               <div className="flex justify-between mt-0.5 px-1">
-                <span className="text-[9px] text-blue-400 font-bold">{weightData.minWeight} kg</span>
-                <span className="text-[9px] text-blue-400 font-bold">{weightData.maxWeight} kg</span>
+                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.minWeight} kg</span>
+                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.maxWeight} kg</span>
               </div>
             </div>
           ) : (
-            <div className="text-center py-6 text-gray-300">
-              <Scale className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-xs text-gray-400">Log your weight to see your progress over time</p>
+            <div className="text-center py-6">
+              <Scale className="w-8 h-8 mx-auto mb-2 text-[#B4A79C] opacity-60" />
+              <p className="text-xs text-[#9A8B80]">Log your weight to see your progress over time</p>
             </div>
           )}
+
+          {/* Goal progress */}
+          {weightData.targetWeight > 0 && weightData.entries.length > 0 && (
+            <div className="mt-3">
+              <div className="h-[6px] rounded-full overflow-hidden bg-[#F6E4DB]">
+                <div className="h-full rounded-full anim-bar bg-[#E07A5F]" style={{ width: `${weightData.goalProgress}%` }} />
+              </div>
+              <div className="flex justify-between mt-1.5">
+                <span className="text-[10px] text-[#B4A79C] font-medium tabular-nums">{weightData.goalProgress}% to goal</span>
+                {weightData.weeksToGoal > 0 && (
+                  <span className="text-[10px] text-[#B4A79C] font-medium tabular-nums">~{weightData.weeksToGoal} {weightData.weeksToGoal === 1 ? 'week' : 'weeks'} to go</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowWeightInput(true)}
+            aria-label="Log weight"
+            className="w-full mt-3 bg-[#FBEBE4] text-[#C85A40] font-bold text-[13px] py-3 rounded-full flex items-center justify-center gap-1.5 active:scale-95 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]"
+          >
+            <Plus className="w-4 h-4" />
+            {t('logWeight')}
+          </button>
         </div>
 
-        {/* Week Workouts Overview */}
+        {/* Workouts this week */}
         {weekWorkouts.workouts.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 card-shadow mb-3">
+          <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <Dumbbell className="w-3.5 h-3.5 text-purple-500" />
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">WEEK WORKOUTS</span>
-              </div>
-              <span className="text-xs font-bold text-gray-600">{weekWorkouts.total} min</span>
+              <span className="text-[13px] font-bold text-[#2B2523] font-display">Workouts</span>
+              <span className="text-[11px] font-semibold text-[#9A8B80] tabular-nums">{weekWorkouts.total} min</span>
             </div>
             {/* Category breakdown */}
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 flex-wrap">
               {weekWorkouts.totalCardio > 0 && (
-                <div className="flex items-center gap-1.5 bg-blue-50 px-2.5 py-1.5 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-[10px] font-bold text-blue-700">Cardio {weekWorkouts.totalCardio}m</span>
+                <div className="flex items-center gap-1.5 bg-[#EFF2EE] px-2.5 py-1.5 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-[#3D5A48]" />
+                  <span className="text-[10px] font-bold text-[#3D5A48] tabular-nums">Cardio {weekWorkouts.totalCardio}m</span>
                 </div>
               )}
               {weekWorkouts.totalStrength > 0 && (
-                <div className="flex items-center gap-1.5 bg-purple-50 px-2.5 py-1.5 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-purple-500" />
-                  <span className="text-[10px] font-bold text-purple-700">Strength {weekWorkouts.totalStrength}m</span>
+                <div className="flex items-center gap-1.5 bg-[#F6ECE2] px-2.5 py-1.5 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-[#D9964F]" />
+                  <span className="text-[10px] font-bold text-[#C4763B] tabular-nums">Strength {weekWorkouts.totalStrength}m</span>
                 </div>
               )}
               {weekWorkouts.totalOther > 0 && (
-                <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1.5 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-gray-400" />
-                  <span className="text-[10px] font-bold text-gray-600">Other {weekWorkouts.totalOther}m</span>
+                <div className="flex items-center gap-1.5 bg-[#F3EAE2] px-2.5 py-1.5 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-[#B4A79C]" />
+                  <span className="text-[10px] font-bold text-[#6B6257] tabular-nums">Other {weekWorkouts.totalOther}m</span>
                 </div>
               )}
             </div>
             {/* Workout list */}
             <div className="space-y-1.5">
               {weekWorkouts.workouts.map((w, i) => (
-                <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl">
+                <div key={i} className="flex items-center justify-between p-2.5 bg-[#FAF6F1] rounded-[14px]">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      w.category === 'cardio' ? 'bg-blue-100' : w.category === 'strength' ? 'bg-purple-100' : 'bg-gray-200'
+                    <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${
+                      w.category === 'cardio' ? 'bg-[#EFF2EE]' : w.category === 'strength' ? 'bg-[#F6ECE2]' : 'bg-[#F3EAE2]'
                     }`}>
                       <Dumbbell className={`w-4 h-4 ${
-                        w.category === 'cardio' ? 'text-blue-500' : w.category === 'strength' ? 'text-purple-500' : 'text-gray-500'
+                        w.category === 'cardio' ? 'text-[#3D5A48]' : w.category === 'strength' ? 'text-[#C4763B]' : 'text-[#9A8B80]'
                       }`} />
                     </div>
                     <div>
-                      <div className="font-semibold text-xs">{w.type}</div>
-                      <div className="text-[10px] text-gray-400">{w.dayName}</div>
+                      <div className="font-semibold text-xs text-[#2B2523]">{w.type}</div>
+                      <div className="text-[10px] text-[#9A8B80]">{w.dayName}</div>
                     </div>
                   </div>
-                  <span className="font-bold text-xs text-gray-600">{w.duration}m</span>
+                  <span className="font-bold text-xs text-[#6B6257] tabular-nums">{w.duration}m</span>
                 </div>
               ))}
             </div>
@@ -622,14 +528,14 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
         {/* Weight Input Modal */}
         {showWeightInput && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Log weight">
-            <div className="bg-white w-full max-w-xs rounded-2xl p-5">
+            <div className="bg-white w-full max-w-xs rounded-[24px] p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Scale className="w-5 h-5 text-[#E07A5F]" />
-                  <h3 className="font-bold">Log Weight</h3>
+                  <h3 className="font-bold font-display text-[15px] text-[#2B2523]">{t('logWeight')}</h3>
                 </div>
-                <button onClick={() => setShowWeightInput(false)} aria-label="Close" className="p-2 -mr-1">
-                  <X className="w-5 h-5 text-gray-400" />
+                <button onClick={() => setShowWeightInput(false)} aria-label="Close" className="p-2 -mr-1 active:scale-90 transition-smooth">
+                  <X className="w-5 h-5 text-[#9A8B80]" />
                 </button>
               </div>
               <div className="relative mb-4">
@@ -641,18 +547,18 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile,
                   value={weightInput}
                   onChange={(e) => setWeightInput(e.target.value)}
                   aria-label="Weight in kg"
-                  className="w-full bg-gray-50 px-4 py-3 pr-12 rounded-xl outline-none text-lg font-bold text-center focus:ring-2 focus:ring-[#E07A5F]/30"
+                  className="w-full bg-[#FAF6F1] px-4 py-3 pr-12 rounded-[14px] outline-none text-lg font-bold font-display text-center text-[#2B2523] placeholder:text-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30"
                   autoFocus
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">kg</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9A8B80] font-medium">kg</span>
               </div>
               <button
                 onClick={handleLogWeight}
                 disabled={!weightInput || parseFloat(weightInput) <= 0}
-                className="w-full bg-[#E07A5F] text-white py-3 rounded-xl font-bold disabled:opacity-40 flex items-center justify-center gap-2"
+                className="w-full bg-[#E07A5F] terra-shadow text-white py-3.5 rounded-full font-bold disabled:opacity-40 flex items-center justify-center gap-2 active:scale-95 transition-smooth"
               >
                 <Check className="w-4 h-4" />
-                Save Weight
+                {t('saveWeight')}
               </button>
             </div>
           </div>

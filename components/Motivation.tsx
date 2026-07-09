@@ -6,7 +6,7 @@ import { getProfile, saveMood, getMoods, saveProfile, clearMoods } from '../serv
 import { generateId } from '../utils/calculations';
 import { todayStr, toDateStr } from '../utils/date';
 import { CoachPersonality, UserProfile, DayLog } from '../types';
-import { t as tr } from '../utils/i18n';
+import { t as tr, getCurrentLanguage } from '../utils/i18n';
 
 interface ChatMessage { id: string; text: string; sender: 'USER' | 'AI'; timestamp: number; }
 
@@ -155,7 +155,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     if (loadedMessages.length === 0) {
       const name = profile?.name || '';
       const hour = new Date().getHours();
-      const lang = (navigator.language || 'en').split('-')[0];
+      const lang = getCurrentLanguage();
       const isNL = lang === 'nl';
       let greeting: string;
 
@@ -216,7 +216,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     'FRIENDLY': 'bg-[#E07A5F] text-white',
     'STOIC': 'bg-gray-600 text-white',
     'TOUGH_LOVE': 'bg-yellow-500 text-white',
-    'SCIENTIFIC': 'bg-blue-500 text-white',
+    'SCIENTIFIC': 'bg-[#EFF2EE]0 text-white',
     'HUMOROUS': 'bg-purple-500 text-white'
   };
 
@@ -254,7 +254,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
   const clearChat = () => {
     clearMoods();
-    const lang = (navigator.language || 'en').split('-')[0];
+    const lang = getCurrentLanguage();
     const isNL = lang === 'nl';
     const name = profile?.name ? ' ' + profile.name : '';
     setMessages([{
@@ -271,7 +271,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
   const suggestedPrompts = useMemo(() => {
     const prompts: string[] = [];
     const hour = new Date().getHours();
-    const lang = (navigator.language || 'en').split('-')[0];
+    const lang = getCurrentLanguage();
     const isNL = lang === 'nl';
 
     // Time-based suggestions
@@ -316,56 +316,53 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
   }, [userStats]);
 
   return (
-    <div className="h-full flex flex-col bg-[#FAFAF8]">
+    <div className="h-full flex flex-col bg-[#FAF6F1]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
+      <div className="px-5 pb-3" style={{paddingTop: 'max(env(safe-area-inset-top, 14px), 14px)'}}>
         <div className="flex items-center justify-between">
-          {onBack ? (
-            <button onClick={onBack} aria-label="Go back" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-              <ArrowLeft className="w-[18px] h-[18px] text-gray-400" />
-            </button>
-          ) : (
-            <div className="w-10" />
-          )}
-          <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-[#E07A5F]" />
-            <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{tr('coach')}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            {onBack && (
+              <button onClick={onBack} aria-label="Go back" className="w-[42px] h-[42px] bg-white rounded-full card-shadow flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 shrink-0">
+                <ArrowLeft className="w-[18px] h-[18px] text-[#9A8B80]" strokeWidth={1.8} />
+              </button>
+            )}
+            <span className="text-[24px] font-bold text-[#2B2523] font-display tracking-tight ml-1">{tr('coach')}</span>
           </div>
-          <div className="flex gap-1.5">
-            <button onClick={clearChat} aria-label="Clear chat" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-              <Trash2 className="w-[18px] h-[18px] text-gray-400" />
+          <div className="flex gap-2 shrink-0">
+            <button onClick={clearChat} aria-label="Clear chat" className="w-[42px] h-[42px] bg-white rounded-full card-shadow flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
+              <Trash2 className="w-[18px] h-[18px] text-[#9A8B80]" strokeWidth={1.8} />
             </button>
-            <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-              <HelpCircle className="w-[18px] h-[18px] text-gray-400" />
+            <button onClick={() => setShowHelp(true)} aria-label="Help" className="w-[42px] h-[42px] bg-white rounded-full card-shadow flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
+              <HelpCircle className="w-[18px] h-[18px] text-[#9A8B80]" strokeWidth={1.8} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Sub-header with stats */}
-      <div className="px-4 py-3 bg-[#FAFAF8]">
+      <div className="px-4 py-3 bg-[#FAF6F1]">
 
         {/* Quick Stats Bar */}
         <div className="flex gap-2 mb-3">
           <div className="flex-1 bg-white rounded-xl p-2.5 shadow-sm flex items-center gap-2">
             <Utensils className="w-4 h-4 text-[#E07A5F]" />
             <div>
-              <span className="text-sm font-bold text-gray-900">{userStats.todayCalories}</span>
-              <span className="text-[10px] text-gray-400 ml-1">kcal</span>
+              <span className="text-sm font-bold text-[#2B2523]">{userStats.todayCalories}</span>
+              <span className="text-[10px] text-[#9A8B80] ml-1">kcal</span>
             </div>
           </div>
           <div className="flex-1 bg-white rounded-xl p-2.5 shadow-sm flex items-center gap-2">
-            <Dumbbell className="w-4 h-4 text-blue-500" />
+            <Dumbbell className="w-4 h-4 text-[#3D5A48]" />
             <div>
-              <span className="text-sm font-bold text-gray-900">{userStats.todayWorkoutMins}</span>
-              <span className="text-[10px] text-gray-400 ml-1">min</span>
+              <span className="text-sm font-bold text-[#2B2523]">{userStats.todayWorkoutMins}</span>
+              <span className="text-[10px] text-[#9A8B80] ml-1">min</span>
             </div>
           </div>
           <div className="flex-1 bg-white rounded-xl p-2.5 shadow-sm flex items-center gap-2">
-            <Flame className="w-4 h-4 text-orange-500" />
+            <Flame className="w-4 h-4 text-[#C4763B]" />
             <div>
-              <span className="text-sm font-bold text-gray-900">{userStats.daysTracked}</span>
-              <span className="text-[10px] text-gray-400 ml-1">/7 days</span>
+              <span className="text-sm font-bold text-[#2B2523]">{userStats.daysTracked}</span>
+              <span className="text-[10px] text-[#9A8B80] ml-1">/7 days</span>
             </div>
           </div>
         </div>
@@ -383,14 +380,14 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
       <div className="flex-1 overflow-y-auto px-4 space-y-3 mb-3">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${msg.sender === 'USER' ? 'bg-[#E07A5F] text-white rounded-br-md' : 'bg-white text-gray-800 shadow-sm border border-gray-50 rounded-bl-md'}`}>
+            <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${msg.sender === 'USER' ? 'bg-[#E07A5F] text-white rounded-br-md' : 'bg-white text-[#2B2523] shadow-sm border border-[#F3EAE2] rounded-bl-md'}`}>
               {msg.text}
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white shadow-sm border border-gray-50 px-4 py-3 rounded-2xl rounded-bl-md flex gap-1.5">
+            <div className="bg-white shadow-sm border border-[#F3EAE2] px-4 py-3 rounded-2xl rounded-bl-md flex gap-1.5">
               <span className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce"></span>
               <span className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
               <span className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
@@ -408,7 +405,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
               <button
                 key={idx}
                 onClick={() => handleSend(prompt)}
-                className="px-4 py-3 bg-white hover:bg-[#E07A5F]/10 text-gray-600 text-sm rounded-xl transition-colors shadow-sm border border-gray-100 active:scale-95 min-h-[44px]"
+                className="px-4 py-3 bg-white hover:bg-[#E07A5F]/10 text-[#6B6257] text-sm rounded-xl transition-colors shadow-sm border border-[#F3EAE2] active:scale-95 min-h-[44px]"
               >
                 {prompt}
               </button>
@@ -419,11 +416,11 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
       {/* Input */}
       <div className="px-4 pb-4" style={{paddingBottom: 'max(env(safe-area-inset-bottom), 16px)'}}>
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center p-2 gap-2">
+        <div className="bg-white rounded-2xl shadow-lg border border-[#F3EAE2] flex items-center p-2 gap-2">
           <input
             type="text"
             placeholder={tr('askAnything') + "..."}
-            className="flex-1 bg-transparent px-3 py-3 outline-none text-gray-800 text-base focus:ring-2 focus:ring-[#E07A5F]/30 rounded-lg"
+            className="flex-1 bg-transparent px-3 py-3 outline-none text-[#2B2523] text-base focus:ring-2 focus:ring-[#E07A5F]/30 rounded-lg"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -444,7 +441,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
       {showHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="AI Coach help">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-4 flex items-center justify-between">
+            <div className="bg-[#E07A5F] p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain className="w-5 h-5 text-white" />
                 <h3 className="font-bold text-white">AI Personal Trainer</h3>
@@ -453,14 +450,14 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
-            <div className="p-4 space-y-4 text-sm text-gray-600 max-h-80 overflow-y-auto">
+            <div className="p-4 space-y-4 text-sm text-[#6B6257] max-h-80 overflow-y-auto">
               <div className="bg-[#E07A5F]/10 rounded-xl p-3">
-                <p className="font-bold text-gray-900 mb-1">🧠 I know your data!</p>
+                <p className="font-bold text-[#2B2523] mb-1">🧠 I know your data!</p>
                 <p className="text-xs">I can see your food logs, workouts, weight, and progress. Ask me personalized questions!</p>
               </div>
 
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Try asking:</p>
+                <p className="text-xs font-bold text-[#9A8B80] uppercase mb-2">Try asking:</p>
                 <ul className="space-y-1.5 text-xs">
                   <li>• "How am I doing this week?"</li>
                   <li>• "Am I eating enough protein?"</li>
@@ -470,13 +467,13 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
                 </ul>
               </div>
 
-              <div className="bg-white rounded-xl p-3 border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Coach Styles</p>
+              <div className="bg-white rounded-xl p-3 border border-[#F3EAE2]">
+                <p className="text-xs font-bold text-[#9A8B80] uppercase mb-2">Coach Styles</p>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2"><Smile className="w-4 h-4 text-[#E07A5F]" /><span className="text-xs"><strong>Friendly</strong> - encouraging & supportive</span></div>
-                  <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-gray-600" /><span className="text-xs"><strong>Stoic</strong> - calm & disciplined</span></div>
+                  <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-[#6B6257]" /><span className="text-xs"><strong>Stoic</strong> - calm & disciplined</span></div>
                   <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-500" /><span className="text-xs"><strong>Tough</strong> - direct & challenging</span></div>
-                  <div className="flex items-center gap-2"><Glasses className="w-4 h-4 text-blue-500" /><span className="text-xs"><strong>Science</strong> - data-driven advice</span></div>
+                  <div className="flex items-center gap-2"><Glasses className="w-4 h-4 text-[#3D5A48]" /><span className="text-xs"><strong>Science</strong> - data-driven advice</span></div>
                   <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-purple-500" /><span className="text-xs"><strong>Funny</strong> - witty & playful</span></div>
                 </div>
               </div>

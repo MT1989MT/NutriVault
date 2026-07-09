@@ -344,7 +344,7 @@ const PersonalSetup: React.FC<PersonalSetupProps> = ({ existingProfile, onComple
 
   return (
     <div
-      className="fixed inset-0 flex flex-col bg-[#FAFAF8]"
+      className="fixed inset-0 flex flex-col bg-[#FAF6F1]"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       {/* Header: back, progress, skip-or-cancel */}
@@ -357,23 +357,23 @@ const PersonalSetup: React.FC<PersonalSetupProps> = ({ existingProfile, onComple
             stepIndex === 0 ? 'opacity-0 pointer-events-none' : 'bg-white card-shadow active:scale-95'
           }`}
         >
-          <ChevronLeft className="w-5 h-5 text-gray-600" />
+          <ChevronLeft className="w-5 h-5 text-[#6B6257]" />
         </button>
 
         <div className="flex-1 mx-3">
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-[#E8DFD5] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] transition-all duration-300"
+              className="h-full bg-[#E07A5F] transition-all duration-300"
               style={{ width: `${progress * 100}%` }}
             />
           </div>
-          <div className="text-[10px] text-gray-400 text-center mt-1 font-medium tabular-nums">
+          <div className="text-[10px] text-[#9A8B80] text-center mt-1 font-medium tabular-nums">
             {stepIndex + 1} / {totalVisible}
           </div>
         </div>
 
         {onCancel ? (
-          <button onClick={onCancel} className="text-gray-400 text-xs font-medium px-2">
+          <button onClick={onCancel} className="text-[#9A8B80] text-xs font-medium px-2">
             {T.skip}
           </button>
         ) : <div className="w-10" />}
@@ -469,13 +469,13 @@ const PersonalSetup: React.FC<PersonalSetupProps> = ({ existingProfile, onComple
 
       {/* Bottom CTA */}
       <div
-        className="px-5 pt-2 pb-4 bg-[#FAFAF8]"
+        className="px-5 pt-2 pb-4 bg-[#FAF6F1]"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {currentStep === 'SUMMARY' ? (
           <button
             onClick={handleFinish}
-            className="w-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-smooth shadow-lg shadow-[#E07A5F]/25"
+            className="w-full bg-[#E07A5F] text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-smooth shadow-lg shadow-[#E07A5F]/25"
           >
             <Check className="w-5 h-5" /> {T.saveAndStart}
           </button>
@@ -483,15 +483,15 @@ const PersonalSetup: React.FC<PersonalSetupProps> = ({ existingProfile, onComple
           <>
             {/* Explain WHY the button is disabled instead of a silent grey button */}
             {!isStepValid && (
-              <p className="text-center text-[11px] text-gray-400 font-medium mb-2">{T.fillFieldsHint}</p>
+              <p className="text-center text-[11px] text-[#9A8B80] font-medium mb-2">{T.fillFieldsHint}</p>
             )}
             <button
               onClick={goNext}
               disabled={!isStepValid}
               className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-smooth ${
                 isStepValid
-                  ? 'bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white active:scale-[0.97] shadow-lg shadow-[#E07A5F]/25'
-                  : 'bg-gray-200 text-gray-400'
+                  ? 'bg-[#E07A5F] text-white active:scale-[0.97] shadow-lg shadow-[#E07A5F]/25'
+                  : 'bg-[#E8DFD5] text-[#9A8B80]'
               }`}
             >
               {T.next} <ChevronRight className="w-5 h-5" />
@@ -510,22 +510,22 @@ const StepHeader: React.FC<{ icon: React.ReactNode; title: string; sub?: string 
     <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-[#E07A5F]/15 to-[#C85A40]/10 rounded-2xl flex items-center justify-center">
       {icon}
     </div>
-    <h1 className="text-[24px] font-black text-gray-900 font-display tracking-tight leading-tight mb-1.5">
+    <h1 className="text-[24px] font-black text-[#2B2523] font-display tracking-tight leading-tight mb-1.5">
       {title}
     </h1>
-    {sub && <p className="text-[14px] text-gray-500 leading-relaxed">{sub}</p>}
+    {sub && <p className="text-[14px] text-[#9A8B80] leading-relaxed">{sub}</p>}
   </div>
 );
 
 const Welcome: React.FC<{ T: SetupStrings }> = ({ T }) => (
   <div className="pt-10 text-center max-w-sm mx-auto">
-    <div className="w-20 h-20 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-[22px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#E07A5F]/25">
+    <div className="w-20 h-20 bg-[#E07A5F] rounded-[22px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#E07A5F]/25">
       <Sparkles className="w-9 h-9 text-white" />
     </div>
-    <h1 className="text-[28px] font-black text-gray-900 font-display tracking-tight leading-tight mb-3">
+    <h1 className="text-[28px] font-black text-[#2B2523] font-display tracking-tight leading-tight mb-3">
       {T.welcomeTitle}
     </h1>
-    <p className="text-[15px] text-gray-500 leading-relaxed mb-6">
+    <p className="text-[15px] text-[#9A8B80] leading-relaxed mb-6">
       {T.welcomeBody}
     </p>
     <div className="bg-white rounded-2xl card-shadow p-4 text-left space-y-3">
@@ -541,7 +541,7 @@ const Bullet: React.FC<{ text: string }> = ({ text }) => (
     <div className="w-5 h-5 bg-[#E07A5F]/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
       <Check className="w-3 h-3 text-[#E07A5F]" />
     </div>
-    <p className="text-[13px] text-gray-700">{text}</p>
+    <p className="text-[13px] text-[#6B6257]">{text}</p>
   </div>
 );
 
@@ -567,13 +567,13 @@ const GoalStep: React.FC<{
             className={`w-full p-4 rounded-2xl text-left transition-all ${
               value === o.val
                 ? 'bg-[#E07A5F] text-white shadow-lg shadow-[#E07A5F]/25'
-                : 'bg-white card-shadow text-gray-900 active:scale-[0.99]'
+                : 'bg-white card-shadow text-[#2B2523] active:scale-[0.99]'
             }`}
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-bold text-[15px]">{o.title}</p>
-                <p className={`text-[12px] mt-0.5 ${value === o.val ? 'text-white/80' : 'text-gray-500'}`}>{o.desc}</p>
+                <p className={`text-[12px] mt-0.5 ${value === o.val ? 'text-white/80' : 'text-[#9A8B80]'}`}>{o.desc}</p>
               </div>
               {value === o.val && <Check className="w-5 h-5" />}
             </div>
@@ -602,7 +602,7 @@ const ReasonsStep: React.FC<{
             className={`p-3 rounded-xl text-center text-[13px] font-bold transition-all ${
               active
                 ? 'bg-[#E07A5F] text-white shadow-md'
-                : 'bg-white card-shadow text-gray-700 active:scale-[0.98]'
+                : 'bg-white card-shadow text-[#6B6257] active:scale-[0.98]'
             }`}
           >
             {o[lang]}
@@ -630,30 +630,30 @@ const StatsStep: React.FC<{
       <StepHeader icon={<User className="w-7 h-7 text-[#E07A5F]" />} title={T.statsTitle} sub={T.statsSub} />
 
       <div className="bg-white rounded-2xl card-shadow p-3 mb-3">
-        <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">{T.name}</label>
+        <label className="text-[10px] font-bold text-[#9A8B80] uppercase block mb-1">{T.name}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => onName(e.target.value)}
           onFocus={handleFocus}
-          className="w-full bg-transparent outline-none font-bold text-gray-900 text-[15px]"
+          className="w-full bg-transparent outline-none font-bold text-[#2B2523] text-[15px]"
           placeholder="—"
         />
       </div>
 
       <div className="bg-white rounded-2xl card-shadow p-3 mb-3">
-        <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">{T.sex}</label>
+        <label className="text-[10px] font-bold text-[#9A8B80] uppercase block mb-2">{T.sex}</label>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => onGender(Gender.MALE)}
             className={`py-3 rounded-xl font-bold text-sm transition-all ${
-              gender === Gender.MALE ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-gray-50 text-gray-700'
+              gender === Gender.MALE ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-[#FAF6F1] text-[#6B6257]'
             }`}
           >{T.male}</button>
           <button
             onClick={() => onGender(Gender.FEMALE)}
             className={`py-3 rounded-xl font-bold text-sm transition-all ${
-              gender === Gender.FEMALE ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-gray-50 text-gray-700'
+              gender === Gender.FEMALE ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-[#FAF6F1] text-[#6B6257]'
             }`}
           >{T.female}</button>
         </div>
@@ -675,7 +675,7 @@ const NumberCell: React.FC<{
   onFocus: (e: React.FocusEvent<HTMLInputElement>) => void;
 }> = ({ label, suffix, value, onChange, inputMode, onFocus }) => (
   <div className="bg-white rounded-2xl card-shadow p-3 text-center">
-    <label className="text-[9px] font-bold text-gray-400 uppercase block mb-1">{label}</label>
+    <label className="text-[9px] font-bold text-[#9A8B80] uppercase block mb-1">{label}</label>
     <div className="flex items-baseline justify-center gap-1">
       <input
         type="text"
@@ -684,11 +684,11 @@ const NumberCell: React.FC<{
         value={value}
         onChange={(e) => onChange(e.target.value.replace(inputMode === 'decimal' ? /[^0-9.]/g : /[^0-9]/g, ''))}
         onFocus={onFocus}
-        className="w-full bg-transparent outline-none font-black text-[22px] text-center text-gray-900 tabular-nums"
+        className="w-full bg-transparent outline-none font-black text-[22px] text-center text-[#2B2523] tabular-nums"
         placeholder="—"
       />
     </div>
-    {suffix && <p className="text-[10px] text-gray-400 font-bold mt-0.5">{suffix}</p>}
+    {suffix && <p className="text-[10px] text-[#9A8B80] font-bold mt-0.5">{suffix}</p>}
   </div>
 );
 
@@ -713,7 +713,7 @@ const ActivityStep: React.FC<{
           >
             <div>
               <p className="font-bold text-[15px]">{localized.title}</p>
-              <p className={`text-[12px] mt-0.5 ${active ? 'text-white/80' : 'text-gray-500'}`}>{localized.desc}</p>
+              <p className={`text-[12px] mt-0.5 ${active ? 'text-white/80' : 'text-[#9A8B80]'}`}>{localized.desc}</p>
             </div>
             {active && <Check className="w-5 h-5" />}
           </button>
@@ -741,13 +741,13 @@ const TargetWeightStep: React.FC<{
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ''))}
           placeholder={String(suggestion)}
-          className="w-full bg-transparent outline-none font-black text-[48px] text-center text-gray-900 tabular-nums"
+          className="w-full bg-transparent outline-none font-black text-[48px] text-center text-[#2B2523] tabular-nums"
         />
-        <p className="text-[12px] text-gray-400 font-bold mt-1">kg</p>
+        <p className="text-[12px] text-[#9A8B80] font-bold mt-1">kg</p>
       </div>
       {currentWeight > 0 && Number(value) > 0 && (
         <div className="mt-4 bg-gradient-to-r from-[#E07A5F]/8 to-[#C85A40]/5 rounded-xl p-3 text-center">
-          <p className="text-[12px] text-gray-600">
+          <p className="text-[12px] text-[#6B6257]">
             {goal === 'LOSE'
               ? `${currentWeight} kg → ${Number(value)} kg (-${(currentWeight - Number(value)).toFixed(1)} kg)`
               : `${currentWeight} kg → ${Number(value)} kg (+${(Number(value) - currentWeight).toFixed(1)} kg)`}
@@ -786,7 +786,7 @@ const PaceStep: React.FC<{
                 <p className="font-bold text-[15px]">
                   {opt.rate.toFixed(2).replace('.', ',')} kg / week
                 </p>
-                <p className={`text-[12px] mt-0.5 ${active ? 'text-white/80' : 'text-gray-500'}`}>
+                <p className={`text-[12px] mt-0.5 ${active ? 'text-white/80' : 'text-[#9A8B80]'}`}>
                   {T[opt.key]} · {goal === 'LOSE' ? '−' : '+'}{dailyKcal} kcal/{goal === 'LOSE' ? 'day' : 'day'}
                 </p>
               </div>
@@ -797,22 +797,22 @@ const PaceStep: React.FC<{
       </div>
 
       {isAggressive && goal === 'LOSE' && (
-        <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-[12px] text-amber-800 leading-relaxed">{T.paceWarning}</p>
+        <div className="mt-4 bg-[#F6ECE2] border border-[#F0DCC8] rounded-xl p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-[#C4763B] shrink-0 mt-0.5" />
+          <p className="text-[12px] text-[#A8674F] leading-relaxed">{T.paceWarning}</p>
         </div>
       )}
 
       {calc?.wasFloored && (
-        <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <p className="text-[12px] text-blue-800 leading-relaxed">{T.floorWarning}</p>
+        <div className="mt-3 bg-[#EFF2EE] border border-[#DDE5DB] rounded-xl p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-[#3D5A48] shrink-0 mt-0.5" />
+          <p className="text-[12px] text-[#3D5A48] leading-relaxed">{T.floorWarning}</p>
         </div>
       )}
 
       {calc?.weeksToGoal != null && (
         <div className="mt-4 bg-white rounded-2xl card-shadow p-4 text-center">
-          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">{T.weeksToGoal}</p>
+          <p className="text-[10px] uppercase font-bold text-[#9A8B80] tracking-wider">{T.weeksToGoal}</p>
           <p className="text-[28px] font-black text-[#E07A5F] tabular-nums mt-1">{calc.weeksToGoal}</p>
         </div>
       )}
@@ -846,7 +846,7 @@ const DietStep: React.FC<{
             key={o.id}
             onClick={() => onToggle(o.id)}
             className={`p-3 rounded-xl text-center text-[13px] font-bold transition-all ${
-              active ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-white card-shadow text-gray-700 active:scale-[0.98]'
+              active ? 'bg-[#E07A5F] text-white shadow-md' : 'bg-white card-shadow text-[#6B6257] active:scale-[0.98]'
             }`}
           >
             {o[lang]}
@@ -893,13 +893,13 @@ const MacrosStep: React.FC<{
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold text-[14px]">{p.title}</p>
-                  <p className={`text-[11px] mt-0.5 ${active ? 'text-white/80' : 'text-gray-500'}`}>{p.desc}</p>
+                  <p className={`text-[11px] mt-0.5 ${active ? 'text-white/80' : 'text-[#9A8B80]'}`}>{p.desc}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-[11px] font-bold tabular-nums ${active ? 'text-white' : 'text-gray-700'}`}>
+                  <p className={`text-[11px] font-bold tabular-nums ${active ? 'text-white' : 'text-[#6B6257]'}`}>
                     {p.pct.proteinPct}/{p.pct.carbsPct}/{p.pct.fatPct}
                   </p>
-                  <p className={`text-[9px] ${active ? 'text-white/70' : 'text-gray-400'}`}>P · C · F</p>
+                  <p className={`text-[9px] ${active ? 'text-white/70' : 'text-[#9A8B80]'}`}>P · C · F</p>
                 </div>
               </div>
             </button>
@@ -914,16 +914,16 @@ const MacrosStep: React.FC<{
           }`}
         >
           <p className="font-bold text-[14px]">{T.macroCustom}</p>
-          <p className={`text-[11px] mt-0.5 ${preset === 'CUSTOM' ? 'text-white/80' : 'text-gray-500'}`}>{T.macroCustomDesc}</p>
+          <p className={`text-[11px] mt-0.5 ${preset === 'CUSTOM' ? 'text-white/80' : 'text-[#9A8B80]'}`}>{T.macroCustomDesc}</p>
         </button>
       </div>
 
       {preset === 'CUSTOM' && (
         <div className="mt-4 bg-white rounded-2xl card-shadow p-4 space-y-3">
-          <PctSlider label={T.pHeader} color="bg-emerald-500" value={custom.proteinPct} onChange={(v) => onCustom({ ...custom, proteinPct: v })} />
-          <PctSlider label={T.cHeader} color="bg-amber-500"   value={custom.carbsPct}   onChange={(v) => onCustom({ ...custom, carbsPct: v })} />
+          <PctSlider label={T.pHeader} color="bg-[#EFF2EE]0" value={custom.proteinPct} onChange={(v) => onCustom({ ...custom, proteinPct: v })} />
+          <PctSlider label={T.cHeader} color="bg-[#F6ECE2]0"   value={custom.carbsPct}   onChange={(v) => onCustom({ ...custom, carbsPct: v })} />
           <PctSlider label={T.fHeader} color="bg-rose-500"    value={custom.fatPct}     onChange={(v) => onCustom({ ...custom, fatPct: v })} />
-          <p className={`text-[11px] text-center font-bold ${totalOk ? 'text-emerald-600' : 'text-rose-500'}`}>
+          <p className={`text-[11px] text-center font-bold ${totalOk ? 'text-[#3D5A48]' : 'text-[#C85A40]'}`}>
             {totalPct}% / 100%
           </p>
         </div>
@@ -932,10 +932,10 @@ const MacrosStep: React.FC<{
       {/* Live preview of grams */}
       {calc && (
         <div className="mt-4 bg-gradient-to-r from-[#E07A5F]/8 to-[#C85A40]/5 rounded-2xl p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">≈ {calc.target} kcal</p>
+          <p className="text-[10px] font-bold text-[#9A8B80] uppercase tracking-wider mb-2 text-center">≈ {calc.target} kcal</p>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <MacroCell color="text-emerald-600" label={T.pHeader} grams={calc.grams.protein} />
-            <MacroCell color="text-amber-600"   label={T.cHeader} grams={calc.grams.carbs} />
+            <MacroCell color="text-[#3D5A48]" label={T.pHeader} grams={calc.grams.protein} />
+            <MacroCell color="text-[#C4763B]"   label={T.cHeader} grams={calc.grams.carbs} />
             <MacroCell color="text-rose-600"    label={T.fHeader} grams={calc.grams.fat} />
           </div>
         </div>
@@ -947,10 +947,10 @@ const MacrosStep: React.FC<{
 const PctSlider: React.FC<{ label: string; color: string; value: number; onChange: (v: number) => void }> = ({ label, value, onChange, color }) => (
   <div>
     <div className="flex justify-between items-baseline mb-1">
-      <span className="text-[12px] font-bold text-gray-700">{label}</span>
-      <span className="text-[14px] font-black tabular-nums text-gray-900">{value}%</span>
+      <span className="text-[12px] font-bold text-[#6B6257]">{label}</span>
+      <span className="text-[14px] font-black tabular-nums text-[#2B2523]">{value}%</span>
     </div>
-    <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div className="relative h-2 bg-[#F3EAE2] rounded-full overflow-hidden">
       <div className={`${color} absolute inset-y-0 left-0 rounded-full transition-all`} style={{ width: `${value}%` }} />
     </div>
     <input
@@ -963,8 +963,8 @@ const PctSlider: React.FC<{ label: string; color: string; value: number; onChang
 
 const MacroCell: React.FC<{ color: string; label: string; grams: number }> = ({ color, label, grams }) => (
   <div>
-    <p className={`text-[18px] font-black ${color} tabular-nums`}>{grams}<span className="text-[11px] font-bold text-gray-400">g</span></p>
-    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</p>
+    <p className={`text-[18px] font-black ${color} tabular-nums`}>{grams}<span className="text-[11px] font-bold text-[#9A8B80]">g</span></p>
+    <p className="text-[10px] font-bold text-[#9A8B80] uppercase tracking-wider">{label}</p>
   </div>
 );
 
@@ -984,7 +984,7 @@ const SummaryStep: React.FC<{
       <StepHeader icon={<Sparkles className="w-7 h-7 text-[#E07A5F]" />} title={T.summaryTitle} sub={T.summarySub} />
 
       {/* Big calorie card */}
-      <div className="bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-3xl p-6 text-white text-center shadow-lg shadow-[#E07A5F]/25 mb-3">
+      <div className="bg-[#E07A5F] rounded-3xl p-6 text-white text-center shadow-lg shadow-[#E07A5F]/25 mb-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-white/80 mb-1">{T.dailyCalories}</p>
         <p className="text-[56px] font-black leading-none tabular-nums">{calc.target}</p>
         <p className="text-[12px] font-bold text-white/80 mt-1">kcal / {lang === 'nl' ? 'dag' : 'day'}</p>
@@ -993,12 +993,12 @@ const SummaryStep: React.FC<{
       {/* Maintenance + delta */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="bg-white rounded-2xl card-shadow p-3 text-center">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">{T.maintenance}</p>
-          <p className="text-[18px] font-black text-gray-900 tabular-nums">{calc.maintenance}</p>
+          <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider mb-1">{T.maintenance}</p>
+          <p className="text-[18px] font-black text-[#2B2523] tabular-nums">{calc.maintenance}</p>
         </div>
         {showDelta && (
           <div className="bg-white rounded-2xl card-shadow p-3 text-center">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+            <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider mb-1">
               {isLose ? T.deficit : T.surplus}
             </p>
             <p className="text-[18px] font-black text-[#E07A5F] tabular-nums">
@@ -1008,8 +1008,8 @@ const SummaryStep: React.FC<{
         )}
         {!showDelta && targetWeightStr && (
           <div className="bg-white rounded-2xl card-shadow p-3 text-center">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Target</p>
-            <p className="text-[18px] font-black text-gray-900 tabular-nums">{targetWeightStr} kg</p>
+            <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider mb-1">Target</p>
+            <p className="text-[18px] font-black text-[#2B2523] tabular-nums">{targetWeightStr} kg</p>
           </div>
         )}
       </div>
@@ -1017,8 +1017,8 @@ const SummaryStep: React.FC<{
       {/* Macro grams */}
       <div className="bg-white rounded-2xl card-shadow p-4 mb-3">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <MacroCell color="text-emerald-600" label={T.pHeader} grams={calc.grams.protein} />
-          <MacroCell color="text-amber-600"   label={T.cHeader} grams={calc.grams.carbs} />
+          <MacroCell color="text-[#3D5A48]" label={T.pHeader} grams={calc.grams.protein} />
+          <MacroCell color="text-[#C4763B]"   label={T.cHeader} grams={calc.grams.carbs} />
           <MacroCell color="text-rose-600"    label={T.fHeader} grams={calc.grams.fat} />
         </div>
       </div>
@@ -1026,7 +1026,7 @@ const SummaryStep: React.FC<{
       {/* Weeks to goal */}
       {calc.weeksToGoal != null && targetWeightStr && (
         <div className="bg-white rounded-2xl card-shadow p-3 mb-3 flex items-center justify-between">
-          <span className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">{T.weeksToGoal}</span>
+          <span className="text-[12px] font-bold text-[#9A8B80] uppercase tracking-wider">{T.weeksToGoal}</span>
           <span className="text-[18px] font-black text-[#E07A5F] tabular-nums">{calc.weeksToGoal}</span>
         </div>
       )}

@@ -141,14 +141,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#FAFAF8]">
+    <div className="h-full flex flex-col bg-[#FAF6F1]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
+      <div className="px-5 pb-3" style={{paddingTop: 'max(env(safe-area-inset-top, 14px), 14px)'}}>
         <div className="flex items-center justify-between">
-          <div className="w-10" />
-          <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('settings')}</span>
-          <button onClick={onBack} aria-label={t('settings')} className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
-            <X className="w-[18px] h-[18px] text-gray-400" />
+          <span className="text-[24px] font-bold text-[#2B2523] font-display tracking-tight">{t('settings')}</span>
+          <button onClick={onBack} aria-label="Close" className="w-[42px] h-[42px] bg-white rounded-full card-shadow flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
+            <X className="w-[18px] h-[18px] text-[#9A8B80]" strokeWidth={1.8} />
           </button>
         </div>
       </div>
@@ -157,7 +156,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       {showAbout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="About NutriVault">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-[#E07A5F] to-[#C85A40] p-5 text-center">
+            <div className="bg-[#E07A5F] p-5 text-center">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <Heart className="w-8 h-8 text-white" />
               </div>
@@ -170,8 +169,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Target className="w-4 h-4 text-[#E07A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Our Mission</h4>
-                  <p className="text-xs text-gray-500">Make healthy living simple, personal, and accessible to everyone.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Our Mission</h4>
+                  <p className="text-xs text-[#9A8B80]">Make healthy living simple, personal, and accessible to everyone.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -179,8 +178,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Utensils className="w-4 h-4 text-[#E07A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Smart Nutrition</h4>
-                  <p className="text-xs text-gray-500">Log food naturally in any language. NutriVault understands what you eat and tracks nutrition automatically.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Smart Nutrition</h4>
+                  <p className="text-xs text-[#9A8B80]">Log food naturally in any language. NutriVault understands what you eat and tracks nutrition automatically.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -188,13 +187,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Shield className="w-4 h-4 text-[#E07A5F]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Privacy First</h4>
-                  <p className="text-xs text-gray-500">Your data stays on your device. Anonymous accounts, no tracking, no ads.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Privacy First</h4>
+                  <p className="text-xs text-[#9A8B80]">Your data stays on your device. Anonymous accounts, no tracking, no ads.</p>
                 </div>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-gray-400 mb-1">Made with care</p>
-                <p className="text-xs font-bold text-gray-600">Privacy-first • No ads • Your data stays local</p>
+              <div className="bg-[#FAF6F1] rounded-xl p-3 text-center">
+                <p className="text-[10px] text-[#9A8B80] mb-1">Made with care</p>
+                <p className="text-xs font-bold text-[#6B6257]">Privacy-first • No ads • Your data stays local</p>
               </div>
             </div>
             <div className="p-4 pt-0">
@@ -223,17 +222,17 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Database className="w-4 h-4 text-green-600" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Local Storage Only</h4>
-                  <p className="text-xs text-gray-500">All your food logs, workouts, recipes, and settings are stored locally on your device. Nothing is uploaded to external servers.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Local Storage Only</h4>
+                  <p className="text-xs text-[#9A8B80]">All your food logs, workouts, recipes, and settings are stored locally on your device. Nothing is uploaded to external servers.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Lock className="w-4 h-4 text-blue-600" />
+                <div className="w-8 h-8 bg-[#EFF2EE] rounded-lg flex items-center justify-center shrink-0">
+                  <Lock className="w-4 h-4 text-[#3D5A48]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Anonymous Accounts</h4>
-                  <p className="text-xs text-gray-500">Your account is just a random number. No email, no phone, no personal information required. Similar to Mullvad's privacy approach.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Anonymous Accounts</h4>
+                  <p className="text-xs text-[#9A8B80]">Your account is just a random number. No email, no phone, no personal information required. Similar to Mullvad's privacy approach.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -241,31 +240,31 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   <Eye className="w-4 h-4 text-purple-600" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">No Tracking</h4>
-                  <p className="text-xs text-gray-500">We don't use analytics, cookies, or tracking pixels. No behavioral profiling, no data selling to third parties.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">No Tracking</h4>
+                  <p className="text-xs text-[#9A8B80]">We don't use analytics, cookies, or tracking pixels. No behavioral profiling, no data selling to third parties.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Trash2 className="w-4 h-4 text-orange-600" />
+                <div className="w-8 h-8 bg-[#F6ECE2] rounded-lg flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4 h-4 text-[#C4763B]" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">Full Data Control</h4>
-                  <p className="text-xs text-gray-500">You can delete all your data anytime from this settings page. When you logout, your local data can be cleared completely.</p>
+                  <h4 className="font-bold text-[#2B2523] text-sm">Full Data Control</h4>
+                  <p className="text-xs text-[#9A8B80]">You can delete all your data anytime from this settings page. When you logout, your local data can be cleared completely.</p>
                 </div>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <h4 className="font-bold text-gray-900 text-xs mb-2">What data we process:</h4>
-                <ul className="text-xs text-gray-500 space-y-1">
+              <div className="bg-[#FAF6F1] rounded-xl p-3">
+                <h4 className="font-bold text-[#2B2523] text-xs mb-2">What data we process:</h4>
+                <ul className="text-xs text-[#9A8B80] space-y-1">
                   <li>• Food entries (for nutrition calculation)</li>
                   <li>• Workout logs (stored locally only)</li>
                   <li>• Profile settings (weight, goals, preferences)</li>
                   <li>• Account number (anonymous identifier)</li>
                 </ul>
               </div>
-              <div className="bg-amber-50 rounded-xl p-3">
-                <h4 className="font-bold text-gray-900 text-xs mb-1">AI Processing</h4>
-                <p className="text-xs text-gray-500">Food descriptions are sent to Google Gemini for nutrition analysis. Only the food text is sent — no personal data, no account info, no tracking.</p>
+              <div className="bg-[#F6ECE2] rounded-xl p-3">
+                <h4 className="font-bold text-[#2B2523] text-xs mb-1">AI Processing</h4>
+                <p className="text-xs text-[#9A8B80]">Food descriptions are sent to Google Gemini for nutrition analysis. Only the food text is sent — no personal data, no account info, no tracking.</p>
               </div>
               <div className="bg-green-50 rounded-xl p-3">
                 <p className="text-xs text-green-700 font-medium">✓ GDPR Compliant • No data retention • You own your data</p>
@@ -282,26 +281,26 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         {/* Account Key Card */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 p-3 opacity-5"><Shield className="w-24 h-24" /></div>
-          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t('accountKey')}</p>
+          <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider mb-2">{t('accountKey')}</p>
           <p className="font-mono text-xl font-bold tracking-widest mb-4">{session?.accountNumber.match(/.{1,4}/g)?.join(' ')}</p>
           <button onClick={handleCopyKey} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-smooth active:scale-95">
-            {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> {t('copied')}</> : <><Copy className="w-3.5 h-3.5" /> {t('copyKey')}</>}
+            {copied ? <><Check className="w-3.5 h-3.5 text-[#3D5A48]" /> {t('copied')}</> : <><Copy className="w-3.5 h-3.5" /> {t('copyKey')}</>}
           </button>
         </div>
 
         {/* Subscription */}
         <div className="bg-white rounded-2xl p-4 card-shadow">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('subscription')}</p>
+          <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider mb-2">{t('subscription')}</p>
           <div className="flex justify-between items-center">
             <div>
-              <span className={`text-sm font-bold ${daysLeft > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{daysLeft > 0 ? t('active') : t('expired')}</span>
-              <span className="text-xs text-gray-400 block">{daysLeft} {t('daysRemaining')}</span>
+              <span className={`text-sm font-bold ${daysLeft > 0 ? 'text-[#3D5A48]' : 'text-red-500'}`}>{daysLeft > 0 ? t('active') : t('expired')}</span>
+              <span className="text-xs text-[#9A8B80] block">{daysLeft} {t('daysRemaining')}</span>
             </div>
             <button onClick={handlePayment} className="text-[#E07A5F] text-xs font-bold bg-[#E07A5F]/8 px-4 py-2 rounded-xl transition-smooth active:scale-95">{t('extend')}</button>
           </div>
           <button
             onClick={handleManageSubscription}
-            className="w-full mt-3 text-gray-400 text-[10px] font-medium flex items-center justify-center gap-1"
+            className="w-full mt-3 text-[#9A8B80] text-[10px] font-medium flex items-center justify-center gap-1"
           >
             {t('manageSubscription')} <ExternalLink className="w-2.5 h-2.5" />
           </button>
@@ -311,30 +310,30 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         <div className="bg-white rounded-2xl p-4 card-shadow">
           <div className="flex items-center gap-2 mb-3">
             <Database className="w-4 h-4 text-[#E07A5F]" />
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('dataBackup')}</p>
+            <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider">{t('dataBackup')}</p>
           </div>
           {importFeedback && (
-            <div className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
+            <div className="bg-[#EFF2EE] text-[#3D5A48] text-xs font-bold px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
               <Check className="w-3 h-3" /> {importFeedback}
             </div>
           )}
           <div className="space-y-2">
-            <button onClick={handleExportData} className="w-full bg-blue-50 text-blue-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-blue-100">
+            <button onClick={handleExportData} className="w-full bg-[#EFF2EE] text-[#3D5A48] font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-[#EFF2EE]">
               <Download className="w-4 h-4" /> {t('exportData')}
             </button>
-            <button onClick={() => fileInputRef.current?.click()} className="w-full bg-gray-50 text-gray-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-gray-100">
+            <button onClick={() => fileInputRef.current?.click()} className="w-full bg-[#FAF6F1] text-[#6B6257] font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-[#F3EAE2]">
               <Upload className="w-4 h-4" /> {t('importBackup')}
             </button>
             <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportData} className="hidden" />
           </div>
-          <p className="text-[10px] text-gray-400 mt-2.5 text-center">{t('backupDesc')}</p>
+          <p className="text-[10px] text-[#9A8B80] mt-2.5 text-center">{t('backupDesc')}</p>
         </div>
 
         {/* Language */}
         <div className="bg-white rounded-2xl p-4 card-shadow">
           <div className="flex items-center gap-2 mb-3">
             <Globe className="w-4 h-4 text-[#E07A5F]" />
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('language')}</p>
+            <p className="text-[9px] font-bold text-[#9A8B80] uppercase tracking-wider">{t('language')}</p>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {getAvailableLanguages().map(l => (
@@ -342,7 +341,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 key={l.code}
                 onClick={() => l.code !== lang && handleLanguageChange(l.code)}
                 aria-pressed={l.code === lang}
-                className={`py-2.5 rounded-xl text-xs font-bold transition-smooth active:scale-[0.97] ${l.code === lang ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/20' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                className={`py-2.5 rounded-xl text-xs font-bold transition-smooth active:scale-[0.97] ${l.code === lang ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/20' : 'bg-[#FAF6F1] text-[#6B6257] hover:bg-[#F3EAE2]'}`}
               >
                 {l.name}
               </button>
@@ -352,13 +351,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
         {/* Actions */}
         <div className="space-y-2">
-          <button onClick={() => setShowAbout(true)} className="w-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/20 transition-smooth active:scale-[0.98]">
+          <button onClick={() => setShowAbout(true)} className="w-full bg-[#E07A5F] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/20 transition-smooth active:scale-[0.98]">
             <Info className="w-4 h-4" /> {t('aboutNutriVault')}
           </button>
-          <button onClick={() => setShowPrivacy(true)} className="w-full bg-white text-gray-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 card-shadow transition-smooth active:scale-[0.98]">
+          <button onClick={() => setShowPrivacy(true)} className="w-full bg-white text-[#6B6257] font-bold py-3 rounded-xl flex items-center justify-center gap-2 card-shadow transition-smooth active:scale-[0.98]">
             <Shield className="w-4 h-4" /> {t('privacyPolicy')}
           </button>
-          <button onClick={handleClearData} className="w-full bg-orange-50 text-orange-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
+          <button onClick={handleClearData} className="w-full bg-[#F6ECE2] text-[#C4763B] font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
             <Trash2 className="w-4 h-4" /> {t('clearAllData')}
           </button>
           <button onClick={handleLogout} className="w-full bg-red-50 text-red-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
@@ -372,7 +371,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             href={PRIVACY_POLICY_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-gray-400 flex items-center gap-1"
+            className="text-[10px] text-[#9A8B80] flex items-center gap-1"
           >
             {t('privacyPolicy')} <ExternalLink className="w-2.5 h-2.5" />
           </a>
@@ -380,7 +379,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-gray-400 flex items-center gap-1"
+            className="text-[10px] text-[#9A8B80] flex items-center gap-1"
           >
             {t('termsOfUse')} <ExternalLink className="w-2.5 h-2.5" />
           </a>

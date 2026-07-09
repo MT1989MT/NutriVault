@@ -64,18 +64,18 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-full w-full bg-[#FAFAF8] flex items-center justify-center p-6" role="alert" aria-live="assertive">
+        <div className="h-full w-full bg-[#FAF6F1] flex items-center justify-center p-6" role="alert" aria-live="assertive">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-lg text-center">
             <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl" aria-hidden="true">!</span>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <h2 className="text-lg font-bold text-[#2B2523] mb-2">Something went wrong</h2>
+            <p className="text-sm text-[#9A8B80] mb-6">
               An unexpected error occurred. Your data is safe.
             </p>
             {this.state.error && (
-              <div className="bg-gray-50 rounded-xl p-3 mb-4 text-left">
-                <p className="text-xs text-gray-400 font-mono break-all">
+              <div className="bg-[#FAF6F1] rounded-xl p-3 mb-4 text-left">
+                <p className="text-xs text-[#9A8B80] font-mono break-all">
                   {this.sanitizeErrorMessage(this.state.error.message)}
                 </p>
               </div>
@@ -92,14 +92,14 @@ class ErrorBoundary extends Component<Props, State> {
                 id="nv-copy-logs-btn"
                 onClick={this.handleCopyLogs}
                 aria-label="Copy debug logs to clipboard"
-                className="w-full bg-gray-100 text-gray-600 font-medium py-3 rounded-xl active:scale-[0.98] transition-transform text-sm"
+                className="w-full bg-[#F3EAE2] text-[#6B6257] font-medium py-3 rounded-xl active:scale-[0.98] transition-transform text-sm"
               >
                 Copy Debug Logs
               </button>
               <button
                 onClick={this.handleClearAndReset}
                 aria-label="Reload app"
-                className="w-full text-gray-400 font-medium py-2 rounded-xl text-xs"
+                className="w-full text-[#9A8B80] font-medium py-2 rounded-xl text-xs"
               >
                 Reload App
               </button>

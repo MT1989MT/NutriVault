@@ -80,7 +80,7 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
-import { t } from '../utils/i18n';
+import { t, getCurrentLanguage } from '../utils/i18n';
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
 const responseCache = new Map<string, { text: string; timestamp: number }>();
@@ -401,7 +401,7 @@ RESPONSE FORMAT — strict JSON array only:
 
 export const parseFoodFromPhoto = async (imageBase64: string, hint?: string): Promise<Omit<FoodItem, 'id' | 'timestamp' | 'mealType'>[]> => {
   try {
-    const lang = (navigator.language || 'en').split('-')[0];
+    const lang = getCurrentLanguage();
     const langName = { nl: 'Dutch', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian' }[lang] || 'English';
     const safeHint = hint?.trim() ? hint.trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ').slice(0, 500) : '';
 

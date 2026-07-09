@@ -90,7 +90,9 @@ type TranslationKey =
   // Profile validation
   | 'invalidAge' | 'invalidHeight' | 'invalidWeight'
   // Coach fallbacks
-  | 'coachGreeting' | 'coachConnectError';
+  | 'coachGreeting' | 'coachConnectError'
+  // Warm Terra dashboard
+  | 'goodMorning' | 'goodAfternoon' | 'goodEvening' | 'viewAll' | 'nothingLoggedHint' | 'kcalTooMany';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -236,7 +238,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Weight',
     targetKcal: 'Target kcal',
     auto: 'Auto',
-    burnedCal: 'Burned cal',
+    burnedCal: 'Burned',
     ignored: 'Ignored',
     added: 'Added',
     dietAllergies: 'Diet & Allergies',
@@ -413,6 +415,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Please enter a valid weight in kg (30-400).',
     coachGreeting: 'Hey, I\'m here! What would you like to know?',
     coachConnectError: 'Hmm, I couldn\'t connect just now. Try again!',
+    viewAll: 'View all',
+    nothingLoggedHint: 'Nothing logged yet — type, speak or photograph',
+    kcalTooMany: 'kcal over',
   },
   nl: {
     // Navigation
@@ -557,7 +562,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Gewicht',
     targetKcal: 'Doel kcal',
     auto: 'Auto',
-    burnedCal: 'Verbrande cal',
+    burnedCal: 'Verbrand',
     ignored: 'Genegeerd',
     added: 'Toegevoegd',
     dietAllergies: 'Dieet & Allergieën',
@@ -734,6 +739,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Voer een geldig gewicht in kg in (30-400).',
     coachGreeting: 'Hey, ik ben er! Wat wil je weten?',
     coachConnectError: 'Hmm, ik kon even niet verbinden. Probeer het nog eens!',
+    viewAll: 'Alles bekijken',
+    nothingLoggedHint: 'Nog niets gelogd — typ, spreek of fotografeer',
+    kcalTooMany: 'kcal teveel',
   },
   de: {
     // Navigation
@@ -878,7 +886,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Gewicht',
     targetKcal: 'Ziel kcal',
     auto: 'Auto',
-    burnedCal: 'Verbrannte cal',
+    burnedCal: 'Verbrannt',
     ignored: 'Ignoriert',
     added: 'Hinzugefügt',
     dietAllergies: 'Diät & Allergien',
@@ -1055,6 +1063,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Bitte gib ein gültiges Gewicht in kg ein (30-400).',
     coachGreeting: 'Hey, ich bin da! Was möchtest du wissen?',
     coachConnectError: 'Hmm, ich konnte gerade keine Verbindung herstellen. Versuch es nochmal!',
+    viewAll: 'Alle ansehen',
+    nothingLoggedHint: 'Noch nichts geloggt — tippe, sprich oder fotografiere',
+    kcalTooMany: 'kcal zu viel',
   },
   fr: {
     // Navigation
@@ -1199,7 +1210,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Poids',
     targetKcal: 'Objectif kcal',
     auto: 'Auto',
-    burnedCal: 'Cal brûlées',
+    burnedCal: 'Brûlées',
     ignored: 'Ignoré',
     added: 'Ajouté',
     dietAllergies: 'Régime & Allergies',
@@ -1376,6 +1387,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Entrez un poids valide en kg (30-400).',
     coachGreeting: 'Salut, je suis là! Que veux-tu savoir?',
     coachConnectError: 'Hmm, je n\'ai pas pu me connecter. Réessaye!',
+    viewAll: 'Tout voir',
+    nothingLoggedHint: 'Rien d\'enregistré — tapez, parlez ou photographiez',
+    kcalTooMany: 'kcal en trop',
   },
   es: {
     // Navigation
@@ -1520,7 +1534,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Peso',
     targetKcal: 'Objetivo kcal',
     auto: 'Auto',
-    burnedCal: 'Cal quemadas',
+    burnedCal: 'Quemadas',
     ignored: 'Ignorado',
     added: 'Añadido',
     dietAllergies: 'Dieta y Alergias',
@@ -1697,6 +1711,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Introduce un peso válido en kg (30-400).',
     coachGreeting: '¡Hola, aquí estoy! ¿Qué quieres saber?',
     coachConnectError: 'Mmm, no pude conectar. ¡Inténtalo de nuevo!',
+    viewAll: 'Ver todo',
+    nothingLoggedHint: 'Nada registrado — escribe, habla o fotografía',
+    kcalTooMany: 'kcal de más',
   },
   it: {
     // Navigation
@@ -1841,7 +1858,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Peso',
     targetKcal: 'Obiettivo kcal',
     auto: 'Auto',
-    burnedCal: 'Cal bruciate',
+    burnedCal: 'Bruciate',
     ignored: 'Ignorato',
     added: 'Aggiunto',
     dietAllergies: 'Dieta e Allergie',
@@ -2018,6 +2035,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Inserisci un peso valido in kg (30-400).',
     coachGreeting: 'Ehi, sono qui! Cosa vuoi sapere?',
     coachConnectError: 'Mmm, non sono riuscito a connettermi. Riprova!',
+    viewAll: 'Vedi tutto',
+    nothingLoggedHint: 'Niente registrato — scrivi, parla o fotografa',
+    kcalTooMany: 'kcal in più',
   }
 };
 
@@ -2027,15 +2047,14 @@ export const getDeviceLanguage = (): string => {
   return lang.split('-')[0].toLowerCase();
 };
 
-// Get current language. Priority: explicit user choice → device language (if
-// supported) → English. Defaulting to the device language keeps the UI and the
-// AI coach (which keys off navigator.language) in the same language.
+// Get current language. English is the app's canonical language and the
+// default; users can explicitly pick one of the 6 supported languages in
+// Settings. (Not auto-detecting from the device keeps the UI consistent —
+// several screens are English-first until the full i18n sweep is done.)
 export const getCurrentLanguage = (): string => {
   try {
     const saved = localStorage.getItem('nutrivault_language');
     if (saved && translations[saved]) return saved;
-    const device = getDeviceLanguage();
-    if (translations[device]) return device;
   } catch { /* ignore */ }
   return 'en';
 };
