@@ -35,6 +35,7 @@ const STEP_ORDER_MAINTAIN: Step[] = [
 // Falls back to English for any unsupported locale.
 type SetupStrings = {
   skip: string; back: string; next: string; finish: string;
+  fillFieldsHint: string;
   welcomeTitle: string; welcomeBody: string;
   welcomeBullet1: string; welcomeBullet2: string; welcomeBullet3: string;
   goalTitle: string; goalSub: string;
@@ -71,6 +72,7 @@ const STRINGS: Record<'en' | 'nl', SetupStrings> = {
     back: 'Back',
     next: 'Next',
     finish: 'Get Started',
+    fillFieldsHint: 'Fill in all fields above to continue',
     welcomeTitle: "Let's personalise your plan",
     welcomeBody: 'Answer a few quick questions and we\'ll calculate the right calorie & macro targets just for you.',
     welcomeBullet1: 'Custom calorie goal based on your body & pace',
@@ -125,6 +127,7 @@ const STRINGS: Record<'en' | 'nl', SetupStrings> = {
     back: 'Terug',
     next: 'Volgende',
     finish: 'Aan de slag',
+    fillFieldsHint: 'Vul alle velden hierboven in om verder te gaan',
     welcomeTitle: 'Laten we jouw plan personaliseren',
     welcomeBody: 'Beantwoord een paar korte vragen en we berekenen de juiste calorie- en macrodoelen voor jou.',
     welcomeBullet1: 'Persoonlijk caloriedoel op basis van jouw lichaam en tempo',
@@ -477,17 +480,23 @@ const PersonalSetup: React.FC<PersonalSetupProps> = ({ existingProfile, onComple
             <Check className="w-5 h-5" /> {T.saveAndStart}
           </button>
         ) : (
-          <button
-            onClick={goNext}
-            disabled={!isStepValid}
-            className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-smooth ${
-              isStepValid
-                ? 'bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white active:scale-[0.97] shadow-lg shadow-[#E07A5F]/25'
-                : 'bg-gray-200 text-gray-400'
-            }`}
-          >
-            {T.next} <ChevronRight className="w-5 h-5" />
-          </button>
+          <>
+            {/* Explain WHY the button is disabled instead of a silent grey button */}
+            {!isStepValid && (
+              <p className="text-center text-[11px] text-gray-400 font-medium mb-2">{T.fillFieldsHint}</p>
+            )}
+            <button
+              onClick={goNext}
+              disabled={!isStepValid}
+              className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-smooth ${
+                isStepValid
+                  ? 'bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white active:scale-[0.97] shadow-lg shadow-[#E07A5F]/25'
+                  : 'bg-gray-200 text-gray-400'
+              }`}
+            >
+              {T.next} <ChevronRight className="w-5 h-5" />
+            </button>
+          </>
         )}
       </div>
     </div>

@@ -299,6 +299,16 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
               { val: 'HIGH_PROTEIN' as MacroPreset, label: 'High Protein', pct: '40/35/25' },
               { val: 'LOW_CARB' as MacroPreset,     label: 'Low carb',  pct: '35/25/40' },
               { val: 'KETO' as MacroPreset,         label: 'Keto',      pct: '25/5/70' },
+              // Show the wizard-made custom split as a selectable option, so a
+              // CUSTOM profile is visible here (previously nothing highlighted)
+              // and tapping a preset isn't a one-way door out of it.
+              ...(existingProfile?.macroPreset === 'CUSTOM' && existingProfile.macroTargets
+                ? [{
+                    val: 'CUSTOM' as MacroPreset,
+                    label: 'Custom',
+                    pct: `${existingProfile.macroTargets.proteinPct}/${existingProfile.macroTargets.carbsPct}/${existingProfile.macroTargets.fatPct}`,
+                  }]
+                : []),
             ].map((opt) => (
               <button
                 key={opt.val}

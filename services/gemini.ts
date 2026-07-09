@@ -215,7 +215,15 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 //   Legacy (absolute): { p, c, f, grams } — used as-is, per-100g derived
 // For foods the user has logged before, stored per-100g values override the AI's
 // to ensure consistent macros across sessions.
-const parseFoodResponse = (rawData: any[], includeMicros: boolean = true) => {
+const parseFoodResponse = (rawData: any, includeMicros: boolean = true) => {
+  // The model occasionally returns an object instead of an array — either a
+  // single food item or a wrapper like {items:[...]}. Normalise instead of
+  // crashing with a raw "x.map is not a function" in the user's face.
+  if (!Array.isArray(rawData)) {
+    if (rawData && Array.isArray(rawData.items)) rawData = rawData.items;
+    else if (rawData && typeof rawData === 'object' && typeof rawData.name === 'string') rawData = [rawData];
+    else return [];
+  }
   return rawData.map((item: any) => {
     const name = typeof item.name === 'string' ? item.name : 'Unknown food';
     const rawGrams = Math.round(Number(item.grams ?? item.weight ?? item.g) || 0);

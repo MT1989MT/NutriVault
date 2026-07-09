@@ -11,6 +11,15 @@ portie-bewerking, meerweekse trainingsplannen, error-UI voor AI-fouten, en
 backend-hardening (Gemini-gate, extend-lockdown, durable rate-limiting —
 alles flag-gated, standaard uit). Productie deployt automatisch via Vercel.
 
+**Volledige app-test (9 juli 2026):** 9 flows end-to-end in echte browsers
+tegen de productie-build met gemockte AI — onboarding+wizard, AI-logging,
+water/handmatig, workouts+plan, recepten, coach, overzicht/gewicht,
+instellingen/taal/data-wissen, profiel-validatie. **43 checks, alle
+regressie-fixes bevestigd, nul console-errors.** Vier kleine bevindingen
+zijn direct gefixt (nette fout bij niet-array AI-antwoord, custom
+macro-split zichtbaar in Profiel, wizard-hint bij uitgeschakelde knop,
+bevestiging bij plan-verwijderen + duidelijker wis-waarschuwing).
+
 ---
 
 ## Fase 1 — Backend activeren (½ dag, eenmalig)
@@ -104,9 +113,14 @@ Bij native purchases (App Store vereist dit voor digitale abonnementen):
 
 ## v1.1-ideeën (na launch)
 
+- **i18n-sweep:** Profiel, Workouts, History en Onboarding bevatten nog
+  hardcoded Engelse strings in een NL UI (gevonden in de app-test); ook
+  "Kopieer gisteren's" → "Kopieer … van gisteren"
 - Streak zichtbaar maken op het dashboard (wordt al berekend)
 - Habits-feature afmaken of verwijderen (nu dood: niets zet `profile.habits`)
 - Gewicht met terugwerkende kracht kunnen loggen/corrigeren
+- "Verlengen"-knop op web: nette melding "alleen in de app" i.p.v. stille no-op
+- Servings-stepper: hele porties sneller (nu 4× tikken voor 2 porties)
 - Web Worker voor foto-verwerking; focus-trap + Escape in modals
 - Unit tests voor `calculations.ts`, `storage.ts` en `auth.ts`
 - Éen calorieverbrand-model voor Dashboard én History (nu twee verschillende)

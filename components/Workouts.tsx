@@ -566,7 +566,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                     <h2 className="font-bold text-gray-900">{trainingPlan.title}</h2>
                     <p className="text-[10px] text-gray-400">{trainingPlan.durationWeeks}w • {trainingPlan.daysPerWeek}d/week</p>
                   </div>
-                  <button onClick={() => { saveTrainingPlan(null as any); setTrainingPlan(null); }} className="text-[10px] text-red-400 font-bold">Delete</button>
+                  <button onClick={() => { if (confirm('Delete this training plan?')) { saveTrainingPlan(null as any); setTrainingPlan(null); } }} className="text-[10px] text-red-400 font-bold">Delete</button>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 p-2 rounded-xl mb-3">
                   <button onClick={() => setCurrentPlanWeek(Math.max(1, currentPlanWeek - 1))} disabled={currentPlanWeek === 1} className="p-1.5 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
