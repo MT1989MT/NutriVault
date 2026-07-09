@@ -15,17 +15,25 @@ function applyCors(req, res) {
   const allAllowed = [...ALLOWED_ORIGINS, ...extraOrigins];
   const origin = req.headers.origin || '';
 
+  // Only this project's production domain and its Vercel preview deployments
+  // (nutri-vault-two-<git-branch|hash>.vercel.app). The old pattern matched any
+  // "nutri-vault-*.vercel.app", so anyone could register nutri-vault-evil.vercel.app
+  // and get a credentialed allowed origin.
   const isAllowed = allAllowed.includes(origin)
-    || /^https:\/\/nutri-vault(-[a-z0-9]+)*\.vercel\.app$/.test(origin);
+    || /^https:\/\/nutri-vault-two(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
+
+  // Vary on Origin so shared/CDN caches never serve one origin's ACAO to another.
+  res.setHeader('Vary', 'Origin');
 
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
+    // Native (Capacitor) requests send no Origin header.
     res.setHeader('Access-Control-Allow-Origin', 'capacitor://localhost');
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-activation-code');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();

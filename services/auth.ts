@@ -137,7 +137,8 @@ export const verifyKey = async (inputKey: string): Promise<{
   success: boolean;
   expiry?: number;
   token?: string;
-  name?: string
+  name?: string;
+  error?: 'invalid' | 'network';
 }> => {
   // Try Supabase first
   if (isSupabaseConfigured()) {
@@ -152,12 +153,12 @@ export const verifyKey = async (inputKey: string): Promise<{
     }
     // In production, don't fall through to mock
     if (!IS_DEV) {
-      // If Supabase returned an explicit failure, code is invalid
+      // Explicit failure = invalid code; null = Supabase unreachable (offline).
+      // Distinguish them so the UI doesn't tell an offline user their code is wrong.
       if (result && !result.success) {
-        return { success: false };
+        return { success: false, error: 'invalid' };
       }
-      // If Supabase was unreachable (result === null), return error
-      return { success: false };
+      return { success: false, error: 'network' };
     }
   }
 

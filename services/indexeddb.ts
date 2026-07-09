@@ -138,6 +138,18 @@ export async function deleteDayLog(date: string): Promise<void> {
   });
 }
 
+/** Delete ALL day logs (used by "clear all data") */
+export async function clearAllLogs(): Promise<void> {
+  const db = await openDB();
+  const tx = db.transaction(LOGS_STORE, 'readwrite');
+  const store = tx.objectStore(LOGS_STORE);
+  store.clear();
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /** Get total count of day logs */
 export async function getLogCount(): Promise<number> {
   const db = await openDB();

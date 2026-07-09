@@ -1,5 +1,6 @@
 
 import { ActivityLevel, Gender, MacroPreset, MacroTargets, UserProfile } from '../types';
+import { toDateStr } from './date';
 
 // 1 kg body fat ≈ 7700 kcal
 export const KCAL_PER_KG = 7700;
@@ -98,7 +99,7 @@ export const calculateStreak = (logs: Record<string, { items?: any[] }>): number
   for (let i = 0; i < 365; i++) {
     const checkDate = new Date(today);
     checkDate.setDate(today.getDate() - i);
-    const dateStr = checkDate.toISOString().split('T')[0];
+    const dateStr = toDateStr(checkDate);
     if (logs[dateStr] && logs[dateStr].items && logs[dateStr].items.length > 0) {
       count++;
     } else if (i > 0) break;

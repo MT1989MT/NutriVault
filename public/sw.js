@@ -1,5 +1,7 @@
 // NutriVault Service Worker — Offline-first with network-first API strategy
-const CACHE_NAME = 'nutrivault-v1';
+// Bump CACHE_NAME on each deploy so the activate handler purges the previous
+// cache (old hashed bundles) instead of letting them accumulate forever.
+const CACHE_NAME = 'nutrivault-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -42,25 +44,38 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation and assets: stale-while-revalidate
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(request);
-      const fetchPromise = fetch(request)
+  // Navigation / HTML: NETWORK-FIRST. The old stale-while-revalidate served a
+  // stale index.html after a deploy, which referenced hashed bundles that no
+  // longer exist → white screen until a second reload. Always try the network
+  // for the shell, fall back to cache only when offline.
+  const isNavigation = request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html');
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request)
         .then((networkResponse) => {
-          // Cache successful responses
           if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return networkResponse;
         })
-        .catch(() => {
-          // Network failed, return cached if available
-          return cached;
-        });
+        .catch(async () => (await caches.match(request)) || caches.match('/index.html'))
+    );
+    return;
+  }
 
-      // Return cached immediately if available, update in background
-      return cached || fetchPromise;
+  // Hashed assets (immutable): cache-first for speed, fetch + cache on miss.
+  event.respondWith(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) cache.put(request, networkResponse.clone());
+        return networkResponse;
+      } catch {
+        return cached || Response.error();
+      }
     })
   );
 });

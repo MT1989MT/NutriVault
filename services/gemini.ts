@@ -80,19 +80,43 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
+import { t } from '../utils/i18n';
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
 const responseCache = new Map<string, { text: string; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 30;
 
+// Fast, stable string hash (djb2) so the cache key reflects the ENTIRE prompt.
+// Keying on only the first 200 chars meant chat/coach prompts — whose dynamic
+// user message sits far past char 200 behind a long static template — all
+// collided and returned the same cached answer within the TTL.
+const hashString = (str: string): string => {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+};
+
 const getCacheKey = (model: string, prompt: string, imageBase64?: string): string => {
-  // Use first 200 chars of prompt + model as key (images are never cached)
+  // Images are never cached.
   if (imageBase64) return '';
-  return `${model}:${prompt.substring(0, 200)}`;
+  return `${model}:${prompt.length}:${hashString(prompt)}`;
 };
 
 // Call our secure API route (API key stays server-side) with retry logic
+// Read the current activation code from the stored session so the server can
+// verify the subscription (see REQUIRE_GEMINI_AUTH). Read localStorage directly
+// to avoid an import cycle with the auth service.
+const getActivationCode = (): string => {
+  try {
+    const raw = localStorage.getItem('nutrivault_auth_session');
+    if (!raw) return '';
+    return JSON.parse(raw)?.accountNumber || '';
+  } catch { return ''; }
+};
+
 const callGemini = async (model: string, prompt: string, jsonMode: boolean = false, imageBase64?: string): Promise<string> => {
   // Check cache for non-image requests
   const cacheKey = getCacheKey(model, prompt, imageBase64);
@@ -112,9 +136,13 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       const body: Record<string, unknown> = { model, prompt, jsonMode };
       if (imageBase64) body.imageBase64 = imageBase64;
 
+      const activationCode = getActivationCode();
       const response = await fetch(`${API_BASE_URL}/api/gemini`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activationCode ? { 'x-activation-code': activationCode } : {}),
+        },
         body: JSON.stringify(body),
         signal: controller.signal
       });
@@ -127,8 +155,11 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
         const errorMsg = errorData?.detail || errorData?.error
           || (rawText ? `Server error: ${rawText.slice(0, 120)}` : `API error: ${response.status}`);
         const error = new Error(errorMsg);
-        // Don't retry on client errors (400-level) except 429
+        // Don't retry on client errors (400-level) except 429. Tag it so the
+        // catch below re-throws immediately instead of retrying (which wasted
+        // quota and added ~3s latency on every hard failure).
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          (error as any).noRetry = true;
           throw error;
         }
         lastError = error;
@@ -156,6 +187,8 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       return text;
     } catch (error: any) {
       clearTimeout(timeout);
+      // Non-retryable client error (4xx) — surface immediately, don't retry.
+      if (error?.noRetry) throw error;
       if (error.name === 'AbortError') {
         lastError = new Error('Request timed out. Please try again.');
         if (attempt < MAX_RETRIES) {
@@ -358,15 +391,16 @@ RESPONSE FORMAT — strict JSON array only:
   }
 };
 
-export const parseFoodFromPhoto = async (imageBase64: string): Promise<Omit<FoodItem, 'id' | 'timestamp' | 'mealType'>[]> => {
+export const parseFoodFromPhoto = async (imageBase64: string, hint?: string): Promise<Omit<FoodItem, 'id' | 'timestamp' | 'mealType'>[]> => {
   try {
     const lang = (navigator.language || 'en').split('-')[0];
     const langName = { nl: 'Dutch', de: 'German', fr: 'French', es: 'Spanish', it: 'Italian' }[lang] || 'English';
+    const safeHint = hint?.trim() ? hint.trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ').slice(0, 500) : '';
 
     const text = await callGemini(
       POWERFUL_MODEL,
       `Food database. Analyze this food photo into JSON.
-
+${safeHint ? `\nThe user added this description — use it to disambiguate what's in the photo: "${safeHint}"\n` : ''}
 RULES:
 1. Identify each food item visible. Split composites into components (bread, topping, sauce, etc.).
 2. When 2+ items: add "group" with a short meal name. 1 item: omit "group".
@@ -551,8 +585,8 @@ Examples: "Lekker bezig vandaag! 💪", "Al 1200 kcal, nice!", "Nog 800 to go, y
 Do NOT mention being AI. Just be a buddy saying hi.` : ''}`,
       false
     );
-    return text || "Hey, ik ben er! Wat wil je weten?";
-  } catch (error) { return "Hmm, ik kon even niet verbinden. Probeer het nog eens!"; }
+    return text || t('coachGreeting');
+  } catch (error) { return t('coachConnectError'); }
 };
 
 export const getWeeklyInsights = async (logs: any, style: CoachPersonality): Promise<string> => {
@@ -594,10 +628,29 @@ export const generateTrainingPlan = async (goal: string, weeks: number, daysPerW
         if (!text) return null;
         const plan = JSON.parse(cleanJsonOutput(text));
 
-        // Flatten for the current view, but data structure supports weeks
-        const firstWeek = plan.weeks ? plan.weeks[0].schedule : plan.schedule;
+        // Keep the FULL per-week schedules so the Week 1…N navigator shows real
+        // progression instead of repeating week 1. Fall back to a single schedule
+        // repeated across weeks if the model returned a flat plan.
+        let weeklySchedules: any[][];
+        if (Array.isArray(plan.weeks) && plan.weeks.length > 0 && plan.weeks[0].schedule) {
+            weeklySchedules = plan.weeks
+                .sort((a: any, b: any) => (a.weekNumber || 0) - (b.weekNumber || 0))
+                .map((w: any) => w.schedule || []);
+        } else {
+            const flat = plan.schedule || [];
+            weeklySchedules = Array.from({ length: weeks }, () => flat);
+        }
+        const firstWeek = weeklySchedules[0] || [];
 
-        return { ...plan, id: generateId(), active: true, durationWeeks: weeks, schedule: firstWeek, startDate: new Date().toISOString() };
+        return {
+            ...plan,
+            id: generateId(),
+            active: true,
+            durationWeeks: weeks,
+            schedule: firstWeek,
+            weeklySchedules,
+            startDate: new Date().toISOString(),
+        };
     } catch(e) { return null; }
 };
 

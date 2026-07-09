@@ -34,9 +34,9 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   handleClearAndReset() {
-    try {
-      localStorage.removeItem('nutrivault_auth_session');
-    } catch {}
+    // Just reload — do NOT clear the auth session. With this app's anonymous
+    // key model, a user who never saved their 16-digit code would be
+    // permanently locked out of a paid account by a transient render crash.
     window.location.reload();
   }
 

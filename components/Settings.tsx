@@ -1,13 +1,20 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Shield, Copy, X, LogOut, Check, Info, Heart, Target, Utensils, Lock, Database, Eye, Trash2, Download, Upload, ExternalLink } from 'lucide-react';
+import { Shield, Copy, X, LogOut, Check, Info, Heart, Target, Utensils, Lock, Database, Eye, Trash2, Download, Upload, ExternalLink, Globe } from 'lucide-react';
 import { getSession, logout, addTime } from '../services/auth';
-import { getProfile, exportAllData, importAllData } from '../services/storage';
+import { getProfile, exportAllData, importAllData, clearAllData } from '../services/storage';
 import { getManagementURL, purchaseMonthly } from '../services/payments';
 import { UserProfile } from '../types';
 import { PRIVACY_POLICY_URL } from '../services/config';
+import { t, getCurrentLanguage, setLanguage, getAvailableLanguages } from '../utils/i18n';
 
 interface SettingsProps { onBack: () => void; }
+
+// The free "extend" shortcut (no real payment) must never be reachable in a
+// production build — it's a test convenience only.
+const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+const IS_TEST_MODE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE === 'true')
+  || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('testmode'));
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const [session, setSession] = useState(getSession());
@@ -17,7 +24,16 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const [copied, setCopied] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [importFeedback, setImportFeedback] = useState<string | null>(null);
+  const [lang, setLang] = useState(getCurrentLanguage());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLanguageChange = (code: string) => {
+    setLanguage(code);
+    setLang(code);
+    // A full reload is the simplest reliable way to re-render every screen in
+    // the new language (t() reads the stored language at render time).
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (session) setDaysLeft(Math.max(0, Math.ceil((session.subscriptionEnds - Date.now()) / (1000 * 60 * 60 * 24))));
@@ -43,8 +59,17 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       return;
     }
 
-    // On web (dev): direct extend
-    if (confirm("Extend subscription by 30 days?")) {
+    // Free extend is a dev/test convenience only. In a real web build, route to
+    // the same purchase flow so payment can't be bypassed with a confirm dialog.
+    if (IS_DEV || IS_TEST_MODE) {
+      if (confirm(t('extendConfirm'))) {
+        await addTime(session.accountNumber, 1);
+        setDaysLeft(p => p + 30);
+      }
+      return;
+    }
+    const result = await purchaseMonthly();
+    if (result.success) {
       await addTime(session.accountNumber, 1);
       setDaysLeft(p => p + 30);
     }
@@ -58,7 +83,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   };
 
   const handleLogout = () => {
-    if (confirm("Make sure you saved your key!")) {
+    if (confirm(t('logoutWarn'))) {
       logout();
       window.location.reload();
     }
@@ -79,13 +104,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = importAllData(ev.target?.result as string);
+    reader.onload = async (ev) => {
+      const result = await importAllData(ev.target?.result as string);
       if (result.success) {
-        setImportFeedback('Data restored successfully!');
+        setImportFeedback(t('dataRestored'));
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        setImportFeedback(result.error || 'Import failed');
+        setImportFeedback(result.error || t('importFailed'));
         setTimeout(() => setImportFeedback(null), 3000);
       }
     };
@@ -93,19 +118,25 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleClearData = () => {
-    if (!confirm("This will delete all your nutrition data (logs, recipes, etc). Your account key will still work. Are you sure?")) return;
-    if (!confirm("This action cannot be undone. All food logs, workouts, and recipes will be permanently deleted. Continue?")) return;
+  const handleClearData = async () => {
+    if (!confirm(t('clearDataWarn1'))) return;
+    if (!confirm(t('clearDataWarn2'))) return;
 
+    // Preserve the things that shouldn't be wiped by a data-clear: the account
+    // session (so the user stays logged in), onboarding flag and language.
     const session = localStorage.getItem('nutrivault_auth_session');
     const serverDb = localStorage.getItem('nutrivault_server_db_hashes');
     const onboarding = localStorage.getItem('nutrivault_onboarding_complete');
-    const lang = localStorage.getItem('nutrivault_language');
-    localStorage.clear();
+    const savedLang = localStorage.getItem('nutrivault_language');
+
+    // clearAllData wipes localStorage + IndexedDB + the in-memory cache, so the
+    // deleted logs can't resurrect from IDB on the next load.
+    await clearAllData();
+
     if (session) localStorage.setItem('nutrivault_auth_session', session);
     if (serverDb) localStorage.setItem('nutrivault_server_db_hashes', serverDb);
     if (onboarding) localStorage.setItem('nutrivault_onboarding_complete', onboarding);
-    if (lang) localStorage.setItem('nutrivault_language', lang);
+    if (savedLang) localStorage.setItem('nutrivault_language', savedLang);
     window.location.reload();
   };
 
@@ -115,8 +146,8 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       <div className="bg-white border-b border-gray-100/80 px-4 pb-2.5" style={{paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)'}}>
         <div className="flex items-center justify-between">
           <div className="w-10" />
-          <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">Settings</span>
-          <button onClick={onBack} aria-label="Close settings" className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
+          <span className="text-[20px] font-extrabold text-gray-900 font-display tracking-tight">{t('settings')}</span>
+          <button onClick={onBack} aria-label={t('settings')} className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2">
             <X className="w-[18px] h-[18px] text-gray-400" />
           </button>
         </div>
@@ -251,28 +282,28 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         {/* Account Key Card */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 p-3 opacity-5"><Shield className="w-24 h-24" /></div>
-          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">Account Key</p>
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t('accountKey')}</p>
           <p className="font-mono text-xl font-bold tracking-widest mb-4">{session?.accountNumber.match(/.{1,4}/g)?.join(' ')}</p>
           <button onClick={handleCopyKey} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-smooth active:scale-95">
-            {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy Key</>}
+            {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> {t('copied')}</> : <><Copy className="w-3.5 h-3.5" /> {t('copyKey')}</>}
           </button>
         </div>
 
         {/* Subscription */}
         <div className="bg-white rounded-2xl p-4 card-shadow">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">Subscription</p>
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('subscription')}</p>
           <div className="flex justify-between items-center">
             <div>
-              <span className={`text-sm font-bold ${daysLeft > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{daysLeft > 0 ? 'Active' : 'Expired'}</span>
-              <span className="text-xs text-gray-400 block">{daysLeft} days remaining</span>
+              <span className={`text-sm font-bold ${daysLeft > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{daysLeft > 0 ? t('active') : t('expired')}</span>
+              <span className="text-xs text-gray-400 block">{daysLeft} {t('daysRemaining')}</span>
             </div>
-            <button onClick={handlePayment} className="text-[#E07A5F] text-xs font-bold bg-[#E07A5F]/8 px-4 py-2 rounded-xl transition-smooth active:scale-95">Extend</button>
+            <button onClick={handlePayment} className="text-[#E07A5F] text-xs font-bold bg-[#E07A5F]/8 px-4 py-2 rounded-xl transition-smooth active:scale-95">{t('extend')}</button>
           </div>
           <button
             onClick={handleManageSubscription}
             className="w-full mt-3 text-gray-400 text-[10px] font-medium flex items-center justify-center gap-1"
           >
-            Manage Subscription <ExternalLink className="w-2.5 h-2.5" />
+            {t('manageSubscription')} <ExternalLink className="w-2.5 h-2.5" />
           </button>
         </div>
 
@@ -280,7 +311,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         <div className="bg-white rounded-2xl p-4 card-shadow">
           <div className="flex items-center gap-2 mb-3">
             <Database className="w-4 h-4 text-[#E07A5F]" />
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Data Backup</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('dataBackup')}</p>
           </div>
           {importFeedback && (
             <div className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
@@ -289,29 +320,49 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
           )}
           <div className="space-y-2">
             <button onClick={handleExportData} className="w-full bg-blue-50 text-blue-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-blue-100">
-              <Download className="w-4 h-4" /> Export Data
+              <Download className="w-4 h-4" /> {t('exportData')}
             </button>
             <button onClick={() => fileInputRef.current?.click()} className="w-full bg-gray-50 text-gray-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-smooth active:scale-[0.98] hover:bg-gray-100">
-              <Upload className="w-4 h-4" /> Import Backup
+              <Upload className="w-4 h-4" /> {t('importBackup')}
             </button>
             <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportData} className="hidden" />
           </div>
-          <p className="text-[10px] text-gray-400 mt-2.5 text-center">Your data stays local. Export to keep a backup.</p>
+          <p className="text-[10px] text-gray-400 mt-2.5 text-center">{t('backupDesc')}</p>
+        </div>
+
+        {/* Language */}
+        <div className="bg-white rounded-2xl p-4 card-shadow">
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="w-4 h-4 text-[#E07A5F]" />
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{t('language')}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {getAvailableLanguages().map(l => (
+              <button
+                key={l.code}
+                onClick={() => l.code !== lang && handleLanguageChange(l.code)}
+                aria-pressed={l.code === lang}
+                className={`py-2.5 rounded-xl text-xs font-bold transition-smooth active:scale-[0.97] ${l.code === lang ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/20' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+              >
+                {l.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Actions */}
         <div className="space-y-2">
           <button onClick={() => setShowAbout(true)} className="w-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#E07A5F]/20 transition-smooth active:scale-[0.98]">
-            <Info className="w-4 h-4" /> About NutriVault
+            <Info className="w-4 h-4" /> {t('aboutNutriVault')}
           </button>
           <button onClick={() => setShowPrivacy(true)} className="w-full bg-white text-gray-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 card-shadow transition-smooth active:scale-[0.98]">
-            <Shield className="w-4 h-4" /> Privacy Policy
+            <Shield className="w-4 h-4" /> {t('privacyPolicy')}
           </button>
           <button onClick={handleClearData} className="w-full bg-orange-50 text-orange-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
-            <Trash2 className="w-4 h-4" /> Clear All Data
+            <Trash2 className="w-4 h-4" /> {t('clearAllData')}
           </button>
           <button onClick={handleLogout} className="w-full bg-red-50 text-red-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-smooth active:scale-[0.98]">
-            <LogOut className="w-4 h-4" /> Logout
+            <LogOut className="w-4 h-4" /> {t('logout')}
           </button>
         </div>
 
@@ -323,7 +374,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             rel="noopener noreferrer"
             className="text-[10px] text-gray-400 flex items-center gap-1"
           >
-            Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
+            {t('privacyPolicy')} <ExternalLink className="w-2.5 h-2.5" />
           </a>
           <a
             href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
@@ -331,7 +382,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             rel="noopener noreferrer"
             className="text-[10px] text-gray-400 flex items-center gap-1"
           >
-            Terms of Use <ExternalLink className="w-2.5 h-2.5" />
+            {t('termsOfUse')} <ExternalLink className="w-2.5 h-2.5" />
           </a>
         </div>
       </div>

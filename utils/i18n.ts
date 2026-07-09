@@ -8,7 +8,7 @@ type TranslationKey =
   | 'breakfast' | 'lunch' | 'dinner' | 'snack'
   | 'brkf' | 'lnch' | 'dinr' | 'snck'
   // Dashboard
-  | 'today' | 'calories' | 'left' | 'over' | 'eaten' | 'of'
+  | 'today' | 'yesterday' | 'calories' | 'left' | 'over' | 'eaten' | 'of'
   | 'quickLog' | 'chat' | 'noMeals' | 'whatDidYouEat' | 'tellMeWhatYouAte'
   | 'logged' | 'youHave' | 'kcalLeft' | 'kcalOver'
   | 'micronutrients' | 'editPortion' | 'current' | 'portion' | 'grams' | 'pieces'
@@ -81,7 +81,16 @@ type TranslationKey =
   // Photo scan & weight goal
   | 'scanFood' | 'analyzing' | 'targetWeight' | 'bmi' | 'toGoal' | 'rate' | 'weeksToGoal'
   // Error messages & copy
-  | 'couldNotIdentifyFood' | 'requestTimedOut' | 'networkError' | 'copyYesterday';
+  | 'couldNotIdentifyFood' | 'requestTimedOut' | 'networkError' | 'copyYesterday'
+  // Settings (added when wiring up the language switcher)
+  | 'logout' | 'privacyPolicy' | 'termsOfUse' | 'copyKey' | 'copied' | 'manageSubscription'
+  | 'clearDataWarn1' | 'clearDataWarn2' | 'logoutWarn' | 'extendConfirm' | 'importFailed'
+  // AI generation errors
+  | 'recipeGenFailed' | 'workoutGenFailed'
+  // Profile validation
+  | 'invalidAge' | 'invalidHeight' | 'invalidWeight'
+  // Coach fallbacks
+  | 'coachGreeting' | 'coachConnectError';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -103,6 +112,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: 'Today',
+    yesterday: 'Yesterday',
     calories: 'kcal',
     left: 'left',
     over: 'over',
@@ -361,6 +371,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Save Weight',
     aboutNutriVault: 'About NutriVault',
     clearAllData: 'Clear All Data',
+    logout: 'Logout',
+    privacyPolicy: 'Privacy Policy',
+    termsOfUse: 'Terms of Use',
+    copyKey: 'Copy Key',
+    copied: 'Copied!',
+    manageSubscription: 'Manage Subscription',
+    clearDataWarn1: 'This will delete all your nutrition data (logs, recipes, etc). Your account key will still work. Are you sure?',
+    clearDataWarn2: 'This action cannot be undone. All food logs, workouts, and recipes will be permanently deleted. Continue?',
+    logoutWarn: 'Make sure you saved your key!',
+    extendConfirm: 'Extend subscription by 30 days?',
+    importFailed: 'Import failed',
     quick: 'Quick',
     create: 'Create',
     dishes: 'Dishes',
@@ -384,7 +405,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: 'Could not identify any food items. Please try again with more detail.',
     requestTimedOut: 'Request timed out. Please try again.',
     networkError: 'Could not reach the server. Check your connection.',
-    copyYesterday: "Copy yesterday's"
+    copyYesterday: "Copy yesterday's",
+    recipeGenFailed: 'Could not generate a recipe. Please try again.',
+    workoutGenFailed: 'Could not generate a workout. Please try again.',
+    invalidAge: 'Please enter a valid age (13-120).',
+    invalidHeight: 'Please enter a valid height in cm (100-250).',
+    invalidWeight: 'Please enter a valid weight in kg (30-400).',
+    coachGreeting: 'Hey, I\'m here! What would you like to know?',
+    coachConnectError: 'Hmm, I couldn\'t connect just now. Try again!',
   },
   nl: {
     // Navigation
@@ -405,6 +433,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: 'Vandaag',
+    yesterday: 'Gisteren',
     calories: 'kcal',
     left: 'over',
     over: 'teveel',
@@ -663,6 +692,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Bewaar gewicht',
     aboutNutriVault: 'Over NutriVault',
     clearAllData: 'Alle data wissen',
+    logout: 'Uitloggen',
+    privacyPolicy: 'Privacybeleid',
+    termsOfUse: 'Gebruiksvoorwaarden',
+    copyKey: 'Kopieer code',
+    copied: 'Gekopieerd!',
+    manageSubscription: 'Abonnement beheren',
+    clearDataWarn1: 'Dit verwijdert al je voedingsdata (logs, recepten, enz). Je accountcode blijft werken. Weet je het zeker?',
+    clearDataWarn2: 'Deze actie kan niet ongedaan worden gemaakt. Alle eetlogs, workouts en recepten worden permanent verwijderd. Doorgaan?',
+    logoutWarn: 'Zorg dat je je code hebt opgeslagen!',
+    extendConfirm: 'Abonnement met 30 dagen verlengen?',
+    importFailed: 'Importeren mislukt',
     quick: 'Snel',
     create: 'Maak',
     dishes: 'Gerechten',
@@ -686,7 +726,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: 'Kon geen voedsel herkennen. Probeer het opnieuw met meer detail.',
     requestTimedOut: 'Verzoek verlopen. Probeer het opnieuw.',
     networkError: 'Kan de server niet bereiken. Controleer je verbinding.',
-    copyYesterday: "Kopieer gisteren's"
+    copyYesterday: "Kopieer gisteren's",
+    recipeGenFailed: 'Kon geen recept genereren. Probeer het opnieuw.',
+    workoutGenFailed: 'Kon geen workout genereren. Probeer het opnieuw.',
+    invalidAge: 'Voer een geldige leeftijd in (13-120).',
+    invalidHeight: 'Voer een geldige lengte in cm in (100-250).',
+    invalidWeight: 'Voer een geldig gewicht in kg in (30-400).',
+    coachGreeting: 'Hey, ik ben er! Wat wil je weten?',
+    coachConnectError: 'Hmm, ik kon even niet verbinden. Probeer het nog eens!',
   },
   de: {
     // Navigation
@@ -707,6 +754,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: 'Heute',
+    yesterday: 'Gestern',
     calories: 'kcal',
     left: 'übrig',
     over: 'über',
@@ -965,6 +1013,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Gewicht speichern',
     aboutNutriVault: '\u00dcber NutriVault',
     clearAllData: 'Alle Daten l\u00f6schen',
+    logout: 'Abmelden',
+    privacyPolicy: 'Datenschutz',
+    termsOfUse: 'Nutzungsbedingungen',
+    copyKey: 'Schlüssel kopieren',
+    copied: 'Kopiert!',
+    manageSubscription: 'Abo verwalten',
+    clearDataWarn1: 'Dies löscht alle deine Ernährungsdaten (Logs, Rezepte usw). Dein Kontoschlüssel funktioniert weiterhin. Bist du sicher?',
+    clearDataWarn2: 'Diese Aktion kann nicht rückgängig gemacht werden. Alle Essenslogs, Workouts und Rezepte werden dauerhaft gelöscht. Fortfahren?',
+    logoutWarn: 'Stelle sicher, dass du deinen Schlüssel gespeichert hast!',
+    extendConfirm: 'Abo um 30 Tage verlängern?',
+    importFailed: 'Import fehlgeschlagen',
     quick: 'Schnell',
     create: 'Erstellen',
     dishes: 'Gerichte',
@@ -988,7 +1047,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: 'Es konnten keine Lebensmittel erkannt werden. Bitte versuche es mit mehr Details.',
     requestTimedOut: 'Zeitüberschreitung. Bitte versuche es erneut.',
     networkError: 'Server nicht erreichbar. Überprüfe deine Verbindung.',
-    copyYesterday: 'Gestern kopieren'
+    copyYesterday: 'Gestern kopieren',
+    recipeGenFailed: 'Rezept konnte nicht erstellt werden. Bitte erneut versuchen.',
+    workoutGenFailed: 'Workout konnte nicht erstellt werden. Bitte erneut versuchen.',
+    invalidAge: 'Bitte gib ein gültiges Alter ein (13-120).',
+    invalidHeight: 'Bitte gib eine gültige Größe in cm ein (100-250).',
+    invalidWeight: 'Bitte gib ein gültiges Gewicht in kg ein (30-400).',
+    coachGreeting: 'Hey, ich bin da! Was möchtest du wissen?',
+    coachConnectError: 'Hmm, ich konnte gerade keine Verbindung herstellen. Versuch es nochmal!',
   },
   fr: {
     // Navigation
@@ -1009,6 +1075,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: "Aujourd'hui",
+    yesterday: 'Hier',
     calories: 'kcal',
     left: 'restant',
     over: 'dépassé',
@@ -1267,6 +1334,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Sauvegarder poids',
     aboutNutriVault: '\u00c0 propos de NutriVault',
     clearAllData: 'Effacer toutes les donn\u00e9es',
+    logout: 'Déconnexion',
+    privacyPolicy: 'Confidentialité',
+    termsOfUse: 'Conditions d\'utilisation',
+    copyKey: 'Copier la clé',
+    copied: 'Copié!',
+    manageSubscription: 'Gérer l\'abonnement',
+    clearDataWarn1: 'Cela supprimera toutes vos données nutritionnelles (journaux, recettes, etc). Votre clé de compte fonctionnera toujours. Êtes-vous sûr?',
+    clearDataWarn2: 'Cette action est irréversible. Tous les journaux alimentaires, entraînements et recettes seront définitivement supprimés. Continuer?',
+    logoutWarn: 'Assurez-vous d\'avoir enregistré votre clé!',
+    extendConfirm: 'Prolonger l\'abonnement de 30 jours?',
+    importFailed: 'Échec de l\'import',
     quick: 'Rapide',
     create: 'Cr\u00e9er',
     dishes: 'Plats',
@@ -1290,7 +1368,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: "Impossible d'identifier les aliments. Réessayez avec plus de détails.",
     requestTimedOut: 'Délai expiré. Veuillez réessayer.',
     networkError: 'Serveur inaccessible. Vérifiez votre connexion.',
-    copyYesterday: "Copier d'hier"
+    copyYesterday: "Copier d'hier",
+    recipeGenFailed: 'Impossible de générer une recette. Réessayez.',
+    workoutGenFailed: 'Impossible de générer un entraînement. Réessayez.',
+    invalidAge: 'Entrez un âge valide (13-120).',
+    invalidHeight: 'Entrez une taille valide en cm (100-250).',
+    invalidWeight: 'Entrez un poids valide en kg (30-400).',
+    coachGreeting: 'Salut, je suis là! Que veux-tu savoir?',
+    coachConnectError: 'Hmm, je n\'ai pas pu me connecter. Réessaye!',
   },
   es: {
     // Navigation
@@ -1311,6 +1396,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: 'Hoy',
+    yesterday: 'Ayer',
     calories: 'kcal',
     left: 'restante',
     over: 'excedido',
@@ -1569,6 +1655,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Guardar peso',
     aboutNutriVault: 'Acerca de NutriVault',
     clearAllData: 'Borrar todos los datos',
+    logout: 'Cerrar sesión',
+    privacyPolicy: 'Privacidad',
+    termsOfUse: 'Términos de uso',
+    copyKey: 'Copiar clave',
+    copied: '¡Copiado!',
+    manageSubscription: 'Gestionar suscripción',
+    clearDataWarn1: 'Esto eliminará todos tus datos nutricionales (registros, recetas, etc). Tu clave de cuenta seguirá funcionando. ¿Estás seguro?',
+    clearDataWarn2: 'Esta acción no se puede deshacer. Todos los registros de comida, entrenamientos y recetas se eliminarán permanentemente. ¿Continuar?',
+    logoutWarn: '¡Asegúrate de haber guardado tu clave!',
+    extendConfirm: '¿Extender la suscripción 30 días?',
+    importFailed: 'Error al importar',
     quick: 'R\u00e1pido',
     create: 'Crear',
     dishes: 'Platos',
@@ -1592,7 +1689,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: 'No se pudo identificar ningún alimento. Inténtalo de nuevo con más detalle.',
     requestTimedOut: 'Tiempo de espera agotado. Inténtalo de nuevo.',
     networkError: 'No se pudo conectar al servidor. Verifica tu conexión.',
-    copyYesterday: 'Copiar de ayer'
+    copyYesterday: 'Copiar de ayer',
+    recipeGenFailed: 'No se pudo generar una receta. Inténtalo de nuevo.',
+    workoutGenFailed: 'No se pudo generar un entrenamiento. Inténtalo de nuevo.',
+    invalidAge: 'Introduce una edad válida (13-120).',
+    invalidHeight: 'Introduce una altura válida en cm (100-250).',
+    invalidWeight: 'Introduce un peso válido en kg (30-400).',
+    coachGreeting: '¡Hola, aquí estoy! ¿Qué quieres saber?',
+    coachConnectError: 'Mmm, no pude conectar. ¡Inténtalo de nuevo!',
   },
   it: {
     // Navigation
@@ -1613,6 +1717,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     snck: 'Snck',
     // Dashboard
     today: 'Oggi',
+    yesterday: 'Ieri',
     calories: 'kcal',
     left: 'rimaste',
     over: 'in eccesso',
@@ -1871,6 +1976,17 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     saveWeight: 'Salva peso',
     aboutNutriVault: 'Info su NutriVault',
     clearAllData: 'Cancella tutti i dati',
+    logout: 'Esci',
+    privacyPolicy: 'Privacy',
+    termsOfUse: 'Termini d\'uso',
+    copyKey: 'Copia chiave',
+    copied: 'Copiato!',
+    manageSubscription: 'Gestisci abbonamento',
+    clearDataWarn1: 'Questo eliminerà tutti i tuoi dati nutrizionali (log, ricette, ecc). La tua chiave account continuerà a funzionare. Sei sicuro?',
+    clearDataWarn2: 'Questa azione non può essere annullata. Tutti i log alimentari, allenamenti e ricette verranno eliminati definitivamente. Continuare?',
+    logoutWarn: 'Assicurati di aver salvato la tua chiave!',
+    extendConfirm: 'Estendere l\'abbonamento di 30 giorni?',
+    importFailed: 'Importazione fallita',
     quick: 'Veloci',
     create: 'Crea',
     dishes: 'Piatti',
@@ -1894,7 +2010,14 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     couldNotIdentifyFood: 'Impossibile identificare gli alimenti. Riprova con più dettagli.',
     requestTimedOut: 'Richiesta scaduta. Riprova.',
     networkError: 'Impossibile raggiungere il server. Controlla la connessione.',
-    copyYesterday: 'Copia da ieri'
+    copyYesterday: 'Copia da ieri',
+    recipeGenFailed: 'Impossibile generare una ricetta. Riprova.',
+    workoutGenFailed: 'Impossibile generare un allenamento. Riprova.',
+    invalidAge: 'Inserisci un\'età valida (13-120).',
+    invalidHeight: 'Inserisci un\'altezza valida in cm (100-250).',
+    invalidWeight: 'Inserisci un peso valido in kg (30-400).',
+    coachGreeting: 'Ehi, sono qui! Cosa vuoi sapere?',
+    coachConnectError: 'Mmm, non sono riuscito a connettermi. Riprova!',
   }
 };
 
@@ -1904,10 +2027,16 @@ export const getDeviceLanguage = (): string => {
   return lang.split('-')[0].toLowerCase();
 };
 
-// Get current language (English default, user can change in settings)
+// Get current language. Priority: explicit user choice → device language (if
+// supported) → English. Defaulting to the device language keeps the UI and the
+// AI coach (which keys off navigator.language) in the same language.
 export const getCurrentLanguage = (): string => {
-  const saved = localStorage.getItem('nutrivault_language');
-  if (saved && translations[saved]) return saved;
+  try {
+    const saved = localStorage.getItem('nutrivault_language');
+    if (saved && translations[saved]) return saved;
+    const device = getDeviceLanguage();
+    if (translations[device]) return device;
+  } catch { /* ignore */ }
   return 'en';
 };
 

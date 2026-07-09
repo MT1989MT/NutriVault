@@ -2,8 +2,9 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Brain, Send, Smile, Shield, Zap, Glasses, Sparkles, HelpCircle, X, ArrowLeft, Trash2, Dumbbell, Utensils, TrendingUp, Flame } from 'lucide-react';
 import { getMotivationMessage, ChatHistoryItem } from '../services/gemini';
-import { getProfile, saveMood, getMoods, saveProfile } from '../services/storage';
+import { getProfile, saveMood, getMoods, saveProfile, clearMoods } from '../services/storage';
 import { generateId } from '../utils/calculations';
+import { todayStr, toDateStr } from '../utils/date';
 import { CoachPersonality, UserProfile, DayLog } from '../types';
 import { t as tr } from '../utils/i18n';
 
@@ -26,7 +27,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
 
   // Calculate user stats from logs — single-pass where possible
   const userStats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     const todayLog = logs[today];
     const todayItems = todayLog?.items || [];
 
@@ -57,7 +58,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
     const last7Days: string[] = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(); d.setDate(d.getDate() - i);
-      last7Days.push(d.toISOString().split('T')[0]);
+      last7Days.push(toDateStr(d));
     }
 
     let weekCalories = 0, weekProtein = 0, weekWorkouts = 0, daysTracked = 0;
@@ -252,7 +253,7 @@ const Motivation: React.FC<MotivationProps> = ({ onBack, logs = {}, profile: pro
   };
 
   const clearChat = () => {
-    localStorage.removeItem('nutrivault_moods');
+    clearMoods();
     const lang = (navigator.language || 'en').split('-')[0];
     const isNL = lang === 'nl';
     const name = profile?.name ? ' ' + profile.name : '';

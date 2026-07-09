@@ -46,6 +46,9 @@ const safeSetItem = (key: string, value: string): void => {
   }
 };
 
+// Holds the latest logs pending a debounced IDB write, so we can flush on demand.
+let pendingLogsForIdb: Record<string, DayLog> | null = null;
+
 // Write an already-parsed object: caches it in memory and persists to localStorage + IDB
 const cachedSet = <T>(key: string, data: T): void => {
   cache.set(key, data);
@@ -53,14 +56,33 @@ const cachedSet = <T>(key: string, data: T): void => {
 
   // Background-sync food logs to IndexedDB (debounced)
   if (key === LOGS_KEY && idbReady) {
+    pendingLogsForIdb = data as Record<string, DayLog>;
     if (idbWriteTimer) clearTimeout(idbWriteTimer);
-    idbWriteTimer = setTimeout(() => {
-      idb.saveDayLogs(data as Record<string, DayLog>).catch(err =>
-        log.warn('IDB write failed', err)
-      );
-    }, 300);
+    idbWriteTimer = setTimeout(() => { flushLogsToIdb(); }, 300);
   }
 };
+
+/**
+ * Immediately persist any pending (debounced) logs to IndexedDB.
+ * Called on a timer, and eagerly on pagehide/visibilitychange so data logged
+ * right before the app is backgrounded/killed is never lost.
+ */
+export function flushLogsToIdb(): void {
+  if (idbWriteTimer) { clearTimeout(idbWriteTimer); idbWriteTimer = null; }
+  if (!idbReady || !pendingLogsForIdb) return;
+  const toWrite = pendingLogsForIdb;
+  pendingLogsForIdb = null;
+  idb.saveDayLogs(toWrite).catch(err => log.warn('IDB write failed', err));
+}
+
+// Register lifecycle flush handlers once (browser only).
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const flush = () => flushLogsToIdb();
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+}
 
 /**
  * Initialize IndexedDB: migrate existing localStorage logs on first run,
@@ -82,10 +104,16 @@ export async function initializeStorage(): Promise<void> {
       localStorage.setItem(IDB_MIGRATED_KEY, '1');
     }
 
-    // Load from IDB into memory cache (IDB is source of truth after migration)
+    // Merge IDB logs with what's already in memory (seeded from localStorage on
+    // startup). localStorage is written synchronously on every save, so for any
+    // date present in both it is at least as fresh as the debounced IDB copy —
+    // it wins. IDB-only dates are preserved. This avoids clobbering data logged
+    // just before the app was killed (before the 300ms debounce flushed).
     const idbLogs = await idb.getAllLogs();
     if (Object.keys(idbLogs).length > 0) {
-      cache.set(LOGS_KEY, idbLogs);
+      const localLogs = cachedGet<Record<string, DayLog>>(LOGS_KEY, {});
+      const merged: Record<string, DayLog> = { ...idbLogs, ...localLogs };
+      cache.set(LOGS_KEY, merged);
     }
     idbReady = true;
   } catch (err) {
@@ -99,46 +127,51 @@ export const getProfile = (): UserProfile | null => cachedGet<UserProfile | null
 export const saveLogs = (logs: Record<string, DayLog>): void => cachedSet(LOGS_KEY, logs);
 export const getLogs = (): Record<string, DayLog> => cachedGet<Record<string, DayLog>>(LOGS_KEY, {});
 
+// All log writers below are IMMUTABLE: they build a new top-level logs object
+// and a new day object so React sees a changed reference and re-renders.
+// (Mutating in place returned the same reference and silently killed re-renders.)
+const upsertDay = (
+  logs: Record<string, DayLog>,
+  date: string,
+  update: (day: DayLog) => DayLog,
+): Record<string, DayLog> => {
+  const day = logs[date] || { date, items: [] };
+  return { ...logs, [date]: update(day) };
+};
+
 export const addFoodToLog = (date: string, item: FoodItem) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [] };
-  logs[date].items.push(item);
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => ({ ...day, items: [...(day.items || []), item] }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const addFoodsToLog = (date: string, items: FoodItem[]) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [] };
-  logs[date].items.push(...items);
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => ({ ...day, items: [...(day.items || []), ...items] }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const removeFoodFromLog = (date: string, itemId: string) => {
   const logs = getLogs();
-  if (logs[date]) {
-    logs[date].items = logs[date].items.filter(i => i.id !== itemId);
-    saveLogs(logs);
-  }
-  return logs;
+  if (!logs[date]) return logs;
+  const updated = upsertDay(logs, date, day => ({ ...day, items: (day.items || []).filter(i => i.id !== itemId) }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const toggleHabit = (date: string, habit: string) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [] };
-  const completed = logs[date].habitsCompleted || [];
-  logs[date].habitsCompleted = completed.includes(habit) ? completed.filter(h => h !== habit) : [...completed, habit];
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => {
+    const completed = day.habitsCompleted || [];
+    return { ...day, habitsCompleted: completed.includes(habit) ? completed.filter(h => h !== habit) : [...completed, habit] };
+  });
+  saveLogs(updated);
+  return updated;
 };
 
 export const saveDayCheckIn = (date: string, checkIn: DayLog['checkIn']) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [] };
-  logs[date].checkIn = checkIn;
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => ({ ...day, checkIn }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const getWorkouts = (): WorkoutLog[] => {
@@ -149,20 +182,15 @@ export const getWorkouts = (): WorkoutLog[] => {
 };
 
 export const updateWaterIntake = (date: string, ml: number) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [] };
-  logs[date].waterIntakeMl = Math.max(0, (logs[date].waterIntakeMl || 0) + ml);
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => ({ ...day, waterIntakeMl: Math.max(0, (day.waterIntakeMl || 0) + ml) }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const addWorkoutToLog = (date: string, workout: WorkoutLog) => {
-  const logs = getLogs();
-  if (!logs[date]) logs[date] = { date, items: [], workouts: [] };
-  if (!logs[date].workouts) logs[date].workouts = [];
-  logs[date].workouts!.push(workout);
-  saveLogs(logs);
-  return logs;
+  const updated = upsertDay(getLogs(), date, day => ({ ...day, workouts: [...(day.workouts || []), workout] }));
+  saveLogs(updated);
+  return updated;
 };
 
 export const getTrainingPlan = (): TrainingPlan | null => cachedGet<TrainingPlan | null>(TRAINING_PLAN_KEY, null);
@@ -173,11 +201,15 @@ export const saveTrainingPlan = (plan: TrainingPlan) => {
 
 export const getMoods = (): MoodLog[] => cachedGet<MoodLog[]>(MOODS_KEY, []);
 export const saveMood = (mood: MoodLog) => {
-  const moods = getMoods();
-  moods.push(mood);
-  if (moods.length > 50) moods.shift();
-  cachedSet(MOODS_KEY, moods);
-  return moods;
+  const moods = [...getMoods(), mood];
+  const trimmed = moods.length > 50 ? moods.slice(moods.length - 50) : moods;
+  cachedSet(MOODS_KEY, trimmed);
+  return trimmed;
+};
+/** Clear all coach chat / mood history (also clears the in-memory cache). */
+export const clearMoods = () => {
+  cachedSet(MOODS_KEY, []);
+  return [];
 };
 
 export const getSavedRecipes = (): Recipe[] => cachedGet<Recipe[]>(RECIPES_KEY, []);
@@ -415,28 +447,62 @@ export const exportAllData = (): string => {
   return JSON.stringify(data, null, 2);
 };
 
-export const importAllData = (jsonString: string): { success: boolean; error?: string } => {
+export const importAllData = async (jsonString: string): Promise<{ success: boolean; error?: string }> => {
+  let data: Record<string, any>;
   try {
     if (!jsonString || jsonString.length > 50_000_000) {
       return { success: false, error: 'File too large or empty' };
     }
-    const data = JSON.parse(jsonString);
+    data = JSON.parse(jsonString);
     if (!data._exportVersion || typeof data._exportVersion !== 'number') {
       return { success: false, error: 'Invalid backup file format' };
     }
-    // Only import known keys, validate each is a string with valid JSON
-    ALL_KEYS.forEach(key => {
-      if (data[key] && typeof data[key] === 'string') {
-        try {
-          JSON.parse(data[key]);
-          safeSetItem(key, data[key]);
-        } catch {
-          // Skip keys with invalid JSON
-        }
-      }
-    });
-    return { success: true };
   } catch {
     return { success: false, error: 'Could not parse backup file' };
   }
+
+  // Only import known keys, validate each is a string with valid JSON
+  ALL_KEYS.forEach(key => {
+    if (data[key] && typeof data[key] === 'string') {
+      try {
+        const parsed = JSON.parse(data[key]);
+        safeSetItem(key, data[key]);
+        // Keep the in-memory cache in sync so reads don't return stale data.
+        cache.set(key, parsed);
+      } catch {
+        // Skip keys with invalid JSON
+      }
+    }
+  });
+
+  // IndexedDB mirrors the food logs and is loaded as source-of-truth on the
+  // next startup; without rewriting it, the old logs would override the
+  // freshly imported ones. Replace IDB contents with the imported logs.
+  try {
+    if (await idb.isIndexedDBAvailable()) {
+      await idb.clearAllLogs();
+      const importedLogs = cache.get(LOGS_KEY) as Record<string, DayLog> | undefined;
+      if (importedLogs && Object.keys(importedLogs).length > 0) {
+        await idb.saveDayLogs(importedLogs);
+      }
+    }
+  } catch {
+    // localStorage import already succeeded; IDB will re-sync on next write.
+  }
+  return { success: true };
+};
+
+/**
+ * Permanently delete ALL app data from every store (localStorage cache,
+ * localStorage, and IndexedDB). Returns once IDB is actually cleared so callers
+ * can safely reload afterwards without the data resurrecting.
+ */
+export const clearAllData = async (): Promise<void> => {
+  cache.clear();
+  pendingLogsForIdb = null;
+  if (idbWriteTimer) { clearTimeout(idbWriteTimer); idbWriteTimer = null; }
+  try { localStorage.clear(); } catch { /* ignore */ }
+  try {
+    if (await idb.isIndexedDBAvailable()) await idb.clearAllLogs();
+  } catch { /* ignore */ }
 };

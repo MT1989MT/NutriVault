@@ -3,11 +3,22 @@ const { createLogger } = require('./_logger');
 
 const log = createLogger('ExtendSub');
 
+// This public proxy let ANYONE extend any code for free (it attaches the edge
+// secret server-side, defeating the edge function's gate). Renewals should come
+// from the signature-verified RevenueCat webhook, so the manual proxy is now
+// disabled by default. Set ALLOW_MANUAL_EXTEND=true only for a controlled
+// dev/test deployment.
+const ALLOW_MANUAL_EXTEND = process.env.ALLOW_MANUAL_EXTEND === 'true';
+
 module.exports = async function handler(req, res) {
   if (applyCors(req, res)) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!ALLOW_MANUAL_EXTEND) {
+    return res.status(403).json({ error: 'Manual extension is disabled. Subscriptions renew automatically via the store.' });
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;

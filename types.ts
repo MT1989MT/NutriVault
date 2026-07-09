@@ -81,6 +81,7 @@ export interface FoodItem {
   source?: 'AI_LOG' | 'MANUAL' | 'BARCODE' | 'RECIPE';
   photoUri?: string;
   groupName?: string; // Parent product name for grouped ingredients (e.g. "Big Mac")
+  grams?: number;     // Gram weight the current macros correspond to (basis for portion editing)
 }
 
 export interface WorkoutLog {
@@ -175,8 +176,9 @@ export interface TrainingPlan {
   title: string;           
   goal: string;
   daysPerWeek: number;
-  weeks: TrainingWeek[]; 
+  weeks: TrainingWeek[];
   schedule?: ScheduledWorkout[];
+  weeklySchedules?: ScheduledWorkout[][]; // per-week schedules (index 0 = week 1)
   startDate?: string;
   active?: boolean;
   durationWeeks?: number;
