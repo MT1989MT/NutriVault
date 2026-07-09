@@ -1,8 +1,15 @@
 const { applyCors } = require('./_cors');
 const { checkRateLimit } = require('./_ratelimit');
+const { isEntitled } = require('./_entitlement');
 const { createLogger } = require('./_logger');
 
 const log = createLogger('Gemini');
+
+// When "true", every /api/gemini call must carry a valid, active activation
+// code (header `x-activation-code`), verified server-side against Supabase.
+// Default off so deploying this change never breaks the live app before the
+// check-entitlement edge function is deployed — flip it on afterwards.
+const REQUIRE_AUTH = process.env.REQUIRE_GEMINI_AUTH === 'true';
 
 // Per-function config — ensures Vercel allows enough time for Gemini API calls
 const config = { maxDuration: 30 };
@@ -27,6 +34,16 @@ async function handler(req, res) {
       }
     } catch (_) {
       // Rate limiting failure should not block the request
+    }
+
+    // Subscription gate: require a valid active activation code so the AI (a
+    // paid, costly resource) can't be used as a free open LLM proxy.
+    if (REQUIRE_AUTH) {
+      const code = req.headers['x-activation-code'];
+      const entitled = await isEntitled(Array.isArray(code) ? code[0] : code);
+      if (!entitled) {
+        return res.status(402).json({ error: 'Active subscription required.' });
+      }
     }
 
     const apiKey = process.env.GEMINI_API_KEY;

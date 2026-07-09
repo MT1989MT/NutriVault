@@ -106,6 +106,17 @@ const getCacheKey = (model: string, prompt: string, imageBase64?: string): strin
 };
 
 // Call our secure API route (API key stays server-side) with retry logic
+// Read the current activation code from the stored session so the server can
+// verify the subscription (see REQUIRE_GEMINI_AUTH). Read localStorage directly
+// to avoid an import cycle with the auth service.
+const getActivationCode = (): string => {
+  try {
+    const raw = localStorage.getItem('nutrivault_auth_session');
+    if (!raw) return '';
+    return JSON.parse(raw)?.accountNumber || '';
+  } catch { return ''; }
+};
+
 const callGemini = async (model: string, prompt: string, jsonMode: boolean = false, imageBase64?: string): Promise<string> => {
   // Check cache for non-image requests
   const cacheKey = getCacheKey(model, prompt, imageBase64);
@@ -125,9 +136,13 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       const body: Record<string, unknown> = { model, prompt, jsonMode };
       if (imageBase64) body.imageBase64 = imageBase64;
 
+      const activationCode = getActivationCode();
       const response = await fetch(`${API_BASE_URL}/api/gemini`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activationCode ? { 'x-activation-code': activationCode } : {}),
+        },
         body: JSON.stringify(body),
         signal: controller.signal
       });
@@ -140,8 +155,11 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
         const errorMsg = errorData?.detail || errorData?.error
           || (rawText ? `Server error: ${rawText.slice(0, 120)}` : `API error: ${response.status}`);
         const error = new Error(errorMsg);
-        // Don't retry on client errors (400-level) except 429
+        // Don't retry on client errors (400-level) except 429. Tag it so the
+        // catch below re-throws immediately instead of retrying (which wasted
+        // quota and added ~3s latency on every hard failure).
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          (error as any).noRetry = true;
           throw error;
         }
         lastError = error;
@@ -169,6 +187,8 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
       return text;
     } catch (error: any) {
       clearTimeout(timeout);
+      // Non-retryable client error (4xx) — surface immediately, don't retry.
+      if (error?.noRetry) throw error;
       if (error.name === 'AbortError') {
         lastError = new Error('Request timed out. Please try again.');
         if (attempt < MAX_RETRIES) {
