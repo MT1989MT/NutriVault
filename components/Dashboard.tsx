@@ -739,12 +739,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                       setMostUsedFoods(getMostUsedFoods());
                       setSelectedMealType(null);
                     }}
-                    className="w-full flex items-center gap-3 p-3.5 mb-4 bg-violet-50 border border-violet-100 rounded-xl hover:bg-violet-100 transition-colors active:scale-[0.98]"
+                    className="w-full flex items-center gap-3 p-3.5 mb-4 bg-[#EFF2EE] border border-[#DDE5DB] rounded-xl hover:bg-[#E3E9E1] transition-colors active:scale-[0.98]"
                   >
-                    <Copy className="w-4 h-4 text-violet-500 shrink-0" />
+                    <Copy className="w-4 h-4 text-[#3D5A48] shrink-0" />
                     <div className="text-left flex-1">
-                      <p className="text-sm font-semibold text-violet-700">{tr('copyYesterday') || 'Copy yesterday\'s'} {getMealLabel(selectedMealType).toLowerCase()}</p>
-                      <p className="text-xs text-violet-400 mt-0.5">{prevItems.length} item{prevItems.length !== 1 ? 's' : ''} • {Math.round(prevCals)} kcal</p>
+                      <p className="text-sm font-semibold text-[#3D5A48]">{tr('copyYesterday') || 'Copy yesterday\'s'} {getMealLabel(selectedMealType).toLowerCase()}</p>
+                      <p className="text-xs text-[#6B6257] mt-0.5">{prevItems.length} item{prevItems.length !== 1 ? 's' : ''} • {Math.round(prevCals)} kcal</p>
                     </div>
                   </button>
                 );
