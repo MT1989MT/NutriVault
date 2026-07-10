@@ -22,6 +22,8 @@ interface DashboardProps {
   onRecipesClick?: () => void;
   /** Incremented by the nav FAB: open the Add Food sheet for the meal suggested by time of day. */
   fabSignal?: number;
+  /** Called after the FAB signal is handled so App can reset the counter. */
+  onFabConsumed?: () => void;
   isActive?: boolean;
 }
 
@@ -125,7 +127,7 @@ const MealItemList: React.FC<{ items: FoodItem[], onItemClick: (item: FoodItem) 
   );
 });
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, onRecipesClick, fabSignal = 0, isActive = true }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, onRecipesClick, fabSignal = 0, onFabConsumed, isActive = true }) => {
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const todayDate = todayStr();
   const dayLog = logs[selectedDate] || { date: selectedDate, items: [] };
@@ -162,14 +164,18 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
   // Calculate streak using shared utility
   const streak = useMemo(() => calculateStreak(logs), [logs]);
 
-  // FAB in the tab bar: open the Add Food sheet for today's time-suggested meal
+  // FAB in the tab bar: open the Add Food sheet for today's time-suggested
+  // meal, then tell App the signal was consumed (App resets the counter to 0).
+  // Without the reset, a stale counter re-opened the sheet on every Dashboard
+  // remount after tab/Coach/Settings round-trips.
   useEffect(() => {
     if (fabSignal > 0) {
       setSelectedDate(todayStr());
       setSelectedMealType(suggestMealByTime());
       setShowManualEntry(false);
+      onFabConsumed?.();
     }
-  }, [fabSignal]);
+  }, [fabSignal, onFabConsumed]);
 
   const navigateDate = useCallback((direction: number) => {
     const date = parseDateStr(selectedDate);

@@ -106,6 +106,9 @@ const App: React.FC = () => {
     setCurrentView('DASHBOARD');
     setFabSignal(n => n + 1);
   }, []);
+  // Dashboard reports back once it opened the sheet; resetting prevents the
+  // sheet from re-opening on every Dashboard remount with a stale counter.
+  const handleFabConsumed = useCallback(() => setFabSignal(0), []);
 
   if (isLoading) return <div className="h-full w-full bg-[#FAF6F1] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#E07A5F]"></div></div>;
   if (forceWizard) return (
@@ -128,7 +131,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden relative">
             {currentView === 'DASHBOARD' && (
               <div className="absolute inset-0 z-10">
-                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} onRecipesClick={goToRecipes} fabSignal={fabSignal} isActive />
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} onRecipesClick={goToRecipes} fabSignal={fabSignal} onFabConsumed={handleFabConsumed} isActive />
               </div>
             )}
             {currentView === 'PROFILE' && (
