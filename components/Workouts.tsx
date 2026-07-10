@@ -532,7 +532,7 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
               <h3 className="text-[13px] font-display font-bold text-[#2B2523] mb-3">Quick log</h3>
               <input placeholder="Activity (e.g. Running, Yoga)" aria-label="Activity type" className="w-full bg-[#FAF6F1] rounded-[14px] px-3.5 py-3 mb-2.5 outline-none text-sm text-[#2B2523] placeholder-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30" value={manualType} onChange={e => setManualType(e.target.value)} />
               <div className="flex gap-2">
-                <input placeholder="Minutes" type="number" aria-label="Duration in minutes" className="w-24 bg-[#FAF6F1] rounded-[14px] px-3.5 py-3 outline-none text-sm text-[#2B2523] placeholder-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30" value={manualDuration} onChange={e => setManualDuration(e.target.value)} />
+                <input placeholder="Minutes" type="number" aria-label="Duration in minutes" className="w-28 bg-[#FAF6F1] rounded-[14px] px-3.5 py-3 outline-none text-sm text-[#2B2523] placeholder-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30" value={manualDuration} onChange={e => setManualDuration(e.target.value)} />
                 <button onClick={handleManualLog} disabled={!manualType || !manualDuration} className="flex-1 bg-[#3D5A48] text-white font-bold py-3 rounded-[14px] text-sm disabled:opacity-40 active:scale-[0.98] transition-smooth">Log activity</button>
               </div>
             </div>
