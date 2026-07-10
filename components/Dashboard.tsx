@@ -442,10 +442,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
     const over = target > 0 && value > target;
     return (
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-2 mb-1.5">
-          <span className="text-[11px] font-semibold text-[#6B6257] truncate">{label}</span>
-          <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${over ? 'text-[#C85A40]' : 'text-[#9A8B80]'}`}>{Math.round(value)}/{target}g</span>
-        </div>
+        {/* Label on its own line so long labels never truncate at 390px */}
+        <span className="text-[11px] font-semibold text-[#6B6257] block leading-tight">{label}</span>
+        <span className={`text-[10px] font-semibold tabular-nums block mb-1.5 ${over ? 'text-[#C85A40]' : 'text-[#9A8B80]'}`}>{Math.round(value)}/{target}g</span>
         <div className="h-[6px] rounded-full overflow-hidden" style={{ background: track }}>
           <div className="h-full rounded-full anim-bar" style={{ width: `${pct}%`, background: fill }} />
         </div>

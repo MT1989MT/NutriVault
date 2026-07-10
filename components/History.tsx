@@ -220,10 +220,9 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
     const over = !!target && target > 0 && value > target;
     return (
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-1.5 mb-1.5">
-          <span className="text-[11px] font-semibold text-[#6B6257] truncate">{label}</span>
-          <span className={`text-[11px] font-semibold tabular-nums shrink-0 ${over ? 'text-[#C85A40]' : 'text-[#9A8B80]'}`}>{target && target > 0 ? `${value}/${target}g` : `${value}g`}</span>
-        </div>
+        {/* Label on its own line so long labels never truncate at 390px */}
+        <span className="text-[11px] font-semibold text-[#6B6257] block leading-tight">{label}</span>
+        <span className={`text-[10px] font-semibold tabular-nums block mb-1.5 ${over ? 'text-[#C85A40]' : 'text-[#9A8B80]'}`}>{target && target > 0 ? `${value}/${target}g` : `${value}g`}</span>
         <div className="h-[6px] rounded-full overflow-hidden" style={{ background: track }}>
           <div className="h-full rounded-full anim-bar" style={{ width: `${pct}%`, background: fill }} />
         </div>
@@ -435,10 +434,10 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
                 <span className="text-[10px] text-[#B4A79C] font-medium">{parseDateStr(weightData.entries[0].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
                 <span className="text-[10px] text-[#B4A79C] font-medium">{parseDateStr(weightData.entries[weightData.entries.length - 1].date).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
               </div>
-              {/* Weight range */}
+              {/* Weight at first/last entry — chronological, matching the date labels above */}
               <div className="flex justify-between mt-0.5 px-1">
-                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.minWeight} kg</span>
-                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.maxWeight} kg</span>
+                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.entries[0].weight} kg</span>
+                <span className="text-[10px] text-[#9A8B80] font-semibold tabular-nums">{weightData.entries[weightData.entries.length - 1].weight} kg</span>
               </div>
             </div>
           ) : (
