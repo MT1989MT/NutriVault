@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, BookOpen, Info, Brain } from 'lucide-react';
-import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine } from '../services/storage';
+import { Dumbbell, Clock, CheckCircle2, Loader2, Play, X, Calendar, Plus, Minus, History, Star, HelpCircle, Check, Edit2, ArrowRight, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, BookOpen, Info, Brain, Flame } from 'lucide-react';
+import { getTrainingPlan, saveTrainingPlan, getSavedRoutines, saveRoutine, deleteRoutine, getProfile } from '../services/storage';
 import { getWorkoutSuggestion, generateTrainingPlan } from '../services/gemini';
 import { WorkoutLog, WorkoutSuggestion, TrainingPlan, DayLog, WorkoutRoutine, ScheduledWorkout } from '../types';
 import { generateId } from '../utils/calculations';
-import { todayStr, toDateStr } from '../utils/date';
-import { t as tr } from '../utils/i18n';
+import { estimateWorkoutCalories, workoutCalories } from '../utils/workoutCalories';
+import { todayStr, toDateStr, parseDateStr } from '../utils/date';
+import { t as tr, getCurrentLanguage } from '../utils/i18n';
 
 interface WorkoutsProps { logs: Record<string, DayLog>; onAddWorkout: (date: string, workout: WorkoutLog) => void; onCoachClick?: () => void; }
 
@@ -80,7 +81,11 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
   const [planWeeks, setPlanWeeks] = useState(4);
   const [manualType, setManualType] = useState('');
   const [manualDuration, setManualDuration] = useState('');
+  const [manualIntensity, setManualIntensity] = useState<'LOW' | 'MODERATE' | 'HIGH'>('MODERATE');
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  // Body weight drives the MET calorie estimates (same helper as Dashboard/Overview)
+  const weightKg = useMemo(() => getProfile()?.weightKg, []);
 
   const [selectedLibraryItems, setSelectedLibraryItems] = useState<string[]>([]);
   const [editingDay, setEditingDay] = useState<string | null>(null);
@@ -169,7 +174,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
   const saveSession = () => {
     if (!suggestion) return;
-    { const d = todayStr(); onAddWorkout(d, { id: generateId(), date: d, type: suggestion.title, durationMinutes: Math.ceil(elapsed / 60), elevatedHeartRate: true, timestamp: Date.now() }); }
+    {
+      const d = todayStr();
+      const minutes = Math.max(1, Math.ceil(elapsed / 60));
+      // Match MET on focus (e.g. "Upper body") + title so creative AI titles still classify
+      const kcal = estimateWorkoutCalories(`${suggestion.focus} ${suggestion.title}`, minutes, weightKg, 'MODERATE');
+      onAddWorkout(d, { id: generateId(), date: d, type: suggestion.title, durationMinutes: minutes, caloriesBurned: kcal, intensity: 'MODERATE', elevatedHeartRate: true, timestamp: Date.now() });
+    }
     setSession(prev => ({ ...prev, active: false })); setShowGenerator(false); setSuggestion(null); showFeedback("Workout Logged!");
   };
 
@@ -193,8 +204,13 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
 
   const handleManualLog = () => {
     if (!manualType || !manualDuration) return;
-    { const d = todayStr(); onAddWorkout(d, { id: generateId(), date: d, type: manualType, durationMinutes: parseInt(manualDuration), elevatedHeartRate: true, timestamp: Date.now() }); }
-    setManualType(''); setManualDuration(''); showFeedback("Logged!");
+    {
+      const d = todayStr();
+      const minutes = parseInt(manualDuration);
+      const kcal = estimateWorkoutCalories(manualType, minutes, weightKg, manualIntensity);
+      onAddWorkout(d, { id: generateId(), date: d, type: manualType, durationMinutes: minutes, caloriesBurned: kcal, intensity: manualIntensity, elevatedHeartRate: manualIntensity !== 'LOW', timestamp: Date.now() });
+    }
+    setManualType(''); setManualDuration(''); setManualIntensity('MODERATE'); showFeedback("Logged!");
   };
 
   const buildLibrarySuggestion = () => {
@@ -444,7 +460,9 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                 <div className="text-center">
                   <div className="text-5xl mb-3">🎉</div>
                   <h1 className="text-2xl font-display font-bold mb-1">Done!</h1>
-                  <p className="text-[#9A8B80] mb-6">{Math.ceil(elapsed / 60)} minutes</p>
+                  <p className="text-[#9A8B80] mb-6">
+                    {Math.max(1, Math.ceil(elapsed / 60))} minutes · ~{suggestion ? estimateWorkoutCalories(`${suggestion.focus} ${suggestion.title}`, Math.max(1, Math.ceil(elapsed / 60)), weightKg, 'MODERATE') : 0} kcal
+                  </p>
                   <button onClick={saveSession} className="bg-[#E07A5F] text-white px-6 py-3 rounded-[14px] font-bold active:scale-[0.98] transition-smooth">Save & Close</button>
                 </div>
               ) : (
@@ -531,10 +549,23 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
             <div className="bg-white p-4 rounded-[20px] card-shadow">
               <h3 className="text-[13px] font-display font-bold text-[#2B2523] mb-3">Quick log</h3>
               <input placeholder="Activity (e.g. Running, Yoga)" aria-label="Activity type" className="w-full bg-[#FAF6F1] rounded-[14px] px-3.5 py-3 mb-2.5 outline-none text-sm text-[#2B2523] placeholder-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30" value={manualType} onChange={e => setManualType(e.target.value)} />
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-2.5">
                 <input placeholder="Minutes" type="number" aria-label="Duration in minutes" className="w-28 bg-[#FAF6F1] rounded-[14px] px-3.5 py-3 outline-none text-sm text-[#2B2523] placeholder-[#B4A79C] focus:ring-2 focus:ring-[#E07A5F]/30" value={manualDuration} onChange={e => setManualDuration(e.target.value)} />
-                <button onClick={handleManualLog} disabled={!manualType || !manualDuration} className="flex-1 bg-[#3D5A48] text-white font-bold py-3 rounded-[14px] text-sm disabled:opacity-40 active:scale-[0.98] transition-smooth">Log activity</button>
+                <div className="flex-1 grid grid-cols-3 gap-1.5">
+                  {([['LOW', 'Light'], ['MODERATE', 'Normal'], ['HIGH', 'Intense']] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setManualIntensity(val)} className={`rounded-[14px] text-[11px] font-bold transition-smooth ${manualIntensity === val ? 'bg-[#2B2523] text-white' : 'bg-[#FAF6F1] text-[#9A8B80]'}`}>{label}</button>
+                  ))}
+                </div>
               </div>
+              <button onClick={handleManualLog} disabled={!manualType || !manualDuration} className="w-full bg-[#3D5A48] text-white font-bold py-3 rounded-[14px] text-sm disabled:opacity-40 active:scale-[0.98] transition-smooth flex items-center justify-center gap-2">
+                <span>Log activity</span>
+                {manualType && parseInt(manualDuration) > 0 && (
+                  <span className="flex items-center gap-1 text-white/80 font-semibold">
+                    <Flame className="w-3.5 h-3.5" />
+                    ~{estimateWorkoutCalories(manualType, parseInt(manualDuration), weightKg, manualIntensity)} kcal
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Today's Workouts */}
@@ -543,11 +574,12 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
               const todayWorkouts = logs[today]?.workouts || [];
               if (todayWorkouts.length === 0) return null;
               const totalMinutes = todayWorkouts.reduce((sum, w) => sum + w.durationMinutes, 0);
+              const totalKcal = todayWorkouts.reduce((sum, w) => sum + workoutCalories(w, weightKg), 0);
               return (
                 <div className="bg-white p-4 rounded-[20px] card-shadow">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-[13px] font-display font-bold text-[#2B2523]">Today</h3>
-                    <span className="text-[11px] font-semibold text-[#C4763B]">{totalMinutes} min total</span>
+                    <span className="text-[11px] font-semibold text-[#C4763B] tabular-nums">{totalMinutes} min · {totalKcal} kcal</span>
                   </div>
                   <div className="space-y-2">
                     {todayWorkouts.map(w => (
@@ -558,7 +590,10 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
                           </div>
                           <div>
                             <div className="text-[13px] font-semibold text-[#2B2523]">{w.type}</div>
-                            <div className="text-[11px] text-[#9A8B80]">{w.durationMinutes} min</div>
+                            <div className="text-[11px] text-[#9A8B80] tabular-nums flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {w.durationMinutes} min
+                              <Flame className="w-3 h-3 ml-1 text-[#D9964F]" /> {workoutCalories(w, weightKg)} kcal
+                            </div>
                           </div>
                         </div>
                         <CheckCircle2 className="w-5 h-5 text-[#3D5A48]" />
@@ -700,20 +735,56 @@ const Workouts: React.FC<WorkoutsProps> = ({ logs, onAddWorkout, onCoachClick })
           <div className="space-y-2.5">
             {allWorkouts.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-[20px] card-shadow"><History className="w-8 h-8 text-[#E8DFD5] mx-auto mb-2" /><p className="text-[#9A8B80] text-sm font-medium">No workouts yet</p><p className="text-[#B4A79C] text-xs mt-1">Start your first workout above</p></div>
-            ) : allWorkouts.slice(0, 20).map(w => (
-              <div key={w.id} className="bg-white p-4 rounded-[20px] card-shadow flex justify-between items-center min-h-[60px]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[14px] bg-[#FBEBE4] flex items-center justify-center">
-                    <Dumbbell className="w-4 h-4 text-[#E07A5F]" />
+            ) : (
+              <>
+                {/* Last-7-days summary: sessions / minutes / kcal */}
+                {(() => {
+                  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+                  const recent = allWorkouts.filter(w => w.timestamp >= cutoff);
+                  const minutes = recent.reduce((s, w) => s + w.durationMinutes, 0);
+                  const kcal = recent.reduce((s, w) => s + workoutCalories(w, weightKg), 0);
+                  return (
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <div className="bg-white rounded-[18px] p-3 card-shadow text-center">
+                        <div className="text-[18px] font-display font-extrabold text-[#2B2523] tabular-nums">{recent.length}</div>
+                        <div className="text-[10px] text-[#9A8B80] font-semibold">sessions · 7d</div>
+                      </div>
+                      <div className="bg-white rounded-[18px] p-3 card-shadow text-center">
+                        <div className="text-[18px] font-display font-extrabold text-[#2B2523] tabular-nums">{minutes}</div>
+                        <div className="text-[10px] text-[#9A8B80] font-semibold">minutes</div>
+                      </div>
+                      <div className="bg-white rounded-[18px] p-3 card-shadow text-center">
+                        <div className="text-[18px] font-display font-extrabold text-[#D9964F] tabular-nums">{kcal}</div>
+                        <div className="text-[10px] text-[#9A8B80] font-semibold">kcal burned</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {allWorkouts.slice(0, 20).map(w => (
+                  <div key={w.id} className="bg-white p-4 rounded-[20px] card-shadow flex justify-between items-center min-h-[60px]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-[14px] bg-[#FBEBE4] flex items-center justify-center">
+                        <Dumbbell className="w-4 h-4 text-[#E07A5F]" />
+                      </div>
+                      <div>
+                        <div className="font-display font-bold text-sm text-[#2B2523]">{w.type}</div>
+                        <div className="text-xs text-[#9A8B80]">
+                          {w.date === todayStr()
+                            ? tr('today')
+                            : parseDateStr(w.date).toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-display font-bold text-sm text-[#6B6257] tabular-nums">{w.durationMinutes} min</div>
+                      <div className="text-[11px] text-[#D9964F] font-semibold tabular-nums flex items-center justify-end gap-0.5">
+                        <Flame className="w-3 h-3" />{workoutCalories(w, weightKg)} kcal
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-display font-bold text-sm text-[#2B2523]">{w.type}</div>
-                    <div className="text-xs text-[#9A8B80]">{w.date}</div>
-                  </div>
-                </div>
-                <span className="font-display font-bold text-sm text-[#6B6257] tabular-nums">{w.durationMinutes} min</span>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
         )}
         </div>

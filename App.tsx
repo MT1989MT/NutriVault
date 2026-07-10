@@ -131,7 +131,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden relative">
             {currentView === 'DASHBOARD' && (
               <div className="absolute inset-0 z-10">
-                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} onRecipesClick={goToRecipes} fabSignal={fabSignal} onFabConsumed={handleFabConsumed} isActive />
+                <Dashboard profile={profile} logs={logs} onItemsAdded={handleAddItems} onRemoveItem={handleRemoveItem} onWaterUpdate={handleWaterUpdate} onSettingsClick={goToSettings} onCoachClick={goToCoach} onRecipesClick={goToRecipes} onProfileClick={() => setCurrentView('PROFILE')} fabSignal={fabSignal} onFabConsumed={handleFabConsumed} isActive />
               </div>
             )}
             {currentView === 'PROFILE' && (
@@ -157,7 +157,7 @@ const App: React.FC = () => {
               )}
               {currentView === 'SETTINGS' && (
                 <div className="absolute inset-0 z-10">
-                  <Settings onBack={goToDashboard} />
+                  <Settings onBack={goToDashboard} onOpenProfile={() => setCurrentView('PROFILE')} />
                 </div>
               )}
               {currentView === 'COACH' && (

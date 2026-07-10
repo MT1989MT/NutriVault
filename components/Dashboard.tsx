@@ -4,6 +4,7 @@ import { Loader2, Trash2, Coffee, Sun, Moon, Cookie, Plus, X, Heart, Target, Bra
 import { parseFoodInput, parseFoodFromPhoto } from '../services/gemini';
 import { toggleHabit, updateWaterIntake, getRecentFoods, addToRecentFoods, FavoriteFood, getFavoriteFoods, saveFavoriteFood, trackFoodFrequency, getMostUsedFoods, getRecentMeals, addToRecentMeals, RecentMeal } from '../services/storage';
 import { generateId, calculateStreak, getMacroTargets, macroGramsFromTargets } from '../utils/calculations';
+import { workoutCalories } from '../utils/workoutCalories';
 import { todayStr, toDateStr, parseDateStr, dateStrOffset } from '../utils/date';
 import { createLogger } from '../services/logger';
 import AnalysisModal from './AnalysisModal';
@@ -20,6 +21,7 @@ interface DashboardProps {
   onSettingsClick: () => void;
   onCoachClick?: () => void;
   onRecipesClick?: () => void;
+  onProfileClick?: () => void;
   /** Incremented by the nav FAB: open the Add Food sheet for the meal suggested by time of day. */
   fabSignal?: number;
   /** Called after the FAB signal is handled so App can reset the counter. */
@@ -127,7 +129,7 @@ const MealItemList: React.FC<{ items: FoodItem[], onItemClick: (item: FoodItem) 
   );
 });
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, onRecipesClick, fabSignal = 0, onFabConsumed, isActive = true }) => {
+const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRemoveItem, onWaterUpdate, onSettingsClick, onCoachClick, onRecipesClick, onProfileClick, fabSignal = 0, onFabConsumed, isActive = true }) => {
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const todayDate = todayStr();
   const dayLog = logs[selectedDate] || { date: selectedDate, items: [] };
@@ -190,11 +192,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
     return parseDateStr(dateStr).toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
-  // Compute active calories directly from the day's workouts — no need to scan all logs
+  // Compute active calories directly from the day's workouts — shared MET
+  // helper so Dashboard, Workouts and Overview always show the same number
   const activeCaloriesComputed = useMemo(() => {
     const dayWorkouts = dayLog.workouts || [];
-    return dayWorkouts.reduce((acc, w) => acc + (w.durationMinutes * (w.elevatedHeartRate ? 8 : 5)), 0);
-  }, [dayLog.workouts]);
+    return dayWorkouts.reduce((acc, w) => acc + workoutCalories(w, profile.weightKg), 0);
+  }, [dayLog.workouts, profile.weightKg]);
 
   useEffect(() => {
     setRecentFoods(getRecentFoods());
@@ -464,9 +467,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
       <div className="px-5 pb-3" style={{paddingTop: 'max(env(safe-area-inset-top, 14px), 14px)'}}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-[46px] h-[46px] rounded-full bg-[#FBEBE4] flex items-center justify-center shrink-0">
+            <button onClick={onProfileClick} aria-label={tr('profile')} className="w-[46px] h-[46px] rounded-full bg-[#FBEBE4] flex items-center justify-center shrink-0 active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]">
               <User className="w-5 h-5 text-[#E07A5F]" strokeWidth={2} />
-            </div>
+            </button>
             <div className="min-w-0">
               <p className="text-[13px] text-[#9A8B80] leading-tight">{tr(greetingKey)}</p>
               <p className="text-[19px] font-bold text-[#2B2523] font-display tracking-tight leading-tight truncate">{profile.name || 'NutriVault'}</p>
@@ -543,7 +546,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
         <div className="flex items-center justify-between px-1 pt-1 pb-2">
           <span className="text-[15px] font-bold text-[#2B2523] font-display">{selectedDate === todayDate ? tr('today') : formatDateHeader(selectedDate)}</span>
           <button onClick={onRecipesClick} className="text-[12px] font-semibold text-[#C4763B] active:scale-95 transition-smooth py-1 px-1">
-            {tr('viewAll')}
+            {tr('recipes')}
           </button>
         </div>
 

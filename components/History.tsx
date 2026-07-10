@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Flame, Scale, Plus, X, Check, Droplets, Target, Utensils, Dumbbell } from 'lucide-react';
 import { getLogs, getProfile, saveLogs } from '../services/storage';
 import { t, getCurrentLanguage } from '../utils/i18n';
-import { getMacroTargets, macroGramsFromTargets } from '../utils/calculations';
+import { getMacroTargets, macroGramsFromTargets, KCAL_PER_KG } from '../utils/calculations';
+import { workoutCalories } from '../utils/workoutCalories';
 import { todayStr, toDateStr, parseDateStr } from '../utils/date';
 import { DayLog, UserProfile } from '../types';
 
@@ -17,6 +18,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [weightInput, setWeightInput] = useState('');
   const [logsVersion, setLogsVersion] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Always read from storage (source of truth) - re-read when propLogs change or local writes happen
   const logs = useMemo(() => {
@@ -57,7 +59,6 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
 
   const dailyData = useMemo(() => {
     const today = todayStr();
-    const weightFactor = (profile?.weightKg || 75) / 75;
     return weekDates.map(date => {
       const log = logs[date];
       const items = log?.items || [];
@@ -72,16 +73,20 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
       const dayWorkouts = log?.workouts || [];
       let burned = 0;
       for (let i = 0; i < dayWorkouts.length; i++) {
-        burned += Math.round(dayWorkouts[i].durationMinutes * (dayWorkouts[i].elevatedHeartRate ? 8 : 5) * weightFactor);
+        // Same MET helper as Dashboard/Workouts so every screen agrees
+        burned += workoutCalories(dayWorkouts[i], profile?.weightKg);
       }
       const d = parseDateStr(date);
       return { date, eaten, burned, protein, carbs, fat, isToday: date === today, hasData: eaten > 0, dayName: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][d.getDay() === 0 ? 6 : d.getDay() - 1] };
     });
-  }, [weekDates, logs]);
+  }, [weekDates, logs, profile?.weightKg]);
 
   const weekStats = useMemo(() => {
-    // Single pass over dailyData for all aggregations
-    let totalEaten = 0, totalBurned = 0, sumProtein = 0, sumCarbs = 0, sumFat = 0, daysTracked = 0, onTarget = 0, totalWater = 0;
+    // Single pass over dailyData for all aggregations. A day's target matches
+    // the Dashboard: base target + workout calories (unless the user disabled
+    // eating workout calories back).
+    const eatBack = !profile?.ignoreWorkoutCalories;
+    let totalEaten = 0, totalBurned = 0, sumProtein = 0, sumCarbs = 0, sumFat = 0, daysTracked = 0, onTarget = 0, totalWater = 0, sumBalance = 0;
     for (let i = 0; i < dailyData.length; i++) {
       const d = dailyData[i];
       totalEaten += d.eaten;
@@ -92,7 +97,9 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
         sumProtein += d.protein;
         sumCarbs += d.carbs;
         sumFat += d.fat;
-        if (Math.abs(d.eaten - targetCalories) <= 200) onTarget++;
+        const dayTarget = targetCalories + (eatBack ? d.burned : 0);
+        sumBalance += d.eaten - dayTarget;
+        if (Math.abs(d.eaten - dayTarget) <= 200) onTarget++;
       }
     }
     const avgEaten = daysTracked ? Math.round(totalEaten / daysTracked) : 0;
@@ -104,8 +111,11 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
     const carbsPct = totalMacros > 0 ? Math.round((avgCarbs / totalMacros) * 100) : 0;
     const fatPct = totalMacros > 0 ? Math.round((avgFat / totalMacros) * 100) : 0;
     const avgWater = daysTracked ? Math.round(totalWater / daysTracked) : 0;
-    return { totalEaten, totalBurned, avgEaten, avgProtein, avgCarbs, avgFat, proteinPct, carbsPct, fatPct, daysTracked, onTarget, avgWater };
-  }, [dailyData, logs, targetCalories]);
+    // Average daily balance vs target; a full week at this pace ≈ kg effect
+    const avgBalance = daysTracked ? Math.round(sumBalance / daysTracked) : 0;
+    const weeklyKgEffect = Math.round(((avgBalance * 7) / KCAL_PER_KG) * 100) / 100;
+    return { totalEaten, totalBurned, avgEaten, avgProtein, avgCarbs, avgFat, proteinPct, carbsPct, fatPct, daysTracked, onTarget, avgWater, avgBalance, weeklyKgEffect };
+  }, [dailyData, logs, targetCalories, profile?.ignoreWorkoutCalories]);
 
   // Macro target grams from profile split (null when no profile is set up)
   const macroTargets = useMemo(
@@ -179,7 +189,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
     const cardioKeywords = ['running', 'cardio', 'cycling', 'swimming', 'hiit', 'walking', 'jogging', 'rowing', 'elliptical', 'treadmill', 'bike', 'spin', 'aerobic'];
     const strengthKeywords = ['strength', 'weight', 'lifting', 'push', 'pull', 'leg', 'upper', 'lower', 'chest', 'back', 'arm', 'shoulder', 'squat', 'deadlift', 'bench', 'muscle', 'core', 'abs'];
 
-    const workouts: { date: string; type: string; duration: number; category: 'cardio' | 'strength' | 'other'; dayName: string }[] = [];
+    const workouts: { date: string; type: string; duration: number; kcal: number; category: 'cardio' | 'strength' | 'other'; dayName: string }[] = [];
 
     weekDates.forEach(date => {
       const log = logs[date];
@@ -193,16 +203,17 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
         if (cardioKeywords.some(k => typeLower.includes(k))) category = 'cardio';
         else if (strengthKeywords.some(k => typeLower.includes(k))) category = 'strength';
 
-        workouts.push({ date, type: w.type, duration: w.durationMinutes, category, dayName });
+        workouts.push({ date, type: w.type, duration: w.durationMinutes, kcal: workoutCalories(w, profile?.weightKg), category, dayName });
       });
     });
 
     const totalCardio = workouts.filter(w => w.category === 'cardio').reduce((s, w) => s + w.duration, 0);
     const totalStrength = workouts.filter(w => w.category === 'strength').reduce((s, w) => s + w.duration, 0);
     const totalOther = workouts.filter(w => w.category === 'other').reduce((s, w) => s + w.duration, 0);
+    const totalKcal = workouts.reduce((s, w) => s + w.kcal, 0);
 
-    return { workouts, totalCardio, totalStrength, totalOther, total: totalCardio + totalStrength + totalOther };
-  }, [weekDates, logs]);
+    return { workouts, totalCardio, totalStrength, totalOther, totalKcal, total: totalCardio + totalStrength + totalOther };
+  }, [weekDates, logs, profile?.weightKg]);
 
   const getWeekLabel = (): string => {
     if (weekOffset === 0) return t('thisWeek');
@@ -308,7 +319,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
           </div>
         </div>
 
-        {/* Calories per day */}
+        {/* Calories per day — tap a bar for that day's numbers */}
         <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
           <div className="flex items-baseline justify-between mb-3">
             <span className="text-[13px] font-bold text-[#2B2523] font-display">{t('caloriesPerDay')}</span>
@@ -318,10 +329,13 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
             {dailyData.map((d) => {
               const barHeight = d.hasData ? Math.max(8, (d.eaten / maxCal) * 100) : 5;
               const barColor = d.isToday ? '#E07A5F' : !d.hasData ? '#F3EAE2' : d.eaten <= targetCalories ? '#3D5A48' : '#E8DFD5';
+              const isSelected = selectedDay === d.date;
               return (
-                <div
+                <button
                   key={d.date}
-                  className="flex-1 rounded-[8px] transition-all duration-500"
+                  onClick={() => setSelectedDay(isSelected ? null : d.date)}
+                  aria-label={`Details ${d.date}`}
+                  className={`flex-1 rounded-[8px] transition-all duration-500 ${isSelected ? 'ring-2 ring-[#E07A5F] ring-offset-1' : ''}`}
                   style={{ height: `${barHeight}%`, background: barColor }}
                 />
               );
@@ -334,6 +348,30 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
               </span>
             ))}
           </div>
+          {/* Selected day detail */}
+          {(() => {
+            const d = dailyData.find(x => x.date === selectedDay);
+            if (!d) return null;
+            const dayTarget = targetCalories + (profile?.ignoreWorkoutCalories ? 0 : d.burned);
+            const diff = d.eaten - dayTarget;
+            return (
+              <div className="mt-3 bg-[#FAF6F1] rounded-[14px] p-3 flex items-center justify-between animate-in fade-in duration-200">
+                <div>
+                  <span className="text-[12px] font-bold text-[#2B2523] font-display">
+                    {parseDateStr(d.date).toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </span>
+                  <p className="text-[10px] text-[#9A8B80] font-medium tabular-nums">
+                    {d.eaten} {t('eaten').toLowerCase()} · {d.burned} {t('burned')} · P{d.protein} C{d.carbs} F{d.fat}
+                  </p>
+                </div>
+                {d.hasData && (
+                  <span className={`text-[11px] font-bold tabular-nums px-2.5 py-1 rounded-full ${diff > 200 ? 'bg-[#F6E4DB] text-[#C85A40]' : 'bg-[#EFF2EE] text-[#3D5A48]'}`}>
+                    {diff > 0 ? '+' : ''}{diff} kcal
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#F3EAE2]">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-[3px] bg-[#3D5A48]" />
@@ -349,6 +387,32 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
             </div>
           </div>
         </div>
+
+        {/* Weekly balance insight */}
+        {weekStats.daysTracked > 0 && (
+          <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[13px] font-bold text-[#2B2523] font-display">{t('calorieBalance')}</span>
+                <p className="text-[11px] text-[#9A8B80] font-medium mt-0.5">
+                  {weekStats.avgBalance <= 0
+                    ? t('balanceUnder').replace('{kcal}', String(Math.abs(weekStats.avgBalance)))
+                    : t('balanceOver').replace('{kcal}', String(weekStats.avgBalance))}
+                </p>
+              </div>
+              <div className={`px-3 py-1.5 rounded-full ${weekStats.avgBalance <= 0 ? 'bg-[#EFF2EE]' : 'bg-[#F6E4DB]'}`}>
+                <span className={`text-[12px] font-bold tabular-nums ${weekStats.avgBalance <= 0 ? 'text-[#3D5A48]' : 'text-[#C85A40]'}`}>
+                  {weekStats.avgBalance > 0 ? '+' : ''}{weekStats.avgBalance} kcal/{t('day')}
+                </span>
+              </div>
+            </div>
+            {Math.abs(weekStats.weeklyKgEffect) >= 0.05 && (
+              <p className="text-[10px] text-[#B4A79C] font-medium mt-2 pt-2 border-t border-[#F3EAE2]">
+                {t('paceEstimate').replace('{kg}', `${weekStats.weeklyKgEffect > 0 ? '+' : ''}${weekStats.weeklyKgEffect}`)}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Macros - daily average */}
         <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
@@ -477,7 +541,7 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
           <div className="bg-white rounded-[24px] p-4 card-shadow mb-3">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[13px] font-bold text-[#2B2523] font-display">Workouts</span>
-              <span className="text-[11px] font-semibold text-[#9A8B80] tabular-nums">{weekWorkouts.total} min</span>
+              <span className="text-[11px] font-semibold text-[#9A8B80] tabular-nums">{weekWorkouts.total} min · {weekWorkouts.totalKcal} kcal</span>
             </div>
             {/* Category breakdown */}
             <div className="flex gap-2 mb-3 flex-wrap">
@@ -517,7 +581,10 @@ const History: React.FC<HistoryProps> = ({ logs: propLogs, profile: propProfile 
                       <div className="text-[10px] text-[#9A8B80]">{w.dayName}</div>
                     </div>
                   </div>
-                  <span className="font-bold text-xs text-[#6B6257] tabular-nums">{w.duration}m</span>
+                  <div className="text-right">
+                    <span className="font-bold text-xs text-[#6B6257] tabular-nums block">{w.duration}m</span>
+                    <span className="text-[10px] font-semibold text-[#D9964F] tabular-nums">{w.kcal} kcal</span>
+                  </div>
                 </div>
               ))}
             </div>

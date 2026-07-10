@@ -1,6 +1,6 @@
 
 import React, { memo, useCallback } from 'react';
-import { Utensils, Dumbbell, Calendar, User, Plus } from 'lucide-react';
+import { Utensils, Dumbbell, Calendar, ChefHat, Plus } from 'lucide-react';
 import { t } from '../utils/i18n';
 
 interface NavigationProps {
@@ -9,15 +9,15 @@ interface NavigationProps {
   onFab: () => void;
 }
 
-// Warm Terra tab bar: 4 tabs + center FAB. Recipes moved out of the bar and is
-// reachable from the Food screen ("View all" / recipes card) and the FAB flow.
+// Warm Terra tab bar: 4 tabs + center FAB. Profile lives behind Settings
+// (gear icon on the Food screen) so Recipes gets a permanent tab.
 const left = [
   { view: 'DASHBOARD', icon: Utensils, labelKey: 'food' as const },
   { view: 'WORKOUTS', icon: Dumbbell, labelKey: 'workout' as const },
 ];
 const right = [
+  { view: 'RECIPES', icon: ChefHat, labelKey: 'recipes' as const },
   { view: 'HISTORY', icon: Calendar, labelKey: 'overview' as const },
-  { view: 'PROFILE', icon: User, labelKey: 'profile' as const },
 ];
 
 const NavButton: React.FC<{

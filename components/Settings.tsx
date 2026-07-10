@@ -8,7 +8,7 @@ import { UserProfile } from '../types';
 import { PRIVACY_POLICY_URL } from '../services/config';
 import { t, getCurrentLanguage, setLanguage, getAvailableLanguages } from '../utils/i18n';
 
-interface SettingsProps { onBack: () => void; }
+interface SettingsProps { onBack: () => void; onOpenProfile?: () => void; }
 
 // The free "extend" shortcut (no real payment) must never be reachable in a
 // production build — it's a test convenience only.
@@ -16,7 +16,7 @@ const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 const IS_TEST_MODE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TEST_MODE === 'true')
   || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('testmode'));
 
-const Settings: React.FC<SettingsProps> = ({ onBack }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, onOpenProfile }) => {
   const [session, setSession] = useState(getSession());
   const [daysLeft, setDaysLeft] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -278,6 +278,22 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       )}
 
       <div className="flex-1 overflow-y-auto px-4 pt-3 space-y-4" style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))' }}>
+        {/* Profile & goals — Profile left the tab bar to make room for Recipes */}
+        {onOpenProfile && (
+          <button onClick={onOpenProfile} className="w-full bg-white rounded-2xl p-4 card-shadow flex items-center gap-3 text-left transition-smooth active:scale-[0.98]">
+            <div className="w-11 h-11 bg-[#FBEBE4] rounded-[14px] flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5 text-[#E07A5F]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-[#2B2523] text-sm">{t('yourProfile')}</p>
+              <p className="text-xs text-[#9A8B80] mt-0.5 truncate">
+                {profile ? `${profile.name || ''}${profile.weightKg ? ` · ${profile.weightKg} kg` : ''} · ${profile.customCalories || profile.tdee} kcal` : t('personalSettings')}
+              </p>
+            </div>
+            <ExternalLink className="w-4 h-4 text-[#B4A79C] shrink-0" />
+          </button>
+        )}
+
         {/* Account Key Card */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 p-3 opacity-5"><Shield className="w-24 h-24" /></div>

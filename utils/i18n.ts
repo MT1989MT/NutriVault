@@ -29,6 +29,7 @@ type TranslationKey =
   // History page
   | 'thisWeek' | 'lastWeek' | 'overview' | 'weekStats' | 'avgPerDay' | 'caloriesPerDay'
   | 'burned' | 'weekTotal' | 'noDataForDay' | 'workouts'
+  | 'calorieBalance' | 'balanceUnder' | 'balanceOver' | 'day' | 'paceEstimate'
   // Workouts page
   | 'trainAndTrack' | 'howWorkoutsWork' | 'startWorkout' | 'newWorkout' | 'saved' | 'log' | 'plan'
   | 'generate' | 'duration' | 'level' | 'easy' | 'medium' | 'hard' | 'restBetweenSets'
@@ -184,6 +185,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tip: Try to add more protein-rich foods for your remaining meals.',
     // History page
     thisWeek: 'This week',
+    calorieBalance: 'Calorie balance',
+    balanceUnder: 'On average {kcal} kcal under your daily target',
+    balanceOver: 'On average {kcal} kcal above your daily target',
+    day: 'day',
+    paceEstimate: 'At this pace roughly {kg} kg per week',
     lastWeek: 'Last week',
     overview: 'Overview',
     weekStats: 'Week statistics',
@@ -508,6 +514,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tip: Probeer meer eiwitrijke voeding toe te voegen aan je resterende maaltijden.',
     // History page
     thisWeek: 'Deze week',
+    calorieBalance: 'Caloriebalans',
+    balanceUnder: 'Gemiddeld {kcal} kcal onder je dagdoel',
+    balanceOver: 'Gemiddeld {kcal} kcal boven je dagdoel',
+    day: 'dag',
+    paceEstimate: 'In dit tempo ongeveer {kg} kg per week',
     lastWeek: 'Vorige week',
     overview: 'Overzicht',
     weekStats: 'Week statistieken',
@@ -832,6 +843,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tipp: Versuche mehr proteinreiche Lebensmittel hinzuzufügen.',
     // History page
     thisWeek: 'Diese Woche',
+    calorieBalance: 'Kalorienbilanz',
+    balanceUnder: 'Durchschnittlich {kcal} kcal unter deinem Tagesziel',
+    balanceOver: 'Durchschnittlich {kcal} kcal über deinem Tagesziel',
+    day: 'Tag',
+    paceEstimate: 'In diesem Tempo etwa {kg} kg pro Woche',
     lastWeek: 'Letzte Woche',
     overview: 'Übersicht',
     weekStats: 'Wochenstatistik',
@@ -1156,6 +1172,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Conseil: Ajoutez plus de protéines à vos repas restants.',
     // History page
     thisWeek: 'Cette semaine',
+    calorieBalance: 'Bilan calorique',
+    balanceUnder: 'En moyenne {kcal} kcal sous votre objectif quotidien',
+    balanceOver: 'En moyenne {kcal} kcal au-dessus de votre objectif quotidien',
+    day: 'jour',
+    paceEstimate: 'À ce rythme environ {kg} kg par semaine',
     lastWeek: 'Semaine dernière',
     overview: 'Aperçu',
     weekStats: 'Statistiques hebdo',
@@ -1480,6 +1501,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Consejo: Añade más alimentos ricos en proteínas.',
     // History page
     thisWeek: 'Esta semana',
+    calorieBalance: 'Balance calórico',
+    balanceUnder: 'De media {kcal} kcal por debajo de tu objetivo diario',
+    balanceOver: 'De media {kcal} kcal por encima de tu objetivo diario',
+    day: 'día',
+    paceEstimate: 'A este ritmo aproximadamente {kg} kg por semana',
     lastWeek: 'Semana pasada',
     overview: 'Resumen',
     weekStats: 'Estadísticas semanales',
@@ -1804,6 +1830,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Consiglio: Aggiungi più alimenti ricchi di proteine ai pasti rimanenti.',
     // History page
     thisWeek: 'Questa settimana',
+    calorieBalance: 'Bilancio calorico',
+    balanceUnder: 'In media {kcal} kcal sotto il tuo obiettivo giornaliero',
+    balanceOver: 'In media {kcal} kcal sopra il tuo obiettivo giornaliero',
+    day: 'giorno',
+    paceEstimate: 'A questo ritmo circa {kg} kg a settimana',
     lastWeek: 'Settimana scorsa',
     overview: 'Panoramica',
     weekStats: 'Statistiche settimanali',
