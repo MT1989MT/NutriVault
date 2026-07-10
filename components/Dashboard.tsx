@@ -519,8 +519,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, logs, onItemsAdded, onRe
                 { label: tr('goal'), value: targetCalories },
               ].map((row, i) => (
                 <div key={row.label} className={`flex items-center justify-between py-2 ${i > 0 ? 'border-t border-[#F3EAE2]' : ''}`}>
+                  {/* Plain digits (no locale separators) to match the ring gauge number */}
                   <span className="text-[12px] text-[#9A8B80] capitalize">{row.label}</span>
-                  <span className="text-[15px] font-bold text-[#2B2523] font-display tabular-nums">{row.value.toLocaleString()}</span>
+                  <span className="text-[15px] font-bold text-[#2B2523] font-display tabular-nums">{Math.round(row.value)}</span>
                 </div>
               ))}
             </div>

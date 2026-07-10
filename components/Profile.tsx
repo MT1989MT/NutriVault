@@ -311,7 +311,7 @@ const Profile: React.FC<ProfileProps> = ({ existingProfile, onSave, onCancel }) 
           <div>
             <span className="text-[11px] font-semibold text-white/60 uppercase block">Daily goal</span>
             <span className="text-[24px] font-extrabold font-display tracking-tight text-white tabular-nums">
-              {displayCalories > 0 ? `${displayCalories.toLocaleString('en-US')} kcal` : '—'}
+              {displayCalories > 0 ? `${Math.round(displayCalories)} kcal` : '—'}
             </span>
           </div>
           <div className="text-right">
