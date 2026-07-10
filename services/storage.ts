@@ -357,6 +357,7 @@ interface FoodFrequency {
   proteinPer100g?: number;
   carbsPer100g?: number;
   fatPer100g?: number;
+  caloriesPer100g?: number;
 }
 
 export const getFoodFrequencies = (): FoodFrequency[] => cachedGet<FoodFrequency[]>(FOOD_FREQUENCY_KEY, []);
@@ -370,6 +371,7 @@ export const trackFoodFrequency = (item: FoodItem) => {
   const p100 = typeof itemAny.proteinPer100g === 'number' ? itemAny.proteinPer100g : undefined;
   const c100 = typeof itemAny.carbsPer100g === 'number' ? itemAny.carbsPer100g : undefined;
   const f100 = typeof itemAny.fatPer100g === 'number' ? itemAny.fatPer100g : undefined;
+  const cal100 = typeof itemAny.caloriesPer100g === 'number' ? itemAny.caloriesPer100g : undefined;
   const hasPer100g = p100 !== undefined;
 
   const existing = freqs.findIndex(f => f.name.toLowerCase().trim() === key);
@@ -385,6 +387,7 @@ export const trackFoodFrequency = (item: FoodItem) => {
       freqs[existing].proteinPer100g = p100;
       freqs[existing].carbsPer100g = c100;
       freqs[existing].fatPer100g = f100;
+      if (cal100 !== undefined) freqs[existing].caloriesPer100g = cal100;
     }
   } else {
     freqs.push({
@@ -396,7 +399,7 @@ export const trackFoodFrequency = (item: FoodItem) => {
       carbs: item.carbs,
       fat: item.fat,
       amountDescription: item.amountDescription,
-      ...(hasPer100g ? { proteinPer100g: p100, carbsPer100g: c100, fatPer100g: f100 } : {}),
+      ...(hasPer100g ? { proteinPer100g: p100, carbsPer100g: c100, fatPer100g: f100, ...(cal100 !== undefined ? { caloriesPer100g: cal100 } : {}) } : {}),
     });
   }
   // Keep top 50 by frequency
@@ -411,14 +414,14 @@ export const trackFoodFrequency = (item: FoodItem) => {
  * Returns stored values if the food has been logged at least once before,
  * giving consistent macros across sessions for repeat foods.
  */
-export const lookupFoodNutrition = (name: string): { p100: number; c100: number; f100: number } | null => {
+export const lookupFoodNutrition = (name: string): { p100: number; c100: number; f100: number; cal100?: number } | null => {
   if (!name) return null;
   const key = name.toLowerCase().trim();
 
   const freqs = getFoodFrequencies();
   const match = freqs.find(f => f.name.toLowerCase().trim() === key);
   if (match && match.proteinPer100g !== undefined && match.carbsPer100g !== undefined && match.fatPer100g !== undefined) {
-    return { p100: match.proteinPer100g, c100: match.carbsPer100g, f100: match.fatPer100g };
+    return { p100: match.proteinPer100g, c100: match.carbsPer100g, f100: match.fatPer100g, cal100: match.caloriesPer100g };
   }
 
   return null;

@@ -9,6 +9,7 @@ interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   baseProteinPer100g?: number;
   baseCarbsPer100g?: number;
   baseFatPer100g?: number;
+  baseCaloriesPer100g?: number;
   removed?: boolean;
   groupName?: string;
   alternatives?: string[];
@@ -37,6 +38,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         baseProteinPer100g: itemAny.proteinPer100g ?? (g > 0 ? (item.protein / g) * 100 : item.protein),
         baseCarbsPer100g: itemAny.carbsPer100g ?? (g > 0 ? (item.carbs / g) * 100 : item.carbs),
         baseFatPer100g: itemAny.fatPer100g ?? (g > 0 ? (item.fat / g) * 100 : item.fat),
+        baseCaloriesPer100g: itemAny.caloriesPer100g ?? (g > 0 ? (item.calories / g) * 100 : item.calories),
         removed: false,
         alternatives: itemAny.alternatives,
       };
@@ -118,7 +120,11 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
       const protein = Math.round((item.baseProteinPer100g || 0) * g / 100);
       const carbs = Math.round((item.baseCarbsPer100g || 0) * g / 100);
       const fat = Math.round((item.baseFatPer100g || 0) * g / 100);
-      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+      // Label-accurate calories from kcal/100g; Atwater only as fallback
+      const cal100 = item.baseCaloriesPer100g && item.baseCaloriesPer100g > 0
+        ? item.baseCaloriesPer100g
+        : (item.baseProteinPer100g || 0) * 4 + (item.baseCarbsPer100g || 0) * 4 + (item.baseFatPer100g || 0) * 9;
+      const calories = Math.round(cal100 * g / 100);
       return {
         ...item,
         grams: g,
@@ -157,16 +163,20 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         const p100 = first?.proteinPer100g ?? item.baseProteinPer100g ?? 0;
         const c100 = first?.carbsPer100g ?? item.baseCarbsPer100g ?? 0;
         const f100 = first?.fatPer100g ?? item.baseFatPer100g ?? 0;
+        const cal100 = first?.caloriesPer100g && first.caloriesPer100g > 0
+          ? first.caloriesPer100g
+          : p100 * 4 + c100 * 4 + f100 * 9;
         const protein = Math.round(p100 * g / 100);
         const carbs = Math.round(c100 * g / 100);
         const fat = Math.round(f100 * g / 100);
-        const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+        const calories = Math.round(cal100 * g / 100);
         return {
           ...item,
           name: altName,
           baseProteinPer100g: p100,
           baseCarbsPer100g: c100,
           baseFatPer100g: f100,
+          baseCaloriesPer100g: cal100,
           protein, carbs, fat, calories,
           alternatives: undefined,
         };
@@ -184,7 +194,15 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   const handleConfirm = () => {
     const itemsToLog = activeItems
       .filter(i => i.calories > 0 || i.protein > 0 || i.carbs > 0 || i.fat > 0)
-      .map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
+      .map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, baseCaloriesPer100g, removed, ...rest }) => ({
+        ...rest,
+        // Sync the per-100g passthrough fields with the (possibly swapped) base
+        // values so food history stores the macros that were actually logged
+        proteinPer100g: baseProteinPer100g,
+        carbsPer100g: baseCarbsPer100g,
+        fatPer100g: baseFatPer100g,
+        caloriesPer100g: baseCaloriesPer100g,
+      }));
     if (itemsToLog.length === 0) return;
     onConfirm(itemsToLog);
   };

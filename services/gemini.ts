@@ -80,6 +80,7 @@ const getPersonalityPrompt = (style: CoachPersonality = 'FRIENDLY') => {
 
 import { API_BASE_URL } from './config';
 import { lookupFoodNutrition } from './storage';
+import { lookupVerifiedFood } from '../data/foodDatabase';
 import { t, getCurrentLanguage } from '../utils/i18n';
 
 // Simple time-limited cache to avoid duplicate API calls for identical prompts
@@ -211,10 +212,14 @@ const callGemini = async (model: string, prompt: string, jsonMode: boolean = fal
 
 // Shared response parser for food items from AI
 // Supports two response formats:
-//   New (per-100g):  { p100, c100, f100, grams } — we compute absolute values
+//   New (per-100g):  { p100, c100, f100, kcal100, grams } — we compute absolute values
 //   Legacy (absolute): { p, c, f, grams } — used as-is, per-100g derived
-// For foods the user has logged before, stored per-100g values override the AI's
-// to ensure consistent macros across sessions.
+//
+// Nutrition priority (most → least trusted):
+//   1. Curated verified database (data/foodDatabase.ts) — official label values,
+//      identical every time, immune to AI variance
+//   2. Values the user logged before for this exact food (cross-session consistency)
+//   3. The AI's estimate, sanity-clamped and cross-checked against its own kcal100
 const parseFoodResponse = (rawData: any, includeMicros: boolean = true) => {
   // The model occasionally returns an object instead of an array — either a
   // single food item or a wrapper like {items:[...]}. Normalise instead of
@@ -227,6 +232,7 @@ const parseFoodResponse = (rawData: any, includeMicros: boolean = true) => {
   return rawData.map((item: any) => {
     const name = typeof item.name === 'string' ? item.name : 'Unknown food';
     const rawGrams = Math.round(Number(item.grams ?? item.weight ?? item.g) || 0);
+    const count = Math.max(0, Math.round(Number(item.count) || 0));
     const prelimGrams = rawGrams > 0 ? rawGrams : 100; // used only to derive per-100g from legacy absolute values
 
     // Determine per-100g macros — prefer explicit per-100g fields from AI
@@ -259,28 +265,61 @@ const parseFoodResponse = (rawData: any, includeMicros: boolean = true) => {
       f100 *= scale;
     }
 
-    // Gemini is the source of truth. For consistency, reuse the per-100g values the
-    // user already logged for this exact food before — so a food stays stable for them
-    // across sessions without maintaining any static database.
-    const stored = lookupFoodNutrition(name);
-    if (stored) {
-      p100 = stored.p100;
-      c100 = stored.c100;
-      f100 = stored.f100;
+    // Calories per 100g: cross-check the AI's own kcal100 against the Atwater
+    // sum of its macros. Labels legitimately deviate from Atwater (alcohol,
+    // fiber), so within a plausible band we trust the label value.
+    const atwater100 = p100 * 4 + c100 * 4 + f100 * 9;
+    const aiKcal100 = Math.max(0, Number(item.kcal100 ?? item.kcal) || 0);
+    let cal100 = atwater100;
+    if (aiKcal100 > 0 && aiKcal100 >= atwater100 * 0.5 && aiKcal100 <= atwater100 * 2 + 25) {
+      cal100 = aiKcal100;
     }
 
-    // Portion weight: trust Gemini's estimate (it computes count × unit weight per the
-    // prompt's reference table), snapped to the nearest 5g for stability.
-    let grams = rawGrams > 0 ? Math.round(rawGrams / 5) * 5 : 100;
+    const verified = lookupVerifiedFood(name);
+    if (verified) {
+      // 1. Verified database wins — official values, always identical
+      p100 = verified.p100;
+      c100 = verified.c100;
+      f100 = verified.f100;
+      cal100 = verified.kcal100;
+    } else {
+      // 2. Reuse the per-100g values the user already logged for this exact
+      //    food — stable across sessions without a static database entry.
+      const stored = lookupFoodNutrition(name);
+      if (stored) {
+        p100 = stored.p100;
+        c100 = stored.c100;
+        f100 = stored.f100;
+        cal100 = stored.cal100 && stored.cal100 > 0 ? stored.cal100 : p100 * 4 + c100 * 4 + f100 * 9;
+      }
+    }
+
+    // Portion weight. For verified foods with a known unit weight, count × unit
+    // beats the AI's gram guess; fixed-size products (Big Mac, Snickers, can of
+    // soda) are ALWAYS whole units, so ignore implausible AI grams entirely.
+    let grams: number;
+    if (verified?.unitGrams && count >= 1) {
+      grams = Math.round(count * verified.unitGrams);
+    } else if (verified?.unitGrams && verified.wholeUnit) {
+      grams = Math.round(verified.unitGrams);
+    } else if (rawGrams > 0) {
+      // Snap to 5g for stability; keep 1g precision for tiny portions (a
+      // teaspoon of sugar shouldn't jump 25% from snapping)
+      grams = rawGrams >= 20 ? Math.round(rawGrams / 5) * 5 : rawGrams;
+    } else if (verified?.unitGrams) {
+      grams = Math.round(verified.unitGrams);
+    } else {
+      grams = 100;
+    }
     if (grams <= 0) grams = 100;
 
-    // Compute absolute macros from per-100g × portion
+    // Compute absolute values from UNROUNDED per-100g × portion; round once for
+    // storage. Calories come from cal100 (label-accurate), not from the already
+    // rounded macros — that rounding drift is how small foods ended up wrong.
     const protein = Math.max(0, Math.round(p100 * grams / 100));
     const carbs = Math.max(0, Math.round(c100 * grams / 100));
     const fat = Math.max(0, Math.round(f100 * grams / 100));
-
-    // Atwater is ground truth for calories
-    const cal = (protein * 4) + (carbs * 4) + (fat * 9);
+    const cal = Math.max(0, Math.round(cal100 * grams / 100));
 
     const result: any = {
       name,
@@ -291,9 +330,11 @@ const parseFoodResponse = (rawData: any, includeMicros: boolean = true) => {
       fat,
       grams,
       // Attach raw per-100g values so they flow through to trackFoodFrequency
+      // and the review modal's portion editor
       proteinPer100g: p100,
       carbsPer100g: c100,
       fatPer100g: f100,
+      caloriesPer100g: cal100,
     };
 
     // Preserve group name for branded/composite products
@@ -339,22 +380,27 @@ USER INPUT: "${safeInput}"
 PARSING RULES:
 1. Understand ANY language, casual speech, abbreviations, typos, brand names, slang.
    Examples: "broodje kaas", "2 boterhammen pb", "koffie verkeerd", "bowl of oats with banana", "mcchicken menu", "tosti ham kaas"
-2. Split composite meals into individual ingredients for accurate tracking:
-   - "broodje gezond" → bread, cheese, lettuce, tomato, egg, butter
-   - "Big Mac" → bun, beef patties, sauce, lettuce, cheese, pickles, onions
-   But keep simple items single: "banana" → just banana
+2. BRANDED & RESTAURANT products = ONE single item with the OFFICIAL nutrition of the
+   complete product. NEVER split branded products into ingredients.
+   - "Big Mac" → ONE item {"name":"Big Mac","count":1,"grams":220,"kcal100":229,"p100":12,"c100":18.5,"f100":12}
+   - Same for: McChicken, Whopper, frikandel, kroket, Snickers, Red Bull, döner, pizza…
+   - A menu/combo = its separate products: "Big Mac menu" → Big Mac + friet + cola (grouped).
+   Only split HOME-MADE / self-assembled meals into their components:
+   - "broodje gezond" → bread roll, cheese, lettuce, tomato, egg, butter
+   Keep simple items single: "banana" → just banana.
 3. When 2+ items from a single meal: add "group" field with a short meal name (e.g. "Broodje gezond"). Single items: omit "group".
-4. Food names MUST be in the SAME language as the user's input.
-5. MACROS MUST BE PER 100g (p100/c100/f100). Use standard nutritional reference values:
-   - Chicken breast: p100=31, c100=0, f100=3.6
-   - Banana: p100=1.1, c100=23, f100=0.3
-   - White bread: p100=9, c100=49, f100=3.2
-   - Whole milk: p100=3.4, c100=4.7, f100=3.3
-   - Cheddar cheese: p100=25, c100=1.3, f100=33
-   - Peanut butter: p100=25, c100=20, f100=50
-   - Egg (whole): p100=13, c100=1.1, f100=11
-   - White rice (cooked): p100=2.7, c100=28, f100=0.3
-   - Butter: p100=0.9, c100=0.1, f100=81
+4. Food names MUST be in the SAME language as the user's input. Keep brand names as-is ("Big Mac" stays "Big Mac").
+5. MACROS MUST BE PER 100g (p100/c100/f100) + "kcal100" = official calories per 100g
+   from the nutrition label. kcal100 includes alcohol calories for beer/wine.
+   Use standard nutritional reference values:
+   - Chicken breast: kcal100=165, p100=31, c100=0, f100=3.6
+   - Banana: kcal100=89, p100=1.1, c100=23, f100=0.3
+   - White bread: kcal100=265, p100=9, c100=49, f100=3.2
+   - Whole milk: kcal100=64, p100=3.4, c100=4.7, f100=3.3
+   - Peanut butter: kcal100=600, p100=26, c100=14, f100=48
+   - Egg (whole): kcal100=155, p100=13, c100=1.1, f100=11
+   - White rice (cooked): kcal100=130, p100=2.7, c100=28, f100=0.3
+   - Butter: kcal100=717, p100=0.9, c100=0.1, f100=81
    Look up the actual standard per-100g values. Do NOT guess.
 6. PORTIONS — be DETERMINISTIC. The same input must ALWAYS produce the same grams.
    When the user states a number of countable units, set "count" to that number and
@@ -363,10 +409,13 @@ PARSING RULES:
    - egg = 50g                            | banana = 120g | apple = 150g
    - orange = 130g | pear = 170g | kiwi = 75g
    - slice of cheese = 20g                | slice of ham/cold cut = 15g
+   - Big Mac = 220g | Whopper = 275g | frikandel = 85g | kroket = 70g
+   - candy bar (Snickers/Mars) = 50g | can of soda = 330ml | energy drink = 250ml
    For non-countable amounts use these fixed defaults (count = 0 or omit):
    - coffee/tea = 150ml | milk/juice/soda = 250ml | glass of water = 0 kcal
    - butter on bread = 10g | peanut butter = 15g | mayo/ketchup = 15g | jam = 15g
    - cheese as a snack cube = 30g | rice/pasta cooked side = 150g | main protein = 150g
+   - portion of fries = 115g
    - "wat"/"a bit of"/"some" of a spread = the fixed default above (do NOT vary it)
    "count" = number of whole units (integer). "grams" = total portion weight =
    count × unit weight (or the fixed default). Round grams to a multiple of 5.
@@ -382,14 +431,14 @@ PARSING RULES:
 WORKED EXAMPLE — "twee boterhammen met wat boter en kipfilet":
   Split into separate ingredients AND group them as one meal:
   [
-    {"name":"boterham","portion":"2 sneetjes (~70g)","count":2,"grams":70,"p100":9,"c100":49,"f100":3.2,"group":"Boterhammen met kipfilet"},
-    {"name":"boter","portion":"~20g","count":0,"grams":20,"p100":0.9,"c100":0.1,"f100":81,"group":"Boterhammen met kipfilet"},
-    {"name":"kipfilet","portion":"beleg (~30g)","count":0,"grams":30,"p100":31,"c100":0,"f100":3.6,"group":"Boterhammen met kipfilet"}
+    {"name":"boterham","portion":"2 sneetjes (~70g)","count":2,"grams":70,"kcal100":265,"p100":9,"c100":49,"f100":3.2,"group":"Boterhammen met kipfilet"},
+    {"name":"boter","portion":"~20g","count":0,"grams":20,"kcal100":717,"p100":0.9,"c100":0.1,"f100":81,"group":"Boterhammen met kipfilet"},
+    {"name":"kipfilet","portion":"beleg (~30g)","count":0,"grams":30,"kcal100":165,"p100":31,"c100":0,"f100":3.6,"group":"Boterhammen met kipfilet"}
   ]
   (2 slices → butter applied per slice ~10g each = 20g; chicken as cold cut ~30g.)
 
 RESPONSE FORMAT — strict JSON array only:
-[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit","alt":["str"] or omit}]`,
+[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"kcal100":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit","alt":["str"] or omit}]`,
       true
     );
     if (!text) return [];
@@ -410,16 +459,19 @@ export const parseFoodFromPhoto = async (imageBase64: string, hint?: string): Pr
       `Food database. Analyze this food photo into JSON.
 ${safeHint ? `\nThe user added this description — use it to disambiguate what's in the photo: "${safeHint}"\n` : ''}
 RULES:
-1. Identify each food item visible. Split composites into components (bread, topping, sauce, etc.).
+1. Identify each food item visible. RECOGNIZABLE BRANDED/RESTAURANT products (Big Mac,
+   Whopper, frikandel, kroket, Snickers, can of soda…) = ONE item with the official
+   nutrition of the complete product — do NOT split those into ingredients.
+   Only split home-made/assembled dishes into components (bread, topping, sauce, etc.).
 2. When 2+ items: add "group" with a short meal name. 1 item: omit "group".
 3. Estimate portion weight in grams using plate/packaging for scale.
-   For countable items (slices, eggs, fruit) set "count" to the number visible and use
-   standard unit weights (bread slice 35g, egg 50g, banana 120g, apple 150g, cheese slice 20g).
-4. p100/c100/f100 = macros PER 100g (standard reference values, not for the portion).
-   "grams" = estimated portion weight. We compute total macros from per-100g × grams/100.
-5. Food names in ${langName}. Empty [] if no food visible.
+   For countable items (slices, eggs, fruit, burgers) set "count" to the number visible and use
+   standard unit weights (bread slice 35g, egg 50g, banana 120g, apple 150g, cheese slice 20g, Big Mac 220g).
+4. p100/c100/f100 = macros PER 100g + kcal100 = official calories per 100g (label values,
+   not for the portion). "grams" = estimated portion weight. We compute totals from per-100g × grams/100.
+5. Food names in ${langName}, but keep brand names as-is. Empty [] if no food visible.
 
-JSON: [{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
+JSON: [{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"kcal100":N,"p100":N,"c100":N,"f100":N,"fiber":N,"sugar":N,"sodium":N,"group":"str or omit"}]`,
       true,
       imageBase64
     );
@@ -443,20 +495,22 @@ export const autoTrackDay = async (description: string): Promise<{ items: Omit<F
 
 PARSING:
 - Handle casual speech, any language, typos, brand names.
-- Combined dishes = 1 item. Food names in same language as input.
+- Combined dishes = 1 item. Branded/restaurant products (Big Mac, frikandel, Snickers…) = 1 item
+  with the official nutrition of the complete product — never split into ingredients.
+- Food names in same language as input; keep brand names as-is.
 - Also detect any exercise mentioned (running, gym, cycling, walking, etc.).
 
 MACROS PER 100g:
-- p100/c100/f100 = macros PER 100g using standard nutritional reference values.
+- p100/c100/f100 = macros PER 100g + kcal100 = official calories per 100g (label values).
 - "grams" = estimated portion weight. We compute totals from per-100g × grams/100.
 - Use context: "kipfilet" on bread = ~30g cold cut; as main dish = ~150g.
 - Sauces/condiments unless specified: mayo = 15g, ketchup = 15g, butter on bread = 10g, peanut butter = 15g.
-- Drinks: coffee/tea = 150ml, juice/soda = 250ml. Bread slice = ~35g, egg = 50g, banana = 120g.
+- Drinks: coffee/tea = 150ml, juice/soda = 250ml. Bread slice = ~35g, egg = 50g, banana = 120g, Big Mac = 220g.
 - For countable units set "count" (e.g. "2 boterhammen" → count 2); grams = count × unit weight, rounded to 5g.
 - Be deterministic: identical descriptions must yield identical grams. When ambiguous, pick the most common everyday interpretation.
 - Include weight estimate in portion description.
 
-JSON: {"foods":[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"p100":N,"c100":N,"f100":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
+JSON: {"foods":[{"name":"str","portion":"str (~Xg)","count":N,"grams":N,"kcal100":N,"p100":N,"c100":N,"f100":N}],"workout":{"type":"str","durationMinutes":N,"elevatedHeartRate":bool} or null}`,
             true
         );
         if (!text) return { items: [], workout: null };
