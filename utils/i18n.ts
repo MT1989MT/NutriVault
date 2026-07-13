@@ -29,6 +29,7 @@ type TranslationKey =
   // History page
   | 'thisWeek' | 'lastWeek' | 'overview' | 'weekStats' | 'avgPerDay' | 'caloriesPerDay'
   | 'burned' | 'weekTotal' | 'noDataForDay' | 'workouts'
+  | 'calorieBalance' | 'balanceUnder' | 'balanceOver' | 'day' | 'paceEstimate'
   // Workouts page
   | 'trainAndTrack' | 'howWorkoutsWork' | 'startWorkout' | 'newWorkout' | 'saved' | 'log' | 'plan'
   | 'generate' | 'duration' | 'level' | 'easy' | 'medium' | 'hard' | 'restBetweenSets'
@@ -90,7 +91,9 @@ type TranslationKey =
   // Profile validation
   | 'invalidAge' | 'invalidHeight' | 'invalidWeight'
   // Coach fallbacks
-  | 'coachGreeting' | 'coachConnectError';
+  | 'coachGreeting' | 'coachConnectError'
+  // Warm Terra dashboard
+  | 'goodMorning' | 'goodAfternoon' | 'goodEvening' | 'viewAll' | 'nothingLoggedHint' | 'kcalTooMany';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -182,6 +185,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tip: Try to add more protein-rich foods for your remaining meals.',
     // History page
     thisWeek: 'This week',
+    calorieBalance: 'Calorie balance',
+    balanceUnder: 'On average {kcal} kcal under your daily target',
+    balanceOver: 'On average {kcal} kcal above your daily target',
+    day: 'day',
+    paceEstimate: 'At this pace roughly {kg} kg per week',
     lastWeek: 'Last week',
     overview: 'Overview',
     weekStats: 'Week statistics',
@@ -236,7 +244,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Weight',
     targetKcal: 'Target kcal',
     auto: 'Auto',
-    burnedCal: 'Burned cal',
+    burnedCal: 'Burned',
     ignored: 'Ignored',
     added: 'Added',
     dietAllergies: 'Diet & Allergies',
@@ -377,7 +385,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Copy Key',
     copied: 'Copied!',
     manageSubscription: 'Manage Subscription',
-    clearDataWarn1: 'This will delete all your nutrition data (logs, recipes, etc). Your account key will still work. Are you sure?',
+    clearDataWarn1: 'This will delete ALL your data: food logs, recipes, workouts AND your profile/goals (you will redo the setup wizard). Your account key keeps working. Are you sure?',
     clearDataWarn2: 'This action cannot be undone. All food logs, workouts, and recipes will be permanently deleted. Continue?',
     logoutWarn: 'Make sure you saved your key!',
     extendConfirm: 'Extend subscription by 30 days?',
@@ -413,6 +421,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Please enter a valid weight in kg (30-400).',
     coachGreeting: 'Hey, I\'m here! What would you like to know?',
     coachConnectError: 'Hmm, I couldn\'t connect just now. Try again!',
+    viewAll: 'View all',
+    nothingLoggedHint: 'Nothing logged yet — type, speak or photograph',
+    kcalTooMany: 'kcal over',
   },
   nl: {
     // Navigation
@@ -503,6 +514,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tip: Probeer meer eiwitrijke voeding toe te voegen aan je resterende maaltijden.',
     // History page
     thisWeek: 'Deze week',
+    calorieBalance: 'Caloriebalans',
+    balanceUnder: 'Gemiddeld {kcal} kcal onder je dagdoel',
+    balanceOver: 'Gemiddeld {kcal} kcal boven je dagdoel',
+    day: 'dag',
+    paceEstimate: 'In dit tempo ongeveer {kg} kg per week',
     lastWeek: 'Vorige week',
     overview: 'Overzicht',
     weekStats: 'Week statistieken',
@@ -557,7 +573,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Gewicht',
     targetKcal: 'Doel kcal',
     auto: 'Auto',
-    burnedCal: 'Verbrande cal',
+    burnedCal: 'Verbrand',
     ignored: 'Genegeerd',
     added: 'Toegevoegd',
     dietAllergies: 'Dieet & Allergieën',
@@ -698,7 +714,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Kopieer code',
     copied: 'Gekopieerd!',
     manageSubscription: 'Abonnement beheren',
-    clearDataWarn1: 'Dit verwijdert al je voedingsdata (logs, recepten, enz). Je accountcode blijft werken. Weet je het zeker?',
+    clearDataWarn1: 'Dit verwijdert AL je data: eetlogs, recepten, workouts ÉN je profiel/doelen (je doorloopt de setup-wizard opnieuw). Je accountcode blijft werken. Weet je het zeker?',
     clearDataWarn2: 'Deze actie kan niet ongedaan worden gemaakt. Alle eetlogs, workouts en recepten worden permanent verwijderd. Doorgaan?',
     logoutWarn: 'Zorg dat je je code hebt opgeslagen!',
     extendConfirm: 'Abonnement met 30 dagen verlengen?',
@@ -734,6 +750,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Voer een geldig gewicht in kg in (30-400).',
     coachGreeting: 'Hey, ik ben er! Wat wil je weten?',
     coachConnectError: 'Hmm, ik kon even niet verbinden. Probeer het nog eens!',
+    viewAll: 'Alles bekijken',
+    nothingLoggedHint: 'Nog niets gelogd — typ, spreek of fotografeer',
+    kcalTooMany: 'kcal teveel',
   },
   de: {
     // Navigation
@@ -824,6 +843,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Tipp: Versuche mehr proteinreiche Lebensmittel hinzuzufügen.',
     // History page
     thisWeek: 'Diese Woche',
+    calorieBalance: 'Kalorienbilanz',
+    balanceUnder: 'Durchschnittlich {kcal} kcal unter deinem Tagesziel',
+    balanceOver: 'Durchschnittlich {kcal} kcal über deinem Tagesziel',
+    day: 'Tag',
+    paceEstimate: 'In diesem Tempo etwa {kg} kg pro Woche',
     lastWeek: 'Letzte Woche',
     overview: 'Übersicht',
     weekStats: 'Wochenstatistik',
@@ -878,7 +902,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Gewicht',
     targetKcal: 'Ziel kcal',
     auto: 'Auto',
-    burnedCal: 'Verbrannte cal',
+    burnedCal: 'Verbrannt',
     ignored: 'Ignoriert',
     added: 'Hinzugefügt',
     dietAllergies: 'Diät & Allergien',
@@ -1019,7 +1043,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Schlüssel kopieren',
     copied: 'Kopiert!',
     manageSubscription: 'Abo verwalten',
-    clearDataWarn1: 'Dies löscht alle deine Ernährungsdaten (Logs, Rezepte usw). Dein Kontoschlüssel funktioniert weiterhin. Bist du sicher?',
+    clearDataWarn1: 'Dies löscht ALLE deine Daten: Essenslogs, Rezepte, Workouts UND dein Profil/Ziele (du durchläufst die Einrichtung erneut). Dein Kontoschlüssel funktioniert weiterhin. Bist du sicher?',
     clearDataWarn2: 'Diese Aktion kann nicht rückgängig gemacht werden. Alle Essenslogs, Workouts und Rezepte werden dauerhaft gelöscht. Fortfahren?',
     logoutWarn: 'Stelle sicher, dass du deinen Schlüssel gespeichert hast!',
     extendConfirm: 'Abo um 30 Tage verlängern?',
@@ -1055,6 +1079,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Bitte gib ein gültiges Gewicht in kg ein (30-400).',
     coachGreeting: 'Hey, ich bin da! Was möchtest du wissen?',
     coachConnectError: 'Hmm, ich konnte gerade keine Verbindung herstellen. Versuch es nochmal!',
+    viewAll: 'Alle ansehen',
+    nothingLoggedHint: 'Noch nichts geloggt — tippe, sprich oder fotografiere',
+    kcalTooMany: 'kcal zu viel',
   },
   fr: {
     // Navigation
@@ -1145,6 +1172,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Conseil: Ajoutez plus de protéines à vos repas restants.',
     // History page
     thisWeek: 'Cette semaine',
+    calorieBalance: 'Bilan calorique',
+    balanceUnder: 'En moyenne {kcal} kcal sous votre objectif quotidien',
+    balanceOver: 'En moyenne {kcal} kcal au-dessus de votre objectif quotidien',
+    day: 'jour',
+    paceEstimate: 'À ce rythme environ {kg} kg par semaine',
     lastWeek: 'Semaine dernière',
     overview: 'Aperçu',
     weekStats: 'Statistiques hebdo',
@@ -1199,7 +1231,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Poids',
     targetKcal: 'Objectif kcal',
     auto: 'Auto',
-    burnedCal: 'Cal brûlées',
+    burnedCal: 'Brûlées',
     ignored: 'Ignoré',
     added: 'Ajouté',
     dietAllergies: 'Régime & Allergies',
@@ -1340,7 +1372,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Copier la clé',
     copied: 'Copié!',
     manageSubscription: 'Gérer l\'abonnement',
-    clearDataWarn1: 'Cela supprimera toutes vos données nutritionnelles (journaux, recettes, etc). Votre clé de compte fonctionnera toujours. Êtes-vous sûr?',
+    clearDataWarn1: 'Cela supprimera TOUTES vos données: journaux, recettes, entraînements ET votre profil/objectifs (vous referez la configuration). Votre clé de compte fonctionnera toujours. Êtes-vous sûr?',
     clearDataWarn2: 'Cette action est irréversible. Tous les journaux alimentaires, entraînements et recettes seront définitivement supprimés. Continuer?',
     logoutWarn: 'Assurez-vous d\'avoir enregistré votre clé!',
     extendConfirm: 'Prolonger l\'abonnement de 30 jours?',
@@ -1376,6 +1408,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Entrez un poids valide en kg (30-400).',
     coachGreeting: 'Salut, je suis là! Que veux-tu savoir?',
     coachConnectError: 'Hmm, je n\'ai pas pu me connecter. Réessaye!',
+    viewAll: 'Tout voir',
+    nothingLoggedHint: 'Rien d\'enregistré — tapez, parlez ou photographiez',
+    kcalTooMany: 'kcal en trop',
   },
   es: {
     // Navigation
@@ -1466,6 +1501,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Consejo: Añade más alimentos ricos en proteínas.',
     // History page
     thisWeek: 'Esta semana',
+    calorieBalance: 'Balance calórico',
+    balanceUnder: 'De media {kcal} kcal por debajo de tu objetivo diario',
+    balanceOver: 'De media {kcal} kcal por encima de tu objetivo diario',
+    day: 'día',
+    paceEstimate: 'A este ritmo aproximadamente {kg} kg por semana',
     lastWeek: 'Semana pasada',
     overview: 'Resumen',
     weekStats: 'Estadísticas semanales',
@@ -1520,7 +1560,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Peso',
     targetKcal: 'Objetivo kcal',
     auto: 'Auto',
-    burnedCal: 'Cal quemadas',
+    burnedCal: 'Quemadas',
     ignored: 'Ignorado',
     added: 'Añadido',
     dietAllergies: 'Dieta y Alergias',
@@ -1661,7 +1701,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Copiar clave',
     copied: '¡Copiado!',
     manageSubscription: 'Gestionar suscripción',
-    clearDataWarn1: 'Esto eliminará todos tus datos nutricionales (registros, recetas, etc). Tu clave de cuenta seguirá funcionando. ¿Estás seguro?',
+    clearDataWarn1: 'Esto eliminará TODOS tus datos: registros, recetas, entrenamientos Y tu perfil/objetivos (repetirás la configuración). Tu clave de cuenta seguirá funcionando. ¿Estás seguro?',
     clearDataWarn2: 'Esta acción no se puede deshacer. Todos los registros de comida, entrenamientos y recetas se eliminarán permanentemente. ¿Continuar?',
     logoutWarn: '¡Asegúrate de haber guardado tu clave!',
     extendConfirm: '¿Extender la suscripción 30 días?',
@@ -1697,6 +1737,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Introduce un peso válido en kg (30-400).',
     coachGreeting: '¡Hola, aquí estoy! ¿Qué quieres saber?',
     coachConnectError: 'Mmm, no pude conectar. ¡Inténtalo de nuevo!',
+    viewAll: 'Ver todo',
+    nothingLoggedHint: 'Nada registrado — escribe, habla o fotografía',
+    kcalTooMany: 'kcal de más',
   },
   it: {
     // Navigation
@@ -1787,6 +1830,11 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     tipProtein: 'Consiglio: Aggiungi più alimenti ricchi di proteine ai pasti rimanenti.',
     // History page
     thisWeek: 'Questa settimana',
+    calorieBalance: 'Bilancio calorico',
+    balanceUnder: 'In media {kcal} kcal sotto il tuo obiettivo giornaliero',
+    balanceOver: 'In media {kcal} kcal sopra il tuo obiettivo giornaliero',
+    day: 'giorno',
+    paceEstimate: 'A questo ritmo circa {kg} kg a settimana',
     lastWeek: 'Settimana scorsa',
     overview: 'Panoramica',
     weekStats: 'Statistiche settimanali',
@@ -1841,7 +1889,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     weight: 'Peso',
     targetKcal: 'Obiettivo kcal',
     auto: 'Auto',
-    burnedCal: 'Cal bruciate',
+    burnedCal: 'Bruciate',
     ignored: 'Ignorato',
     added: 'Aggiunto',
     dietAllergies: 'Dieta e Allergie',
@@ -1982,7 +2030,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     copyKey: 'Copia chiave',
     copied: 'Copiato!',
     manageSubscription: 'Gestisci abbonamento',
-    clearDataWarn1: 'Questo eliminerà tutti i tuoi dati nutrizionali (log, ricette, ecc). La tua chiave account continuerà a funzionare. Sei sicuro?',
+    clearDataWarn1: 'Questo eliminerà TUTTI i tuoi dati: log alimentari, ricette, allenamenti E il tuo profilo/obiettivi (rifarai la configurazione). La tua chiave account continuerà a funzionare. Sei sicuro?',
     clearDataWarn2: 'Questa azione non può essere annullata. Tutti i log alimentari, allenamenti e ricette verranno eliminati definitivamente. Continuare?',
     logoutWarn: 'Assicurati di aver salvato la tua chiave!',
     extendConfirm: 'Estendere l\'abbonamento di 30 giorni?',
@@ -2018,6 +2066,9 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidWeight: 'Inserisci un peso valido in kg (30-400).',
     coachGreeting: 'Ehi, sono qui! Cosa vuoi sapere?',
     coachConnectError: 'Mmm, non sono riuscito a connettermi. Riprova!',
+    viewAll: 'Vedi tutto',
+    nothingLoggedHint: 'Niente registrato — scrivi, parla o fotografa',
+    kcalTooMany: 'kcal in più',
   }
 };
 
@@ -2027,15 +2078,14 @@ export const getDeviceLanguage = (): string => {
   return lang.split('-')[0].toLowerCase();
 };
 
-// Get current language. Priority: explicit user choice → device language (if
-// supported) → English. Defaulting to the device language keeps the UI and the
-// AI coach (which keys off navigator.language) in the same language.
+// Get current language. English is the app's canonical language and the
+// default; users can explicitly pick one of the 6 supported languages in
+// Settings. (Not auto-detecting from the device keeps the UI consistent —
+// several screens are English-first until the full i18n sweep is done.)
 export const getCurrentLanguage = (): string => {
   try {
     const saved = localStorage.getItem('nutrivault_language');
     if (saved && translations[saved]) return saved;
-    const device = getDeviceLanguage();
-    if (translations[device]) return device;
   } catch { /* ignore */ }
   return 'en';
 };

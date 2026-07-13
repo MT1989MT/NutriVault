@@ -1,36 +1,65 @@
 
 import React, { memo, useCallback } from 'react';
-import { Utensils, Dumbbell, ChefHat, Calendar, User } from 'lucide-react';
+import { Utensils, Dumbbell, Calendar, ChefHat, Plus } from 'lucide-react';
 import { t } from '../utils/i18n';
 
-interface NavigationProps { currentView: string; onChange: (view: any) => void; }
+interface NavigationProps {
+  currentView: string;
+  onChange: (view: any) => void;
+  onFab: () => void;
+}
 
-const items = [
+// Warm Terra tab bar: 4 tabs + center FAB. Profile lives behind Settings
+// (gear icon on the Food screen) so Recipes gets a permanent tab.
+const left = [
   { view: 'DASHBOARD', icon: Utensils, labelKey: 'food' as const },
   { view: 'WORKOUTS', icon: Dumbbell, labelKey: 'workout' as const },
+];
+const right = [
   { view: 'RECIPES', icon: ChefHat, labelKey: 'recipes' as const },
   { view: 'HISTORY', icon: Calendar, labelKey: 'overview' as const },
-  { view: 'PROFILE', icon: User, labelKey: 'profile' as const },
 ];
 
-const Navigation: React.FC<NavigationProps> = memo(({ currentView, onChange }) => {
-  const handleClick = useCallback((view: string) => {
-    onChange(view);
-  }, [onChange]);
+const NavButton: React.FC<{
+  view: string; icon: any; label: string; active: boolean; onClick: () => void;
+}> = ({ icon: Icon, label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+    className="flex flex-col items-center justify-center flex-1 min-h-[52px] py-1 transition-smooth active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 rounded-xl"
+  >
+    <Icon className="w-[22px] h-[22px]" strokeWidth={active ? 2.2 : 1.8} style={{ color: active ? 'var(--terra)' : 'var(--faint)' }} />
+    <span className={`text-[10px] font-semibold mt-1 tracking-wide ${active ? 'text-[#E07A5F]' : 'text-[#B4A79C]'}`}>{label}</span>
+  </button>
+);
+
+const Navigation: React.FC<NavigationProps> = memo(({ currentView, onChange, onFab }) => {
+  const handleClick = useCallback((view: string) => { onChange(view); }, [onChange]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 glass-nav border-t border-gray-100/60 z-50">
-      <div className="max-w-full mx-auto flex items-center justify-around px-3 h-[68px]">
-        {items.map(({ view, icon: Icon, labelKey }) => (
-          <button key={view} onClick={() => handleClick(view)} aria-label={t(labelKey)} aria-current={currentView === view ? 'page' : undefined} className="flex flex-col items-center justify-center min-w-[64px] min-h-[52px] py-1 px-2 transition-smooth active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2 rounded-xl">
-            <div className={`p-2.5 rounded-2xl transition-smooth ${currentView === view ? 'bg-gradient-to-br from-[#E07A5F] to-[#C85A40] text-white shadow-md shadow-[#E07A5F]/25' : 'text-gray-400 hover:text-gray-500'}`}>
-              <Icon className="w-[22px] h-[22px]" strokeWidth={currentView === view ? 2.5 : 1.8} />
-            </div>
-            <span className={`text-[11px] font-semibold mt-1 tracking-wide ${currentView === view ? 'text-[#E07A5F]' : 'text-gray-400'}`}>{t(labelKey)}</span>
-          </button>
-        ))}
+    <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="bg-white nav-shadow rounded-t-[28px]">
+        <div className="max-w-full mx-auto flex items-center px-4 h-[72px]">
+          {left.map(({ view, icon, labelKey }) => (
+            <NavButton key={view} view={view} icon={icon} label={t(labelKey)} active={currentView === view} onClick={() => handleClick(view)} />
+          ))}
+          {/* Center FAB — raised above the bar, opens the Add Food flow */}
+          <div className="relative flex-1 flex justify-center">
+            <button
+              onClick={onFab}
+              aria-label={t('addFood')}
+              className="absolute -top-[54px] w-[58px] h-[58px] bg-[#E07A5F] rounded-full flex items-center justify-center terra-shadow-lg active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F] focus-visible:ring-offset-2"
+            >
+              <Plus className="w-[26px] h-[26px] text-white" strokeWidth={2.4} />
+            </button>
+          </div>
+          {right.map(({ view, icon, labelKey }) => (
+            <NavButton key={view} view={view} icon={icon} label={t(labelKey)} active={currentView === view} onClick={() => handleClick(view)} />
+          ))}
+        </div>
+        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
       </div>
-      <div style={{height: 'env(safe-area-inset-bottom, 0px)'}} />
     </div>
   );
 });

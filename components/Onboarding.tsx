@@ -54,7 +54,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // Slide 0 = branded welcome, slides 1-3 = onboarding content
   const contentSlides = [
     {
-      icon: <Shield className="w-8 h-8 text-gray-700" />,
+      icon: <Shield className="w-8 h-8 text-[#6B6257]" />,
       title: 'Your data stays private.',
       subtitle: 'Everything is stored locally on your phone. No account needed, no email, no tracking.',
       example: 'Privacy by default. Your health data is yours and yours only.',
@@ -68,17 +68,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       color: 'from-[#E07A5F]/10 to-[#E07A5F]/5'
     },
     {
-      icon: <Dumbbell className="w-8 h-8 text-blue-500" />,
+      icon: <Dumbbell className="w-8 h-8 text-[#3D5A48]" />,
       title: 'Track everything.',
       subtitle: 'Meals, weight, workouts and recipes in one place. Stay on top of your goals with ease.',
       example: 'Affordable and complete. Everything you need to stay healthy.',
-      color: 'from-blue-500/10 to-blue-500/5'
+      color: 'from-[#EFF2EE] to-[#EFF2EE]'
     }
   ];
 
   return (
     <div
-      className="fixed inset-0 flex flex-col bg-[#FAFAF8]"
+      className="fixed inset-0 flex flex-col bg-[#FAF6F1]"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -87,7 +87,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       <div className="flex justify-end px-6 pt-4">
         <button
           onClick={handleComplete}
-          className="text-gray-400 text-sm font-medium px-3 py-1"
+          className="text-[#9A8B80] text-sm font-medium px-3 py-1"
         >
           Skip
         </button>
@@ -99,17 +99,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           /* ===== BRANDED WELCOME SCREEN ===== */
           <div className="text-center animate-fadeIn w-full max-w-sm" key="welcome">
             {/* App icon */}
-            <div className="w-20 h-20 bg-gradient-to-br from-[#E07A5F] to-[#C85A40] rounded-[22px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#E07A5F]/25">
+            <div className="w-20 h-20 bg-[#E07A5F] rounded-[22px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#E07A5F]/25">
               <span className="text-white text-3xl font-black font-display">N</span>
             </div>
 
             {/* Brand name */}
             <h1 className="text-[36px] font-black tracking-tight font-display leading-none mb-2">
-              <span className="text-gray-900">Nutri</span><span className="text-[#E07A5F]">Vault</span>
+              <span className="text-[#2B2523]">Nutri</span><span className="text-[#E07A5F]">Vault</span>
             </h1>
 
             {/* Tagline */}
-            <p className="text-[17px] text-gray-500 font-medium leading-relaxed">
+            <p className="text-[17px] text-[#9A8B80] font-medium leading-relaxed">
               Your Private Nutrition Coach
             </p>
 
@@ -118,7 +118,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             {/* Sub-message */}
             <div className="bg-white rounded-2xl p-4 card-shadow mx-auto">
-              <p className="text-[14px] text-gray-500 leading-relaxed">
+              <p className="text-[14px] text-[#9A8B80] leading-relaxed">
                 Simple, private, and affordable nutrition tracking. Built for people who want to live healthier.
               </p>
             </div>
@@ -135,16 +135,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     {slide.icon}
                   </div>
 
-                  <h1 className="text-[24px] font-black text-gray-900 mb-2 font-display tracking-tight leading-tight">
+                  <h1 className="text-[24px] font-black text-[#2B2523] mb-2 font-display tracking-tight leading-tight">
                     {slide.title}
                   </h1>
-                  <p className="text-[15px] text-gray-500 leading-relaxed mb-5">
+                  <p className="text-[15px] text-[#9A8B80] leading-relaxed mb-5">
                     {slide.subtitle}
                   </p>
 
                   {/* Example card */}
                   <div className="bg-white rounded-2xl p-3.5 card-shadow mx-auto">
-                    <p className="text-[13px] text-gray-600 leading-relaxed">
+                    <p className="text-[13px] text-[#6B6257] leading-relaxed">
                       {slide.example}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               key={i}
               onClick={() => setCurrentScreen(i)}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                currentScreen === i ? 'bg-[#E07A5F] w-7' : 'bg-gray-200 w-1.5'
+                currentScreen === i ? 'bg-[#E07A5F] w-7' : 'bg-[#E8DFD5] w-1.5'
               }`}
             />
           ))}
@@ -173,7 +173,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         {/* Button */}
         <button
           onClick={currentScreen === totalSlides - 1 ? handleComplete : nextScreen}
-          className="w-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-smooth shadow-lg shadow-[#E07A5F]/25"
+          className="w-full bg-[#E07A5F] text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-smooth shadow-lg shadow-[#E07A5F]/25"
         >
           {currentScreen === 0 ? "Let's Go" : currentScreen === totalSlides - 1 ? 'Get Started' : 'Next'}
           <ChevronRight className="w-5 h-5" />

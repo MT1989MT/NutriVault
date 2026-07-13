@@ -9,6 +9,7 @@ interface EditableItem extends Omit<FoodItem, 'id' | 'timestamp'> {
   baseProteinPer100g?: number;
   baseCarbsPer100g?: number;
   baseFatPer100g?: number;
+  baseCaloriesPer100g?: number;
   removed?: boolean;
   groupName?: string;
   alternatives?: string[];
@@ -37,6 +38,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         baseProteinPer100g: itemAny.proteinPer100g ?? (g > 0 ? (item.protein / g) * 100 : item.protein),
         baseCarbsPer100g: itemAny.carbsPer100g ?? (g > 0 ? (item.carbs / g) * 100 : item.carbs),
         baseFatPer100g: itemAny.fatPer100g ?? (g > 0 ? (item.fat / g) * 100 : item.fat),
+        baseCaloriesPer100g: itemAny.caloriesPer100g ?? (g > 0 ? (item.calories / g) * 100 : item.calories),
         removed: false,
         alternatives: itemAny.alternatives,
       };
@@ -118,7 +120,11 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
       const protein = Math.round((item.baseProteinPer100g || 0) * g / 100);
       const carbs = Math.round((item.baseCarbsPer100g || 0) * g / 100);
       const fat = Math.round((item.baseFatPer100g || 0) * g / 100);
-      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+      // Label-accurate calories from kcal/100g; Atwater only as fallback
+      const cal100 = item.baseCaloriesPer100g && item.baseCaloriesPer100g > 0
+        ? item.baseCaloriesPer100g
+        : (item.baseProteinPer100g || 0) * 4 + (item.baseCarbsPer100g || 0) * 4 + (item.baseFatPer100g || 0) * 9;
+      const calories = Math.round(cal100 * g / 100);
       return {
         ...item,
         grams: g,
@@ -157,16 +163,20 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
         const p100 = first?.proteinPer100g ?? item.baseProteinPer100g ?? 0;
         const c100 = first?.carbsPer100g ?? item.baseCarbsPer100g ?? 0;
         const f100 = first?.fatPer100g ?? item.baseFatPer100g ?? 0;
+        const cal100 = first?.caloriesPer100g && first.caloriesPer100g > 0
+          ? first.caloriesPer100g
+          : p100 * 4 + c100 * 4 + f100 * 9;
         const protein = Math.round(p100 * g / 100);
         const carbs = Math.round(c100 * g / 100);
         const fat = Math.round(f100 * g / 100);
-        const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+        const calories = Math.round(cal100 * g / 100);
         return {
           ...item,
           name: altName,
           baseProteinPer100g: p100,
           baseCarbsPer100g: c100,
           baseFatPer100g: f100,
+          baseCaloriesPer100g: cal100,
           protein, carbs, fat, calories,
           alternatives: undefined,
         };
@@ -184,7 +194,15 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
   const handleConfirm = () => {
     const itemsToLog = activeItems
       .filter(i => i.calories > 0 || i.protein > 0 || i.carbs > 0 || i.fat > 0)
-      .map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, removed, ...rest }) => rest);
+      .map(({ baseProteinPer100g, baseCarbsPer100g, baseFatPer100g, baseCaloriesPer100g, removed, ...rest }) => ({
+        ...rest,
+        // Sync the per-100g passthrough fields with the (possibly swapped) base
+        // values so food history stores the macros that were actually logged
+        proteinPer100g: baseProteinPer100g,
+        carbsPer100g: baseCarbsPer100g,
+        fatPer100g: baseFatPer100g,
+        caloriesPer100g: baseCaloriesPer100g,
+      }));
     if (itemsToLog.length === 0) return;
     onConfirm(itemsToLog);
   };
@@ -194,7 +212,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
     const isExpanded = expandedIdx === idx;
 
     return (
-      <div key={idx} className={`rounded-xl border transition-all ${isExpanded ? 'border-[#E07A5F]/30 bg-[#FAFAF8]' : 'border-gray-100 bg-gray-50/80'} ${indented ? 'ml-3' : ''}`}>
+      <div key={idx} className={`rounded-xl border transition-all ${isExpanded ? 'border-[#E07A5F]/30 bg-[#FAF6F1]' : 'border-[#F3EAE2] bg-[#FAF6F1]/80'} ${indented ? 'ml-3' : ''}`}>
         <button
           className="w-full p-3 text-left min-h-[52px]"
           onClick={() => { setExpandedIdx(isExpanded ? null : idx); setEditingNameIdx(null); }}
@@ -208,13 +226,13 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => { if (e.key === 'Enter') setEditingNameIdx(null); }}
                 onBlur={() => setEditingNameIdx(null)}
-                className="font-bold text-gray-800 text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1 focus:ring-2 focus:ring-[#E07A5F]/30"
+                className="font-bold text-[#2B2523] text-sm leading-tight pr-2 bg-white border border-[#E07A5F]/30 rounded-lg px-2 py-0.5 outline-none flex-1 focus:ring-2 focus:ring-[#E07A5F]/30"
                 autoFocus
               />
             ) : (
-              <span className={`font-bold text-gray-800 text-sm leading-tight pr-2 ${indented ? 'text-xs' : ''}`}>{item.name}</span>
+              <span className={`font-bold text-[#2B2523] text-sm leading-tight pr-2 ${indented ? 'text-xs' : ''}`}>{item.name}</span>
             )}
-            <span className="font-bold text-gray-900 text-sm shrink-0">{Math.round(item.calories)} kcal</span>
+            <span className="font-bold text-[#2B2523] text-sm shrink-0">{Math.round(item.calories)} kcal</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[#E07A5F] text-xs font-semibold">
@@ -230,13 +248,13 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
 
         {item.alternatives && item.alternatives.length > 0 && !isExpanded && (
           <div className="px-3 pb-2 flex items-center gap-1.5 flex-wrap">
-            <RefreshCw className={`w-3 h-3 text-gray-400 shrink-0 ${swappingIdx === idx ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 text-[#9A8B80] shrink-0 ${swappingIdx === idx ? 'animate-spin' : ''}`} />
             {item.alternatives.map((alt, ai) => (
               <button
                 key={ai}
                 disabled={swappingIdx === idx}
                 onClick={(e) => { e.stopPropagation(); swapToAlternative(idx, alt); }}
-                className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[11px] font-semibold hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-50"
+                className="px-2.5 py-1 bg-[#EFF2EE] text-[#3D5A48] rounded-lg text-[11px] font-semibold hover:bg-[#EFF2EE] active:scale-95 transition-all disabled:opacity-50"
               >
                 {alt}
               </button>
@@ -246,15 +264,15 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
 
         {isExpanded && (
           <div className="px-3 pb-3 pt-0">
-            <div className="h-px bg-gray-200 mb-3" />
+            <div className="h-px bg-[#E8DFD5] mb-3" />
 
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={() => updateItemGrams(idx, (item.grams || 100) - 10)}
                 aria-label="Decrease 10 grams"
-                className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-11 h-11 rounded-xl bg-[#F3EAE2] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <Minus className="w-4 h-4 text-gray-600" />
+                <Minus className="w-4 h-4 text-[#6B6257]" />
               </button>
 
               <div className="flex-1 relative">
@@ -262,17 +280,17 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                   type="number"
                   value={item.grams || ''}
                   onChange={(e) => updateItemGrams(idx, parseInt(e.target.value) || 0)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-center text-base font-bold text-gray-900 outline-none focus:border-[#E07A5F]/40 focus:ring-2 focus:ring-[#E07A5F]/30"
+                  className="w-full bg-white border border-[#E8DFD5] rounded-xl px-3 py-2.5 text-center text-base font-bold text-[#2B2523] outline-none focus:border-[#E07A5F]/40 focus:ring-2 focus:ring-[#E07A5F]/30"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold">g</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9A8B80] font-semibold">g</span>
               </div>
 
               <button
                 onClick={() => updateItemGrams(idx, (item.grams || 100) + 10)}
                 aria-label="Increase 10 grams"
-                className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-11 h-11 rounded-xl bg-[#F3EAE2] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <Plus className="w-4 h-4 text-gray-600" />
+                <Plus className="w-4 h-4 text-[#6B6257]" />
               </button>
             </div>
 
@@ -284,7 +302,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                   className={`py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 min-h-[44px] ${
                     item.grams === g
                       ? 'bg-[#E07A5F] text-white'
-                      : 'bg-white border border-gray-200 text-gray-600'
+                      : 'bg-white border border-[#E8DFD5] text-[#6B6257]'
                   }`}
                 >
                   {g}g
@@ -293,16 +311,16 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
             </div>
 
             <div className="flex gap-1.5 mb-3">
-              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                <div className="text-xs font-bold text-gray-900">{Math.round(item.protein)}g</div>
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-[#F3EAE2]">
+                <div className="text-xs font-bold text-[#2B2523]">{Math.round(item.protein)}g</div>
                 <div className="text-[8px] text-[#E07A5F] font-bold">PROT</div>
               </div>
-              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                <div className="text-xs font-bold text-gray-900">{Math.round(item.carbs)}g</div>
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-[#F3EAE2]">
+                <div className="text-xs font-bold text-[#2B2523]">{Math.round(item.carbs)}g</div>
                 <div className="text-[8px] text-[#81B29A] font-bold">CARB</div>
               </div>
-              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-gray-100">
-                <div className="text-xs font-bold text-gray-900">{Math.round(item.fat)}g</div>
+              <div className="flex-1 bg-white rounded-lg p-1.5 text-center border border-[#F3EAE2]">
+                <div className="text-xs font-bold text-[#2B2523]">{Math.round(item.fat)}g</div>
                 <div className="text-[8px] text-[#F2CC8F] font-bold">FAT</div>
               </div>
             </div>
@@ -311,7 +329,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
               <button
                 onClick={() => setEditingNameIdx(idx)}
                 aria-label={`Rename ${item.name}`}
-                className="flex-1 py-2.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform min-h-[44px]"
+                className="flex-1 py-2.5 bg-[#FAF6F1] text-[#9A8B80] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform min-h-[44px]"
               >
                 <PenLine className="w-3.5 h-3.5" />
                 Rename
@@ -336,10 +354,10 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
       <div className="bg-white w-full max-w-sm rounded-t-[1.5rem] sm:rounded-[1.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[80vh] flex flex-col" style={{ marginBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div className="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
-          <button onClick={onCancel} aria-label="Close" className="text-gray-400 w-11 h-11 flex items-center justify-center rounded-xl active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]">
+          <button onClick={onCancel} aria-label="Close" className="text-[#9A8B80] w-11 h-11 flex items-center justify-center rounded-xl active:scale-90 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]">
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-bold text-gray-900">Review & Adjust</h2>
+          <h2 className="text-base font-bold text-[#2B2523]">Review & Adjust</h2>
           <span className="bg-[#E07A5F]/10 text-[#E07A5F] text-[10px] font-bold px-2 py-0.5 rounded-full">
             {activeItems.length} item{activeItems.length !== 1 ? 's' : ''}
           </span>
@@ -370,12 +388,12 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
                         ) : (
                           <ChevronRight className="w-4 h-4 text-[#E07A5F] shrink-0" />
                         )}
-                        <span className="font-black text-gray-900 text-sm">{group.groupName}</span>
+                        <span className="font-black text-[#2B2523] text-sm">{group.groupName}</span>
                       </div>
                       <span className="font-black text-[#E07A5F] text-sm shrink-0">{Math.round(groupTotals.cal)} kcal</span>
                     </div>
                     <div className="flex justify-between items-center pl-6">
-                      <span className="text-gray-400 text-xs font-semibold">
+                      <span className="text-[#9A8B80] text-xs font-semibold">
                         {activeCount} ingredient{activeCount !== 1 ? 's' : ''}
                       </span>
                       <div className="flex gap-2 text-[10px] font-bold">
@@ -411,23 +429,23 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
 
         {/* Totals bar */}
         <div className="px-4 py-3 shrink-0">
-          <div className="bg-[#FAFAF8] rounded-2xl p-3 border border-[#E07A5F]/10">
+          <div className="bg-[#FAF6F1] rounded-2xl p-3 border border-[#E07A5F]/10">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-black text-gray-900 tracking-tight">{Math.round(totals.cal)}</div>
-                <div className="text-[9px] text-gray-400 font-bold uppercase">Total kcal</div>
+                <div className="text-2xl font-black text-[#2B2523] tracking-tight">{Math.round(totals.cal)}</div>
+                <div className="text-[9px] text-[#9A8B80] font-bold uppercase">Total kcal</div>
               </div>
               <div className="flex gap-1.5">
                 <div className="bg-white px-2 py-1 rounded-lg shadow-sm text-center min-w-[3rem]">
-                  <div className="text-xs font-bold text-gray-900">{Math.round(totals.p)}g</div>
+                  <div className="text-xs font-bold text-[#2B2523]">{Math.round(totals.p)}g</div>
                   <div className="text-[7px] text-[#E07A5F] uppercase font-bold">Prot</div>
                 </div>
                 <div className="bg-white px-2 py-1 rounded-lg shadow-sm text-center min-w-[3rem]">
-                  <div className="text-xs font-bold text-gray-900">{Math.round(totals.c)}g</div>
+                  <div className="text-xs font-bold text-[#2B2523]">{Math.round(totals.c)}g</div>
                   <div className="text-[7px] text-[#81B29A] uppercase font-bold">Carb</div>
                 </div>
                 <div className="bg-white px-2 py-1 rounded-lg shadow-sm text-center min-w-[3rem]">
-                  <div className="text-xs font-bold text-gray-900">{Math.round(totals.f)}g</div>
+                  <div className="text-xs font-bold text-[#2B2523]">{Math.round(totals.f)}g</div>
                   <div className="text-[7px] text-[#F2CC8F] uppercase font-bold">Fat</div>
                 </div>
               </div>
@@ -437,7 +455,7 @@ const AnalysisModal: React.FC<AnalysisModalProps> = ({ items: initialItems, onCo
 
         {/* Action buttons */}
         <div className="p-4 pt-0 flex gap-3 shrink-0">
-          <button onClick={onCancel} className="flex-1 py-3.5 rounded-xl text-gray-500 font-semibold text-sm hover:bg-gray-50 active:scale-[0.98] transition-transform">
+          <button onClick={onCancel} className="flex-1 py-3.5 rounded-xl text-[#9A8B80] font-semibold text-sm hover:bg-[#FAF6F1] active:scale-[0.98] transition-transform">
             Cancel
           </button>
           <button

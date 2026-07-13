@@ -266,30 +266,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   // Create Account Screen (after successful payment)
   if (view === 'CREATE' && newKey) {
     return (
-      <div className="h-[100dvh] bg-[#FAFAF8] flex items-center justify-center p-6">
+      <div className="h-[100dvh] bg-[#FAF6F1] flex items-center justify-center p-6">
         <div className="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-xl text-center">
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
 
           <h2 className="text-2xl font-bold mb-2">{t('saveCode')}</h2>
-          <p className="text-gray-500 text-sm mb-8">
+          <p className="text-[#9A8B80] text-sm mb-8">
             {t('lostAccessWarning')}
           </p>
 
-          <div className="bg-[#FAFAF8] p-6 rounded-2xl mb-8 border border-gray-200">
-            <p className="text-3xl font-mono font-bold tracking-wider text-gray-900">
+          <div className="bg-[#FAF6F1] p-6 rounded-2xl mb-8 border border-[#E8DFD5]">
+            <p className="text-3xl font-mono font-bold tracking-wider text-[#2B2523]">
               {newKey.match(/.{1,4}/g)?.join(' ')}
             </p>
             {newName && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
+              <div className="mt-4 inline-flex items-center gap-2 bg-white border border-[#E8DFD5] px-3 py-1.5 rounded-lg">
                 <span className="w-2 h-2 rounded-full bg-[#E07A5F]"></span>
-                <span className="text-xs font-bold uppercase text-gray-700">{newName}</span>
+                <span className="text-xs font-bold uppercase text-[#6B6257]">{newName}</span>
               </div>
             )}
           </div>
 
-          <p className="text-xs text-gray-400 mb-6">
+          <p className="text-xs text-[#9A8B80] mb-6">
             {t('tipScreenshot')}
           </p>
 
@@ -312,22 +312,22 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   // Login Screen
   if (view === 'LOGIN') {
     return (
-      <div className="h-[100dvh] bg-[#FAFAF8] flex items-center justify-center p-6">
+      <div className="h-[100dvh] bg-[#FAF6F1] flex items-center justify-center p-6">
         <div className="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-xl">
           <button
             onClick={() => setView('WELCOME')}
-            className="text-gray-400 text-xs font-bold uppercase mb-8"
+            className="text-[#9A8B80] text-xs font-bold uppercase mb-8"
           >
             {t('back')}
           </button>
 
-          <h2 className="text-3xl font-black mb-2 text-gray-900 font-display tracking-tight">{t('login')}</h2>
-          <p className="text-gray-500 text-sm mb-8">{t('enterCode')}</p>
+          <h2 className="text-3xl font-black mb-2 text-[#2B2523] font-display tracking-tight">{t('login')}</h2>
+          <p className="text-[#9A8B80] text-sm mb-8">{t('enterCode')}</p>
 
           <input
             type="text"
             placeholder="0000 0000 0000 0000"
-            className="w-full bg-[#FAFAF8] p-5 rounded-2xl text-center text-xl font-mono font-bold tracking-widest outline-none mb-4 text-gray-900 placeholder-gray-400"
+            className="w-full bg-[#FAF6F1] p-5 rounded-2xl text-center text-xl font-mono font-bold tracking-widest outline-none mb-4 text-[#2B2523] placeholder-[#B4A79C]"
             value={inputKey}
             onChange={(e) => setInputKey(e.target.value)}
             autoComplete="off"
@@ -353,15 +353,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
   // Welcome Screen
   return (
-    <div className="h-[100dvh] bg-[#FAFAF8] flex flex-col justify-center p-6 relative overflow-hidden">
+    <div className="h-[100dvh] bg-[#FAF6F1] flex flex-col justify-center p-6 relative overflow-hidden">
       <div className="absolute top-[-20%] right-[-20%] w-[500px] h-[500px] bg-[#E07A5F]/5 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-[-10%] left-[-20%] w-[400px] h-[400px] bg-[#E07A5F]/3 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-sm mx-auto z-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-2 font-display">NutriVault</h1>
-          <p className="text-sm text-gray-500 font-medium">
+          <h1 className="text-5xl font-extrabold tracking-tighter mb-2 font-display"><span className="text-[#2B2523]">Nutri</span><span className="text-[#E07A5F]">Vault</span></h1>
+          <p className="text-sm text-[#9A8B80] font-medium">
             Affordable nutrition tracking. Maximum privacy.
           </p>
         </div>
@@ -374,20 +374,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               <div className="w-7 h-7 bg-[#E07A5F]/10 rounded-lg flex items-center justify-center">
                 <Lock className="w-3.5 h-3.5 text-[#E07A5F]" />
               </div>
-              <span className="text-sm text-gray-700 font-medium">100% local & private</span>
+              <span className="text-sm text-[#6B6257] font-medium">100% local & private</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 bg-[#E07A5F]/10 rounded-lg flex items-center justify-center">
                 <KeyRound className="w-3.5 h-3.5 text-[#E07A5F]" />
               </div>
-              <span className="text-sm text-gray-700 font-medium">No account needed - just a code</span>
+              <span className="text-sm text-[#6B6257] font-medium">No account needed - just a code</span>
             </div>
           </div>
 
           {/* Price */}
-          <div className="text-center py-4 mb-4 border-t border-gray-50">
-            <span className="text-4xl font-black text-gray-900 font-display tracking-tight">{price}</span>
-            <span className="text-gray-400 font-medium">{perMonth}</span>
+          <div className="text-center py-4 mb-4 border-t border-[#F3EAE2]">
+            <span className="text-4xl font-black text-[#2B2523] font-display tracking-tight">{price}</span>
+            <span className="text-[#9A8B80] font-medium">{perMonth}</span>
           </div>
 
           {error && (
@@ -399,13 +399,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <button
               onClick={handlePurchase}
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#E07A5F] to-[#C85A40] text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-[#E07A5F]/25 disabled:opacity-50 active:scale-[0.97] transition-smooth"
+              className="w-full bg-[#E07A5F] text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-[#E07A5F]/25 disabled:opacity-50 active:scale-[0.97] transition-smooth"
             >
               {loading ? '...' : t('startSubscription')}
             </button>
             <button
               onClick={() => setView('LOGIN')}
-              className="w-full bg-gray-50 text-gray-600 py-3 rounded-xl font-bold text-sm"
+              className="w-full bg-[#FAF6F1] text-[#6B6257] py-3 rounded-xl font-bold text-sm"
             >
               {t('loginWithCode')}
             </button>
@@ -415,19 +415,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           <button
             onClick={handleRestore}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 text-gray-400 text-xs font-medium py-3 mt-2"
+            className="w-full flex items-center justify-center gap-2 text-[#9A8B80] text-xs font-medium py-3 mt-2"
           >
             <RefreshCw className="w-3 h-3" />
             {t('restorePurchases')}
           </button>
 
           {/* Legal links (Apple requirement) */}
-          <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-gray-50">
+          <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-[#F3EAE2]">
             <a
               href={PRIVACY_POLICY_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-gray-400 flex items-center gap-1"
+              className="text-[10px] text-[#9A8B80] flex items-center gap-1"
             >
               Privacy Policy <ExternalLink className="w-2.5 h-2.5" />
             </a>
@@ -435,7 +435,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-gray-400 flex items-center gap-1"
+              className="text-[10px] text-[#9A8B80] flex items-center gap-1"
             >
               Terms of Use <ExternalLink className="w-2.5 h-2.5" />
             </a>
@@ -446,7 +446,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <button
               onClick={handleDevSkip}
               disabled={loading}
-              className="w-full mt-3 py-2 text-xs font-mono text-orange-500 border border-dashed border-orange-300 rounded-xl bg-orange-50 disabled:opacity-50"
+              className="w-full mt-3 py-2 text-xs font-mono text-[#C4763B] border border-dashed border-[#E5C6A8] rounded-xl bg-[#F6ECE2] disabled:opacity-50"
             >
               {IS_TEST_MODE && !IS_DEV ? 'TEST MODE — Free Access' : 'DEV MODE — Skip Auth'}
             </button>

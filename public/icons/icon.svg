@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="108" fill="#E07A5F"/>
-  <text x="256" y="300" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="200" fill="white">NV</text>
+  <!-- Warm Terra app icon: terracotta rounded square with a white "vault dial" -->
+  <rect width="512" height="512" rx="143" fill="#E07A5F"/>
+  <!-- track ring (semi-transparent) -->
+  <circle cx="256" cy="256" r="118" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="58"/>
+  <!-- progress arc: 75% of circumference, gap at the top-right -->
+  <circle cx="256" cy="256" r="118" stroke="#FFFFFF" stroke-width="58" stroke-linecap="round"
+          stroke-dasharray="556 186" transform="rotate(-45 256 256)"/>
+  <!-- center dot -->
+  <circle cx="256" cy="256" r="31" fill="#FFFFFF"/>
 </svg>
