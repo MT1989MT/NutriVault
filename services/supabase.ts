@@ -64,11 +64,13 @@ const callApiRoute = async (route: string, body: Record<string, unknown>) => {
  * Create a new activation code via Vercel API proxy
  * The proxy adds a server-side secret before calling the Edge Function
  */
-export const createActivationCode = async (): Promise<{ code: string; name: string } | null> => {
+export const createActivationCode = async (appUserId?: string): Promise<{ code: string; name: string } | null> => {
   if (!isSupabaseConfigured()) return null;
 
   try {
-    const result = await callApiRoute('create-code', {});
+    // appUserId (RevenueCat customer id) lets the server verify the purchase
+    // receipt when REQUIRE_PURCHASE_RECEIPT is enabled
+    const result = await callApiRoute('create-code', appUserId ? { appUserId } : {});
     if (result.error) throw new Error(result.error);
     return { code: result.code, name: result.name };
   } catch (error) {

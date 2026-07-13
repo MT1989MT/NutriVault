@@ -20,10 +20,6 @@ export default defineConfig(() => {
         chunkSizeWarningLimit: 500,
         sourcemap: false,
         rollupOptions: {
-          external: [
-            '@revenuecat/purchases-capacitor',
-            '@revenuecat/purchases-capacitor-ui',
-          ],
           output: {
             manualChunks: {
               'vendor-react': ['react', 'react-dom'],

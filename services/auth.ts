@@ -75,10 +75,10 @@ const generateSessionToken = (): string => {
  * Production: uses Supabase Edge Functions via Vercel proxy
  * Dev only: falls back to localStorage mock
  */
-export const createAccount = async (): Promise<{ key: string; name: string } | null> => {
+export const createAccount = async (appUserId?: string): Promise<{ key: string; name: string } | null> => {
   // Try Supabase first (production)
   if (isSupabaseConfigured()) {
-    const result = await createActivationCode();
+    const result = await createActivationCode(appUserId);
     if (result) {
       return { key: result.code, name: result.name };
     }

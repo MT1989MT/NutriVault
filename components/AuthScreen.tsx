@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, KeyRound, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import { createAccount, verifyKey, saveSession } from '../services/auth';
-import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute } from '../services/payments';
+import { purchaseMonthly, restorePurchases, getOfferings, setActivationCodeAttribute, getAppUserId } from '../services/payments';
 import { createLogger } from '../services/logger';
 import { t, getCurrentLanguage } from '../utils/i18n';
 import { PRIVACY_POLICY_URL } from '../services/config';
@@ -83,7 +83,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     setError('');
 
     try {
-      const acc = await createAccount();
+      // Send the RevenueCat customer id so the server can verify the purchase
+      const appUserId = await getAppUserId();
+      const acc = await createAccount(appUserId ?? undefined);
       if (acc && acc.key) {
         localStorage.removeItem(PENDING_PURCHASE_KEY);
         // Link code to RevenueCat customer
@@ -124,12 +126,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       // This ensures recovery if code creation fails
       localStorage.setItem(PENDING_PURCHASE_KEY, Date.now().toString());
 
-      // Step 3: Generate unique activation code
+      // Step 3: Generate unique activation code. Send the RevenueCat customer
+      // id so the server-side receipt gate can verify this purchase.
+      const appUserId = await getAppUserId();
       let acc: { key: string; name: string } | null = null;
       let retries = 3;
 
       while (retries > 0 && !acc) {
-        acc = await createAccount();
+        acc = await createAccount(appUserId ?? undefined);
         if (!acc) {
           retries--;
           if (retries > 0) {

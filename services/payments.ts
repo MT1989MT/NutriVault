@@ -7,7 +7,7 @@
  * 1. npm install @revenuecat/purchases-capacitor @revenuecat/purchases-capacitor-ui
  * 2. Set VITE_REVENUECAT_API_KEY in environment
  * 3. Configure products in RevenueCat dashboard
- * 4. Set entitlement ID to 'NutriVault'
+ * 4. Set entitlement ID to 'premium'
  */
 
 import { createLogger } from './logger';
@@ -17,8 +17,9 @@ const log = createLogger('Payments');
 // RevenueCat Configuration
 const REVENUECAT_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_REVENUECAT_API_KEY) || '';
 
-// Entitlement identifier (must match RevenueCat dashboard)
-const ENTITLEMENT_ID = 'NutriVault';
+// Entitlement identifier — must match the RevenueCat dashboard AND the
+// server-side receipt gate (api/create-code.js checks entitlements.premium)
+const ENTITLEMENT_ID = 'premium';
 
 // Check if running on native platform
 const isNativePlatform = (): boolean => {
@@ -32,27 +33,36 @@ const isNativePlatform = (): boolean => {
   return false;
 };
 
-// Dynamic import of RevenueCat modules (only available after Capacitor setup)
-let _purchasesModule: any = null;
-let _uiModule: any = null;
+// Dynamic import of RevenueCat modules (only loaded on native platforms).
+// Cache the NORMALIZED shape — caching the raw modules and returning them as
+// `Purchases`/`RevenueCatUI` made every call after the first silently fail.
+interface RevenueCatModules {
+  Purchases: any;
+  RevenueCatUI: any;
+  PAYWALL_RESULT: any;
+  LOG_LEVEL: any;
+}
+let _modules: RevenueCatModules | null = null;
 let _initialized = false;
 
-const loadRevenueCatModules = async () => {
-  if (_purchasesModule && _uiModule) return { Purchases: _purchasesModule, RevenueCatUI: _uiModule };
+const loadRevenueCatModules = async (): Promise<RevenueCatModules | null> => {
+  if (_modules) return _modules;
   if (!isNativePlatform()) return null;
 
   try {
-    // These imports resolve at build time when Capacitor packages are installed
-    // They will fail gracefully if packages aren't yet installed
     const [purchasesMod, uiMod] = await Promise.all([
       import('@revenuecat/purchases-capacitor').catch(() => null),
       import('@revenuecat/purchases-capacitor-ui').catch(() => null),
     ]);
 
     if (purchasesMod && uiMod) {
-      _purchasesModule = purchasesMod;
-      _uiModule = uiMod;
-      return { Purchases: purchasesMod.Purchases, RevenueCatUI: uiMod.RevenueCatUI, PAYWALL_RESULT: uiMod.PAYWALL_RESULT, LOG_LEVEL: purchasesMod.LOG_LEVEL };
+      _modules = {
+        Purchases: purchasesMod.Purchases,
+        RevenueCatUI: uiMod.RevenueCatUI,
+        PAYWALL_RESULT: uiMod.PAYWALL_RESULT,
+        LOG_LEVEL: purchasesMod.LOG_LEVEL,
+      };
+      return _modules;
     }
   } catch {}
   return null;
@@ -88,6 +98,26 @@ export const initializePurchases = async (): Promise<void> => {
     _initialized = true;
   } catch (error) {
     log.error('RevenueCat init failed', error);
+  }
+};
+
+/**
+ * The RevenueCat app user id for the current (anonymous) customer.
+ * Sent with create-code so the server can verify the purchase receipt
+ * (REQUIRE_PURCHASE_RECEIPT gate) before minting an activation code.
+ */
+export const getAppUserId = async (): Promise<string | null> => {
+  if (!isNativePlatform() || !_initialized) return null;
+
+  const modules = await loadRevenueCatModules();
+  if (!modules) return null;
+
+  try {
+    const { appUserID } = await modules.Purchases.getAppUserID();
+    return appUserID || null;
+  } catch (error) {
+    log.error('Failed to get app user id', error);
+    return null;
   }
 };
 
